@@ -50,7 +50,7 @@ onUnmounted(() => {
 .footer {
   margin-top: auto;
   padding: 2.75rem 0;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.6) 0%, rgba(226, 232, 240, 0.9) 100%);
+  background: var(--gradient-footer);
   border-top: 1px solid var(--color-border);
   position: relative;
 }

@@ -2,13 +2,23 @@ server:
   port: 8080 # ??????
 
 spring:
-  # Spring Security ???? (JWT ???)
   security:
     jwt:
-      secret: YourSecretKeyForJWTGenerationAndValidation1234567890 # ??????????
-      expiration: 604800 # JWT ???????? (7?)
+      secret: YourSecretKeyForJWTGenerationAndValidation1234567890
+      expiration: 43200
+      remember-me-expiration: 604800
   profiles:
     active: local
+  # 生产部署请将 SPRING_PROFILES_ACTIVE 设为 dev
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml # Mapper XML ????
@@ -29,4 +39,4 @@ logging:
     org.mybatis.spring: DEBUG
     org.springframework.security: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n" # ??????
+    console: "%d{yyyy-MM-dd HH:mm:ss, Asia/Shanghai} - %logger{36} - %msg%n" # ??????

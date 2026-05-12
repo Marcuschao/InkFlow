@@ -5,27 +5,56 @@
       <div class="login-card">
         <div class="login-card-glow" aria-hidden="true" />
         <h1 class="card-title">管理员登录</h1>
-        <p class="card-hint">请输入凭据以管理文章</p>
+        <p class="card-hint">请输入凭据与验证码</p>
         <form class="login-form" @submit.prevent="handleLogin">
           <div class="form-group">
-            <label for="username">用户名</label>
-            <input id="username" v-model="username" type="text" required autocomplete="username" />
+            <label class="ds-form-label" for="username">用户名</label>
+            <input id="username" v-model="username" class="ds-input" type="text" required autocomplete="username" />
           </div>
-          <div class="form-group">
-            <label for="password">密码</label>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              required
-              autocomplete="current-password"
-            />
+          <div class="form-group password-row">
+            <label class="ds-form-label" for="password">密码</label>
+            <div class="password-wrap">
+              <input
+                id="password"
+                v-model="password"
+                class="ds-input"
+                :type="showPwd ? 'text' : 'password'"
+                required
+                autocomplete="current-password"
+              />
+              <button type="button" class="pwd-toggle" tabindex="-1" @click="showPwd = !showPwd">
+                {{ showPwd ? '隐藏' : '显示' }}
+              </button>
+            </div>
           </div>
-          <button type="submit" class="submit-button" :disabled="isLoading">
-            <span v-if="isLoading" class="btn-spinner" aria-hidden="true" />
+          <div class="form-group captcha-row">
+            <label class="ds-form-label" for="captchaCode">验证码</label>
+            <div class="captcha-line">
+              <input
+                id="captchaCode"
+                v-model="captchaCode"
+                class="ds-input"
+                type="text"
+                autocomplete="off"
+                maxlength="8"
+                placeholder="右侧图形中的字符"
+                required
+              />
+              <button type="button" class="captcha-img-btn" title="点击刷新" @click="loadCaptcha">
+                <img v-if="captchaSrc" :src="captchaSrc" alt="验证码" class="captcha-img" />
+                <span v-else class="captcha-placeholder">加载中…</span>
+              </button>
+            </div>
+          </div>
+          <label class="remember-row">
+            <input v-model="rememberMe" type="checkbox" />
+            <span>记住我（延长登录有效期）</span>
+          </label>
+          <button type="submit" class="submit-button ds-btn ds-btn--primary" :disabled="isLoading">
+            <span v-if="isLoading" class="ds-spin-lg" aria-hidden="true" />
             <span>{{ isLoading ? '登录中…' : '登录' }}</span>
           </button>
-          <p v-if="error" :key="error" class="error-message">{{ error }}</p>
+          <p v-if="error" :key="errorTick" class="error-message ds-error-box">{{ error }}</p>
         </form>
       </div>
     </div>
@@ -36,40 +65,73 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import { login } from '../api/auth';
+import { login, fetchCaptcha } from '../api/auth';
 
 const username = ref('');
 const password = ref('');
+const captchaKey = ref('');
+const captchaCode = ref('');
+const captchaSrc = ref('');
+const rememberMe = ref(false);
+const showPwd = ref(false);
 const isLoading = ref(false);
 const error = ref(null);
+const errorTick = ref(0);
 const router = useRouter();
 const authStore = useAuthStore();
 
-onMounted(() => {
+async function loadCaptcha() {
+  captchaCode.value = '';
+  try {
+    const d = await fetchCaptcha();
+    captchaKey.value = d?.captchaKey || '';
+    const raw = d?.imageBase64 || '';
+    captchaSrc.value = raw.startsWith('data:') ? raw : `data:image/png;base64,${raw}`;
+  } catch {
+    captchaSrc.value = '';
+    captchaKey.value = '';
+    error.value = '验证码加载失败';
+    errorTick.value += 1;
+  }
+}
+
+onMounted(async () => {
   if (authStore.isLoggedIn) {
     router.replace({ name: 'AdminDashboard' });
+    return;
   }
+  await loadCaptcha();
 });
 
 const handleLogin = async () => {
   isLoading.value = true;
   error.value = null;
   try {
-    const response = await login({
+    const res = await login({
       username: username.value,
       password: password.value,
+      captchaKey: captchaKey.value,
+      captchaCode: captchaCode.value,
+      rememberMe: rememberMe.value,
     });
-
-    if (response.data && response.data.token) {
-      authStore.setToken(response.data.token);
+    const token = res?.data?.token;
+    if (token) {
+      authStore.setToken(token);
       router.push({ name: 'AdminDashboard' });
-    } else {
-      error.value = '登录失败：未获取到有效的 Token。';
+      return;
     }
+    error.value = '登录失败：未获取到有效的 Token。';
+    errorTick.value += 1;
+    await loadCaptcha();
   } catch (err) {
-    console.error('Login Error:', err);
-    error.value =
-      err.response?.data?.message || '登录失败，请检查用户名和密码。';
+    let msg = err?.message || '登录失败';
+    const ra = err?.payload?.remainingAttempts;
+    if (ra != null && Number.isFinite(Number(ra))) {
+      msg += `（还剩 ${ra} 次尝试机会）`;
+    }
+    error.value = msg;
+    errorTick.value += 1;
+    await loadCaptcha();
   } finally {
     isLoading.value = false;
   }
@@ -133,117 +195,124 @@ const handleLogin = async () => {
 
 .card-title {
   margin: 0;
-  font-size: 1.85rem;
+  font-size: var(--text-display-sm);
   font-weight: 720;
   letter-spacing: -0.03em;
   color: var(--color-text);
 }
 
 .card-hint {
-  margin: 0.5rem 0 1.85rem;
-  font-size: 0.9rem;
+  margin: var(--space-2) 0 var(--space-8);
+  font-size: var(--text-base);
   color: var(--color-text-muted);
 }
 
 .login-form .form-group {
-  margin-bottom: 1.35rem;
+  margin-bottom: var(--space-5);
   text-align: left;
 }
 
-.login-form label {
-  display: block;
-  margin-bottom: 0.42rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.login-form .password-wrap .ds-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.login-form .ds-input {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.password-wrap {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.pwd-toggle {
+  flex-shrink: 0;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-family: inherit;
+}
+
+.captcha-line {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.captcha-line .ds-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.captcha-img-btn {
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  overflow: hidden;
+  height: 2.85rem;
+  width: 7.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.captcha-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.captcha-placeholder {
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
-.login-form input[type='text'],
-.login-form input[type='password'] {
-  width: 100%;
-  padding: 0.78rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
-  font-family: inherit;
-  background: rgba(255, 255, 255, 0.9);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
-    background var(--transition-fast);
+.login-form .form-group:focus-within .ds-input {
+  border-color: var(--border-focus-input);
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
 }
 
-.login-form .form-group:focus-within input {
-  border-color: rgba(79, 70, 229, 0.45);
-  box-shadow: 0 0 0 4px var(--color-primary-soft);
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: calc(var(--space-2) * -1) 0 var(--space-5);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+  text-transform: none;
+  cursor: pointer;
+}
+
+.remember-row input {
+  width: auto;
+  accent-color: var(--color-primary);
 }
 
 .submit-button {
   width: 100%;
-  margin-top: 0.35rem;
-  padding: 0.95rem 1.25rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 1.02rem;
-  font-weight: 650;
-  font-family: inherit;
-  color: #fff;
-  cursor: pointer;
-  background: var(--gradient-cta);
-  box-shadow: 0 10px 28px rgba(79, 70, 229, 0.38);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
-    opacity var(--transition-fast);
+  margin-top: var(--space-2);
+  padding: 0.95rem var(--space-5);
+  font-size: var(--text-lg);
 }
 
-.submit-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 36px rgba(79, 70, 229, 0.45);
-}
-
-.submit-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.submit-button:disabled {
-  opacity: 0.75;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-spinner {
-  width: 1.05rem;
-  height: 1.05rem;
-  border-radius: var(--radius-pill);
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
-  animation: spin 0.72s linear infinite;
-}
-
-.error-message {
-  margin-top: 1.05rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-md);
-  background: rgba(239, 68, 68, 0.1);
-  color: #b91c1c;
-  font-size: 0.88rem;
-  font-weight: 500;
+.ds-error-box.error-message {
+  margin-top: var(--space-5);
   animation: shake-soft 0.45s var(--ease-out-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .submit-button:hover:not(:disabled) {
-    transform: none;
-  }
-
-  .btn-spinner {
-    animation: spin 1.4s linear infinite;
-  }
-
-  .error-message {
+  .ds-error-box.error-message {
     animation: none;
   }
 }

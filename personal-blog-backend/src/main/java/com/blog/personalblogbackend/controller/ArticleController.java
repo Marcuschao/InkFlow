@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.controller;
 
+import com.blog.personalblogbackend.audit.Audit;
 import com.blog.personalblogbackend.common.PageResult;
 import com.blog.personalblogbackend.common.Result;
 import com.blog.personalblogbackend.dto.ArticlePageQuery;
@@ -45,14 +46,13 @@ public class ArticleController {
      * @param id 文章ID
      * @return 统一响应格式的文章详情
      */
-    @GetMapping("/{id}")
-    public Result<ArticleVO> getArticleDetail(@PathVariable Long id) {
-        Article article = articleService.getArticleDetail(id);
-        if (article == null) {
+@GetMapping("/{id}")
+    public Result<ArticleVO> getArticleDetail(@PathVariable Long id,
+                                            @RequestParam(required = false) String lang) {
+        ArticleVO vo = articleService.getArticleVo(id, lang);
+        if (vo == null) {
             return Result.fail(404, "文章不存在");
         }
-        ArticleVO vo = new ArticleVO();
-        BeanUtils.copyProperties(article, vo);
         return Result.success(vo);
     }
 
@@ -89,6 +89,7 @@ public class ArticleController {
      * @param id 文章ID
      * @return 统一响应格式
      */
+    @Audit("DELETE_ARTICLE")
     @DeleteMapping("/{id}")
     public Result<String> deleteArticle(@PathVariable Long id) {
         articleService.deleteArticle(id);

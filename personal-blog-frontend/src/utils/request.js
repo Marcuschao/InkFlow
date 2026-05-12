@@ -2,11 +2,10 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
 const service = axios.create({
-  baseURL: import.meta.env.VITE_APP_API_BASE_URL || '/api', // 后端 API 的基础 URL
-  timeout: 5000, // 请求超时时间
+  baseURL: import.meta.env.VITE_APP_API_BASE_URL || '/api',
+  timeout: 8000,
 });
 
-// 请求拦截器
 service.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore();
@@ -15,33 +14,43 @@ service.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    console.error('Request Error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// 响应拦截器
 service.interceptors.response.use(
   (response) => {
     const { data } = response;
     if (data != null && typeof data.code === 'number') {
       if (data.code !== 200) {
-        console.error('API Error:', data.message);
-        return Promise.reject(new Error(data.message || 'Error'));
+        const err = new Error(data.message || 'Error');
+        err.code = data.code;
+        err.payload = data.data;
+        return Promise.reject(err);
       }
       response.data = data.data;
     }
     return response;
   },
   (error) => {
-    console.log('Response Error:', error.response);
-    if (error.response && error.response.status === 401) {
-      // 认证失败，重定向到登录页或清除认证信息
-      const authStore = useAuthStore();
-      authStore.clearAuth();
-      // 可以考虑跳转到登录页
-      // router.push('/login');
+    const res = error.response;
+    if (res?.data && typeof res.data.code === 'number') {
+      const d = res.data;
+      const err = new Error(d.message || error.message || 'Error');
+      err.code = d.code;
+      err.payload = d.data;
+      if (res.status === 401) {
+        const url = error.config?.url || '';
+        if (!url.includes('/auth/login')) {
+          useAuthStore().clearAuth();
+        }
+      }
+      return Promise.reject(err);
+    }
+    if (res?.status === 401) {
+      const url = error.config?.url || '';
+      if (!url.includes('/auth/login')) {
+        useAuthStore().clearAuth();
+      }
     }
     return Promise.reject(error);
   }

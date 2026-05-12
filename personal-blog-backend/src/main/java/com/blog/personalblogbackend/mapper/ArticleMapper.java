@@ -56,4 +56,13 @@ public interface ArticleMapper extends BaseMapper<Article> {
     List<Article> searchPublishedByKeywords(@Param("keywords") List<String> keywords,
                                             @Param("excludeId") Long excludeId,
                                             @Param("limit") int limit);
+
+    List<Article> searchPublishedByKeywordsExcludeIds(@Param("keywords") List<String> keywords,
+                                                      @Param("excludeIds") List<Long> excludeIds,
+                                                      @Param("limit") int limit);
+
+    List<Article> selectPublishedExcludeIds(@Param("excludeIds") List<Long> excludeIds, @Param("limit") int limit);
+
+    @Select("SELECT t.name FROM article_tag at INNER JOIN tag t ON at.tag_id = t.id WHERE at.article_id = #{articleId} ORDER BY t.id")
+    List<String> selectTagNamesByArticleId(@Param("articleId") Long articleId);
 }

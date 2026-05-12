@@ -7,5 +7,5 @@ public interface AuthService {
      * @param password 密码
      * @return JWT Token
      */
-    String login(String username, String password);
+    String login(String username, String password, boolean rememberMe);
 }

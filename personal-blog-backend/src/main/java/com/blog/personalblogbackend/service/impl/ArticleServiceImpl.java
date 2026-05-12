@@ -1,16 +1,24 @@
 package com.blog.personalblogbackend.service.impl;
 
+import com.blog.personalblogbackend.dto.ArticlePageQuery;
+import com.blog.personalblogbackend.dto.ArticleVO;
 import com.blog.personalblogbackend.entity.Article;
-import com.blog.personalblogbackend.entity.ArticleTag;
+import com.blog.personalblogbackend.entity.ArticleTranslation;
 import com.blog.personalblogbackend.entity.Tag;
+import com.blog.personalblogbackend.exception.ServiceException;
+import com.blog.personalblogbackend.llm.AiService;
 import com.blog.personalblogbackend.mapper.ArticleMapper;
+import com.blog.personalblogbackend.mapper.ArticleTranslationMapper;
 import com.blog.personalblogbackend.mapper.TagMapper;
 import com.blog.personalblogbackend.service.ArticleService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.blog.personalblogbackend.dto.ArticlePageQuery;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +27,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
@@ -29,6 +35,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private ArticleMapper articleMapper;
     @Autowired
     private TagMapper tagMapper;
+    @Autowired
+    private ArticleTranslationMapper articleTranslationMapper;
+    @Autowired
+    private AiService aiService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     public IPage<Article> getArticlePage(ArticlePageQuery query) {
@@ -39,6 +51,122 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public Article getArticleDetail(Long id) {
         return articleMapper.selectArticleVOById(id);
+    }
+
+    @Override
+    public ArticleVO getArticleVo(Long id, String lang) {
+        Article article = articleMapper.selectArticleVOById(id);
+        if (article == null) {
+            return null;
+        }
+        ArticleVO vo = new ArticleVO();
+        BeanUtils.copyProperties(article, vo);
+        String loc = normalizeLocale(lang);
+        vo.setViewingLocale(loc);
+        vo.setTranslationActive(Boolean.FALSE);
+        if (loc != null && !"zh".equals(loc)) {
+            ArticleTranslation tr = articleTranslationMapper.selectOne(new LambdaQueryWrapper<ArticleTranslation>()
+                    .eq(ArticleTranslation::getArticleId, id)
+                    .eq(ArticleTranslation::getLocale, loc));
+            if (tr != null) {
+                vo.setTitle(tr.getTitle());
+                vo.setSummary(tr.getSummary());
+                vo.setContent(tr.getContent());
+                if (StringUtils.hasText(tr.getSeoTitle())) {
+                    vo.setSeoTitle(tr.getSeoTitle());
+                }
+                if (StringUtils.hasText(tr.getSeoDescription())) {
+                    vo.setSeoDescription(tr.getSeoDescription());
+                }
+                vo.setTranslationActive(Boolean.TRUE);
+            }
+        }
+        return vo;
+    }
+
+    private static String normalizeLocale(String lang) {
+        if (!StringUtils.hasText(lang)) {
+            return "zh";
+        }
+        return lang.trim().toLowerCase();
+    }
+
+    @Override
+    @Transactional
+    public Long duplicateArticleAsDraft(Long sourceArticleId) {
+        Article src = articleMapper.selectById(sourceArticleId);
+        if (src == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        List<String> tags = articleMapper.selectTagNamesByArticleId(sourceArticleId);
+        Article dup = new Article();
+        dup.setTitle(src.getTitle() + " (副本)");
+        dup.setSummary(src.getSummary());
+        dup.setContent(src.getContent());
+        dup.setCover(src.getCover());
+        dup.setCategoryId(src.getCategoryId());
+        dup.setStatus(0);
+        dup.setViewCount(0);
+        dup.setFreshnessStatus(0);
+        dup.setFreshnessCheckedAt(null);
+        dup.setSeoTitle(src.getSeoTitle());
+        dup.setSeoDescription(src.getSeoDescription());
+        createArticle(dup, tags);
+        return dup.getId();
+    }
+
+    @Override
+    @Transactional
+    public void generateSeoByAi(Long articleId) {
+        Article article = articleMapper.selectById(articleId);
+        if (article == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        String sys = "你是 SEO 编辑。根据下列中文博客标题与正文节选，输出严格一行 JSON，键为 seoTitle、seoDescription。"
+                + "seoTitle 简洁不超过30字符；seoDescription 不超过120字符；不要 markdown，不要其它文字。";
+        String user = "标题：" + nullToEmpty(article.getTitle())
+                + "\n摘要：" + nullToEmpty(article.getSummary())
+                + "\n正文节选：\n" + truncate(nullToEmpty(article.getContent()), 6000);
+        String raw = aiService.chat(sys, user);
+        applySeoJsonToArticle(articleId, raw);
+    }
+
+    private void applySeoJsonToArticle(Long articleId, String raw) {
+        try {
+            String s = raw.trim();
+            int l = s.indexOf('{');
+            int r = s.lastIndexOf('}');
+            if (l >= 0 && r > l) {
+                s = s.substring(l, r + 1);
+            }
+            JsonNode node = objectMapper.readTree(s);
+            Article patch = new Article();
+            patch.setId(articleId);
+            patch.setSeoTitle(textOrNull(node.get("seoTitle")));
+            patch.setSeoDescription(textOrNull(node.get("seoDescription")));
+            articleMapper.updateById(patch);
+        } catch (Exception e) {
+            throw new ServiceException(502, "SEO JSON 解析失败");
+        }
+    }
+
+    private static String textOrNull(JsonNode n) {
+        if (n == null || n.isNull()) {
+            return null;
+        }
+        String t = n.asText().trim();
+        return StringUtils.hasText(t) ? t : null;
+    }
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s;
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null || s.length() <= max) {
+            return s == null ? "" : s;
+        }
+        return s.substring(0, max);
     }
 
     @Override

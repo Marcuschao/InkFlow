@@ -23,7 +23,7 @@
           <li><router-link to="/" @click="closeMenu">首页</router-link></li>
           <li><router-link to="/archive" @click="closeMenu">归档</router-link></li>
           <li><router-link to="/tags" @click="closeMenu">标签</router-link></li>
-          <li><router-link to="/about" @click="closeMenu">关于</router-link></li>
+          <li><router-link to="/reading-history" @click="closeMenu">阅读记录</router-link></li>
           <li>
             <router-link
               :to="authStore.isLoggedIn ? '/admin' : '/login'"
@@ -102,7 +102,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1200;
+  z-index: var(--z-nav);
   transition: transform var(--transition-smooth), box-shadow var(--transition-fast);
 }
 
@@ -111,7 +111,7 @@ onUnmounted(() => {
 }
 
 .navbar.navbar-menu-open .nav-inner {
-  z-index: 1210;
+  z-index: var(--z-nav-menu);
 }
 
 .navbar.scrolled .nav-inner {
@@ -271,8 +271,8 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   top: var(--nav-height);
-  z-index: 1190;
-  background: rgba(15, 23, 42, 0.35);
+  z-index: var(--z-nav-backdrop);
+  background: var(--color-overlay-nav);
   backdrop-filter: blur(4px);
 }
 
@@ -290,7 +290,7 @@ onUnmounted(() => {
   .nav-backdrop {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background: rgba(15, 23, 42, 0.42);
+    background: var(--color-overlay-nav-mobile);
   }
 
   .menu-toggle {
@@ -310,7 +310,7 @@ onUnmounted(() => {
     align-items: stretch;
     gap: 0;
     padding: 0.75rem 1rem 1.25rem;
-    background: #fff;
+    background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
     box-shadow: var(--shadow-md);
     max-height: min(70vh, 440px);

@@ -2,7 +2,7 @@
   <div v-if="total > 0" class="pagination">
     <button
       type="button"
-      class="nav"
+      class="nav ds-btn ds-btn--ghost ds-btn--pill"
       :disabled="currentPage <= 1"
       @click="go(currentPage - 1)"
     >
@@ -21,7 +21,7 @@
     </div>
     <button
       type="button"
-      class="nav"
+      class="nav ds-btn ds-btn--ghost ds-btn--pill"
       :disabled="currentPage >= totalPages"
       @click="go(currentPage + 1)"
     >
@@ -65,50 +65,21 @@ const go = (page) => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0.65rem;
-  margin-top: 2.75rem;
+  gap: var(--space-3);
+  margin-top: var(--space-14);
 }
 
-.nav {
+.pagination .nav {
   padding: 0.52rem 1.15rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  cursor: pointer;
   font-size: 0.875rem;
-  font-weight: 600;
-  font-family: var(--font-ui);
-  color: var(--color-text-muted);
-  box-shadow: var(--shadow-xs);
-  transition: background var(--transition-fast), color var(--transition-fast),
-    border-color var(--transition-fast), transform var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.nav:hover:not(:disabled) {
-  border-color: rgba(79, 70, 229, 0.35);
-  color: var(--color-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
-
-.nav:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-.nav:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
 }
 
 .pages {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  padding: 0.25rem;
-  background: rgba(255, 255, 255, 0.65);
+  padding: var(--space-2);
+  background: var(--surface-pages-well);
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-border);
 }
@@ -121,12 +92,15 @@ const go = (page) => {
   border-radius: var(--radius-pill);
   background: transparent;
   cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: var(--text-88);
+  font-weight: var(--weight-semibold);
   font-family: var(--font-ui);
   color: var(--color-text-muted);
-  transition: background var(--transition-fast), color var(--transition-fast),
-    transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .page-btn:hover:not(.active) {
@@ -134,20 +108,14 @@ const go = (page) => {
   color: var(--color-primary);
 }
 
-.page-btn:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
 .page-btn.active {
   background: var(--gradient-cta);
   color: #fff;
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+  box-shadow: var(--shadow-primary-md);
   transform: scale(1.02);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav:hover:not(:disabled),
   .page-btn.active {
     transform: none;
   }

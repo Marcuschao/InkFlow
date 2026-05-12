@@ -15,10 +15,14 @@ public class Article {
     private Long id;
     private String title;
     private String summary;
+    private String seoTitle;
+    private String seoDescription;
     private String content; // Markdown内容
     private String cover;
     private Long categoryId;
     private Integer status; // 0-草稿 1-发布
+    private Integer freshnessStatus;
+    private LocalDateTime freshnessCheckedAt;
     private Integer viewCount;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

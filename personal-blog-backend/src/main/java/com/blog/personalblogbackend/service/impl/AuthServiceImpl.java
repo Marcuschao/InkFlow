@@ -21,19 +21,19 @@ public class AuthServiceImpl implements AuthService {
     private JwtUtils jwtUtils;
 
     @Override
-    public String login(String username, String password) {
+    public String login(String username, String password, boolean rememberMe) {
         // 1. 根据用户名查询用户
         User user = userMapper.selectOne(new QueryWrapper<User>().eq("username", username));
         if (user == null) {
-            throw new ServiceException("用户不存在");
+            throw new ServiceException(401, "用户名或密码错误");
         }
 
         // 2. 验证密码
         if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
-            throw new ServiceException("密码错误");
+            throw new ServiceException(401, "用户名或密码错误");
         }
 
         // 3. 生成 JWT Token
-        return jwtUtils.generateToken(user.getId(), user.getUsername());
+        return jwtUtils.generateToken(user.getId(), user.getUsername(), rememberMe);
     }
 }

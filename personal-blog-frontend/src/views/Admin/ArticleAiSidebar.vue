@@ -237,7 +237,7 @@ const applyReplace = () => {
   gap: 0.45rem;
   padding: 0.55rem 0.75rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(79, 70, 229, 0.35);
+  border: 1px solid var(--border-accent-strong);
   background: #fff;
   color: var(--color-primary);
   font-weight: 650;
@@ -287,7 +287,7 @@ const applyReplace = () => {
   width: 0.85rem;
   height: 0.85rem;
   border-radius: 50%;
-  border: 2px solid rgba(79, 70, 229, 0.25);
+  border: 2px solid var(--border-accent-muted);
   border-top-color: var(--color-primary);
   animation: spin 0.7s linear infinite;
 }

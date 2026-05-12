@@ -1,18 +1,22 @@
 <template>
-  <div class="admin-dashboard-page">
+  <div class="admin-dashboard-page ds-page">
     <div class="container">
-      <header class="dash-header">
+      <header class="dash-header ds-admin-header">
         <div>
-          <h1 class="page-title">文章管理</h1>
-          <p class="page-sub">创建、编辑与发布内容</p>
+          <h1 class="ds-page-title">文章管理</h1>
+          <p class="ds-page-sub">创建、编辑与发布内容</p>
         </div>
         <div class="dash-actions">
-          <router-link to="/admin/new" class="new-article-button">＋ 新建文章</router-link>
-          <router-link to="/admin/ai-weekly" class="ai-weekly-link">AI 周报</router-link>
+          <router-link to="/admin/freshness" class="ds-btn ds-btn--secondary ds-btn--pill">内容保鲜</router-link>
+          <router-link to="/admin/translations" class="ds-btn ds-btn--secondary ds-btn--pill">翻译</router-link>
+          <router-link to="/admin/logs" class="ds-btn ds-btn--secondary ds-btn--pill">操作日志</router-link>
+          <router-link to="/admin/dashboard" class="ds-btn ds-btn--secondary ds-btn--pill">数据看板</router-link>
+          <router-link to="/admin/new" class="ds-btn ds-btn--green ds-btn--pill">＋ 新建文章</router-link>
+          <router-link to="/admin/ai-weekly" class="ds-btn ds-btn--secondary ds-btn--pill">AI 周报</router-link>
         </div>
       </header>
 
-      <div v-if="articles.length" class="article-management-list">
+      <div v-if="articles.length" class="article-management-list ds-table-shell">
         <table>
           <thead>
             <tr>
@@ -28,8 +32,15 @@
               <td class="td-title">{{ article.title }}</td>
               <td class="td-date">{{ formatDate(article.createTime || article.createdAt) }}</td>
               <td class="actions-column">
-                <router-link :to="`/admin/edit/${article.id}`" class="edit-button">编辑</router-link>
-                <button type="button" class="delete-button" @click="confirmDelete(article.id)">
+                <router-link
+                  :to="`/admin/edit/${article.id}`"
+                  class="edit-button ds-btn ds-btn--primary"
+                >编辑</router-link>
+                <button
+                  type="button"
+                  class="delete-button ds-btn ds-btn--danger"
+                  @click="confirmDelete(article.id)"
+                >
                   删除
                 </button>
               </td>
@@ -37,8 +48,8 @@
           </tbody>
         </table>
       </div>
-      <div v-else class="no-articles">
-        <p>暂无文章，<router-link to="/admin/new">立即新建一篇</router-link></p>
+      <div v-else class="no-articles ds-empty-panel">
+        <p>暂无文章，<router-link to="/admin/new" class="ds-link-inline">立即新建一篇</router-link></p>
       </div>
     </div>
   </div>
@@ -81,135 +92,34 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-dashboard-page {
-  padding: 2.25rem 0 3.5rem;
-}
-
-.dash-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.25rem;
-  margin-bottom: 1.75rem;
-  position: sticky;
-  top: var(--nav-height);
-  z-index: 30;
-  padding: 1rem 0 0.85rem;
-  margin-top: -0.25rem;
-  background: var(--color-page);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-}
-
-.page-title {
-  margin: 0;
-  font-size: clamp(1.85rem, 4vw, 2.35rem);
-  font-weight: 760;
-  letter-spacing: -0.03em;
-  color: var(--color-text);
-}
-
-.page-sub {
-  margin: 0.35rem 0 0;
-  font-size: 0.92rem;
-  color: var(--color-text-muted);
-}
-
 .dash-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: var(--space-3);
   align-items: center;
 }
 
-.ai-weekly-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.72rem 1.25rem;
-  border-radius: var(--radius-pill);
+.edit-button {
+  padding: 0.45rem 0.85rem;
+  margin: 0 var(--space-2);
+  font-size: var(--text-sm);
   text-decoration: none;
-  font-size: 0.92rem;
-  font-weight: 650;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  border: 1px solid rgba(79, 70, 229, 0.28);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.ai-weekly-link:hover {
-  transform: translateY(-2px);
-}
-
-.new-article-button {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.72rem 1.35rem;
-  border-radius: var(--radius-pill);
-  text-decoration: none;
-  font-size: 0.92rem;
-  font-weight: 650;
-  color: #fff;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 10px 26px rgba(16, 185, 129, 0.32);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.new-article-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 32px rgba(16, 185, 129, 0.38);
-}
-
-.article-management-list {
-  background: var(--color-surface);
-  padding: 0;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-}
-
-.article-management-list table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.article-management-list th,
-.article-management-list td {
-  padding: 0.95rem 1.15rem;
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.article-management-list th {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-text-soft);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(241, 245, 249, 0.85));
-}
-
-.article-management-list tbody tr {
-  transition: background var(--transition-fast);
-}
-
-.article-management-list tbody tr:hover {
-  background: rgba(79, 70, 229, 0.04);
-}
-
-.article-management-list tbody tr:last-child td {
-  border-bottom: none;
+.delete-button {
+  padding: 0.45rem 0.85rem;
+  margin: 0 var(--space-2);
+  font-size: var(--text-sm);
 }
 
 .td-title {
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
   max-width: 320px;
 }
 
 .td-date {
-  font-size: 0.88rem;
+  font-size: var(--text-88);
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -221,55 +131,8 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.edit-button,
-.delete-button {
-  padding: 0.45rem 0.85rem;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  border: none;
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: inherit;
-  margin: 0 0.2rem;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
-    opacity var(--transition-fast);
-}
-
-.edit-button {
-  background: var(--gradient-cta);
-  color: #fff;
-  text-decoration: none;
-  display: inline-block;
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.25);
-}
-
-.edit-button:hover {
-  transform: translateY(-1px);
-}
-
-.delete-button {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-}
-
-.delete-button:hover {
-  background: #dc2626;
-  color: #fff;
-}
-
-.no-articles {
-  text-align: center;
-  padding: 3rem 1.5rem;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  color: var(--color-text-muted);
-}
-
-.no-articles a {
-  color: var(--color-primary);
-  font-weight: 600;
+.no-articles p {
+  margin: 0;
 }
 
 @media (max-width: 768px) {
@@ -277,10 +140,10 @@ onMounted(() => {
     overflow-x: auto;
   }
 
-  .dash-header {
+  .dash-header.ds-admin-header {
     position: sticky;
     top: var(--nav-height);
-    z-index: 30;
+    z-index: var(--z-admin-sticky);
     background: var(--color-page);
     border-bottom: 1px solid rgba(148, 163, 184, 0.22);
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.035);
@@ -288,8 +151,7 @@ onMounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .new-article-button:hover,
-  .edit-button:hover {
+  .dash-actions :deep(.ds-btn:hover) {
     transform: none;
   }
 }

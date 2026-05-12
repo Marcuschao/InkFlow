@@ -29,9 +29,27 @@ const routes = [
     component: () => import('../views/About.vue'),
   },
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('../views/Login.vue'),
+    path: '/reading-history',
+    name: 'ReadingHistory',
+    component: () => import('../views/ReadingHistory.vue'),
+  },
+  {
+    path: '/admin/translations',
+    name: 'AdminTranslations',
+    component: () => import('../views/Admin/AdminTranslations.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/freshness',
+    name: 'AdminFreshness',
+    component: () => import('../views/Admin/AdminFreshness.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/dashboard',
+    name: 'AdminAnalytics',
+    component: () => import('../views/Admin/StatsDashboard.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/admin',

@@ -26,5 +26,9 @@ public interface AgentService {
 
     List<RecommendArticleDto> recommend(Long articleId);
 
+    List<RecommendArticleDto> recommendWithContext(Long articleId, List<Long> recentArticleIds);
+
+    List<RecommendArticleDto> recommendHome(List<Long> recentArticleIds);
+
     String weeklyReport(WeeklyReportRequest request);
 }

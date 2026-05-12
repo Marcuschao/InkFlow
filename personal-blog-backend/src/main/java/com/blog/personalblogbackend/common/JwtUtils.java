@@ -1,7 +1,6 @@
 package com.blog.personalblogbackend.common;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -21,24 +20,22 @@ public class JwtUtils {
     private String secret;
 
     @Value("${spring.security.jwt.expiration}")
-    private Long expiration;
+    private Long sessionExpirationSeconds;
 
-    /**
-     * 生成JWT
-     * @param userId 用户ID
-     * @param username 用户名
-     * @return JWT Token
-     */
-    public String generateToken(Long userId, String username) {
+    @Value("${spring.security.jwt.remember-me-expiration}")
+    private Long rememberMeExpirationSeconds;
+
+    public String generateToken(Long userId, String username, boolean rememberMe) {
+        long ttl = Boolean.TRUE.equals(rememberMe) ? rememberMeExpirationSeconds : sessionExpirationSeconds;
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
 
         return Jwts.builder()
                 .setClaims(claims)
-                .setIssuedAt(new Date()) // 签发时间
-                .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000)) // 过期时间
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // 签名算法和密钥
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + ttl * 1000))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 

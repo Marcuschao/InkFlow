@@ -1,6 +1,8 @@
 package com.blog.personalblogbackend.service.impl;
 
 import com.blog.personalblogbackend.agent.KeywordHelper;
+import com.blog.personalblogbackend.agent.langchain.BlogChatAssistant;
+import com.blog.personalblogbackend.agent.tools.ArticleSearchTools;
 import com.blog.personalblogbackend.dto.agent.*;
 import com.blog.personalblogbackend.entity.Article;
 import com.blog.personalblogbackend.exception.ServiceException;
@@ -10,6 +12,7 @@ import com.blog.personalblogbackend.service.AgentService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -18,8 +21,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,11 +40,17 @@ public class AgentServiceImpl implements AgentService {
     private final AiService aiService;
     private final ArticleMapper articleMapper;
     private final ObjectMapper objectMapper;
+    private final Optional<BlogChatAssistant> blogChatAssistant;
+    private final ArticleSearchTools articleSearchTools;
 
-    public AgentServiceImpl(AiService aiService, ArticleMapper articleMapper, ObjectMapper objectMapper) {
+    public AgentServiceImpl(AiService aiService, ArticleMapper articleMapper, ObjectMapper objectMapper,
+                            @Autowired(required = false) BlogChatAssistant blogChatAssistant,
+                            ArticleSearchTools articleSearchTools) {
         this.aiService = aiService;
         this.articleMapper = articleMapper;
         this.objectMapper = objectMapper;
+        this.blogChatAssistant = Optional.ofNullable(blogChatAssistant);
+        this.articleSearchTools = articleSearchTools;
     }
 
     @Override
@@ -169,25 +182,40 @@ public class AgentServiceImpl implements AgentService {
                 articles.add(cur);
             }
         }
-        int chunk = CONTEXT_CHUNK;
-        if (articles.isEmpty()) {
-            List<String> keywords = KeywordHelper.fromText(q);
-            if (keywords.isEmpty()) {
-                return refusalResponse();
-            }
-            articles = articleMapper.searchPublishedByKeywords(keywords, null, 3);
-            if (articles == null || articles.isEmpty()) {
-                articles = articleMapper.selectList(new QueryWrapper<Article>()
-                        .eq("status", 1)
-                        .orderByDesc("create_time")
-                        .last("LIMIT 3"));
-            }
-            if (articles == null || articles.isEmpty()) {
-                return refusalResponse();
-            }
-        } else {
-            chunk = CONTEXT_CHUNK_SCOPED;
+        if (!articles.isEmpty()) {
+            return answerFromArticles(articles, q, CONTEXT_CHUNK_SCOPED);
         }
+        if (blogChatAssistant.isPresent()) {
+            articleSearchTools.beginSession();
+            try {
+                String answer = blogChatAssistant.get().respond(q);
+                List<ChatSourceDto> sources = articleSearchTools.endSession();
+                ChatResponse res = new ChatResponse();
+                res.setAnswer(answer != null ? answer.trim() : "");
+                res.setSources(sources != null ? sources : List.of());
+                return res;
+            } catch (Exception ex) {
+                articleSearchTools.endSession();
+            }
+        }
+        List<String> keywords = KeywordHelper.fromText(q);
+        if (keywords.isEmpty()) {
+            return refusalResponse();
+        }
+        articles = articleMapper.searchPublishedByKeywords(keywords, null, 3);
+        if (articles == null || articles.isEmpty()) {
+            articles = articleMapper.selectList(new QueryWrapper<Article>()
+                    .eq("status", 1)
+                    .orderByDesc("create_time")
+                    .last("LIMIT 3"));
+        }
+        if (articles == null || articles.isEmpty()) {
+            return refusalResponse();
+        }
+        return answerFromArticles(articles, q, CONTEXT_CHUNK);
+    }
+
+    private ChatResponse answerFromArticles(List<Article> articles, String q, int chunk) {
         String sys = "你是博客问答助手。回答必须结合下面「参考资料」中的实际内容。"
                 + "若用户问你能做什么、如何提问等元问题，请根据参考资料中的文章主题，简要说明可以围绕这些主题回答哪些类型的问题。"
                 + "若参考资料与用户问题完全无关、或资料为空，请只回复：" + REFUSAL
@@ -229,7 +257,154 @@ public class AgentServiceImpl implements AgentService {
         if (found == null) {
             return List.of();
         }
-        return found.stream().map(this::toRecommendDto).collect(Collectors.toList());
+        return found.stream().map(a -> toRecommendDto(a, "与当前阅读主题相近")).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<RecommendArticleDto> recommendWithContext(Long articleId, List<Long> recentArticleIds) {
+        Article current = articleId != null ? articleMapper.selectById(articleId) : null;
+        if (articleId != null && current == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        List<Long> recentIds = recentArticleIds != null ? recentArticleIds : List.of();
+        List<Article> recentArticles = loadRecentArticlesPublished(recentIds);
+        List<Long> exclude = mergeExcludeIds(articleId, recentIds);
+        String blob = keywordBlobFrom(current, recentArticles);
+        List<String> keywords = KeywordHelper.fromText(blob);
+        List<Article> found = resolveCandidates(keywords, exclude, 9);
+        return takeTopWithReasons(found, recentArticles, current);
+    }
+
+    @Override
+    public List<RecommendArticleDto> recommendHome(List<Long> recentArticleIds) {
+        List<Long> recentIds = recentArticleIds != null ? recentArticleIds : List.of();
+        List<Article> recentArticles = loadRecentArticlesPublished(recentIds);
+        List<Long> exclude = mergeExcludeIds(null, recentIds);
+        String blob = keywordBlobFrom(null, recentArticles);
+        List<String> keywords = KeywordHelper.fromText(blob);
+        List<Article> found = resolveCandidates(keywords, exclude, 9);
+        return takeTopWithReasons(found, recentArticles, null);
+    }
+
+    private List<Long> mergeExcludeIds(Long articleId, List<Long> recentIds) {
+        LinkedHashSet<Long> set = new LinkedHashSet<>();
+        if (articleId != null) {
+            set.add(articleId);
+        }
+        if (recentIds != null) {
+            for (Long id : recentIds) {
+                if (id != null) {
+                    set.add(id);
+                }
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    private List<Article> loadRecentArticlesPublished(List<Long> idsOrdered) {
+        if (idsOrdered == null || idsOrdered.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<Long> uniq = new LinkedHashSet<>();
+        for (Long id : idsOrdered) {
+            if (id != null && uniq.size() < 16) {
+                uniq.add(id);
+            }
+        }
+        if (uniq.isEmpty()) {
+            return List.of();
+        }
+        Collection<Article> rows = articleMapper.selectBatchIds(uniq);
+        Map<Long, Article> map = rows.stream().collect(Collectors.toMap(Article::getId, a -> a, (x, y) -> x));
+        List<Article> out = new ArrayList<>();
+        for (Long id : uniq) {
+            Article a = map.get(id);
+            if (a != null && Integer.valueOf(1).equals(a.getStatus())) {
+                out.add(a);
+            }
+        }
+        return out;
+    }
+
+    private String keywordBlobFrom(Article current, List<Article> recentArticles) {
+        StringBuilder sb = new StringBuilder();
+        if (current != null) {
+            sb.append(nullToEmpty(current.getTitle())).append(' ')
+                    .append(nullToEmpty(current.getSummary())).append(' ')
+                    .append(truncate(nullToEmpty(current.getContent()), 900)).append(' ');
+        }
+        for (Article r : recentArticles) {
+            sb.append(nullToEmpty(r.getTitle())).append(' ')
+                    .append(nullToEmpty(r.getSummary())).append(' ')
+                    .append(truncate(nullToEmpty(r.getContent()), 500)).append(' ');
+        }
+        return sb.toString();
+    }
+
+    private List<Article> resolveCandidates(List<String> keywords, List<Long> excludeIds, int limit) {
+        List<Article> found;
+        if (keywords == null || keywords.isEmpty()) {
+            found = articleMapper.selectPublishedExcludeIds(excludeIds, limit);
+        } else {
+            found = articleMapper.searchPublishedByKeywordsExcludeIds(keywords, excludeIds, limit);
+        }
+        return found != null ? found : List.of();
+    }
+
+    private List<RecommendArticleDto> takeTopWithReasons(List<Article> found,
+                                                         List<Article> recentOrdered,
+                                                         Article current) {
+        List<RecommendArticleDto> out = new ArrayList<>();
+        int n = Math.min(3, found.size());
+        for (int i = 0; i < n; i++) {
+            Article a = found.get(i);
+            String reason = buildReason(a, recentOrdered, current);
+            out.add(toRecommendDto(a, reason));
+        }
+        return out;
+    }
+
+    private String buildReason(Article candidate, List<Article> recentOrdered, Article current) {
+        for (Article r : recentOrdered) {
+            if (shareKeywords(candidate, r)) {
+                return "与您最近阅读的《" + nullToEmpty(r.getTitle()) + "》主题相近";
+            }
+        }
+        if (current != null && shareKeywords(candidate, current)) {
+            return "与当前阅读的《" + nullToEmpty(current.getTitle()) + "》主题相近";
+        }
+        return "猜你喜欢";
+    }
+
+    private boolean shareKeywords(Article a, Article b) {
+        List<String> ka = KeywordHelper.fromText(compactBlob(a));
+        List<String> kb = KeywordHelper.fromText(compactBlob(b));
+        if (ka.isEmpty() || kb.isEmpty()) {
+            return false;
+        }
+        HashSet<String> sa = new HashSet<>(ka);
+        for (String x : kb) {
+            if (sa.contains(x)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String compactBlob(Article a) {
+        return nullToEmpty(a.getTitle()) + " " + nullToEmpty(a.getSummary()) + " "
+                + truncate(nullToEmpty(a.getContent()), 400);
+    }
+
+    private RecommendArticleDto toRecommendDto(Article a, String reason) {
+        RecommendArticleDto d = new RecommendArticleDto();
+        d.setId(a.getId());
+        d.setTitle(a.getTitle());
+        d.setSummary(a.getSummary());
+        d.setCover(a.getCover());
+        d.setCreateTime(a.getCreateTime());
+        d.setReason(reason);
+        return d;
     }
 
     @Override
@@ -288,16 +463,6 @@ public class AgentServiceImpl implements AgentService {
         r.setAnswer(REFUSAL);
         r.setSources(List.of());
         return r;
-    }
-
-    private RecommendArticleDto toRecommendDto(Article a) {
-        RecommendArticleDto d = new RecommendArticleDto();
-        d.setId(a.getId());
-        d.setTitle(a.getTitle());
-        d.setSummary(a.getSummary());
-        d.setCover(a.getCover());
-        d.setCreateTime(a.getCreateTime());
-        return d;
     }
 
     private List<String> parseStringList(String raw) {

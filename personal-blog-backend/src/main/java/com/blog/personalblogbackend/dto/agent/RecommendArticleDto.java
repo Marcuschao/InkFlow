@@ -11,4 +11,5 @@ public class RecommendArticleDto {
     private String summary;
     private String cover;
     private LocalDateTime createTime;
+    private String reason;
 }

@@ -1,68 +1,149 @@
 <template>
-  <div class="article-editor-page">
+  <div class="article-editor-page ds-page">
     <div class="container editor-shell">
-      <header class="editor-hero">
-        <h1 class="page-title">{{ isEditMode ? '编辑文章' : '新建文章' }}</h1>
-        <p class="page-sub">支持 Markdown，提交后将在后台列表中显示</p>
+      <header class="editor-hero ds-page-hero">
+        <h1 class="ds-page-title">{{ isEditMode ? '编辑文章' : '新建文章' }}</h1>
+        <p class="ds-page-sub">支持 Markdown，提交后将在后台列表中显示</p>
       </header>
+
+      <div v-if="isEditMode" class="lang-tabs">
+        <button
+          v-for="t in langTabs"
+          :key="t.key"
+          type="button"
+          :class="['lang-tab', { on: activeLang === t.key }]"
+          @click="setLang(t.key)"
+        >
+          {{ t.label }}
+        </button>
+      </div>
 
       <div class="editor-layout">
         <form class="article-form" @submit.prevent="handleSubmit">
-          <div class="form-group">
-            <label for="title">文章标题</label>
-            <input id="title" v-model="article.title" type="text" required />
-          </div>
+          <template v-if="activeLang === 'zh'">
+            <div class="form-group">
+              <label class="ds-form-label" for="title">文章标题</label>
+              <input class="ds-input" id="title" v-model="article.title" type="text" required />
+            </div>
 
-          <div class="form-group">
-            <label for="summary">摘要</label>
-            <input id="summary" v-model="article.summary" type="text" placeholder="可选，显示在列表卡片中" />
-          </div>
+            <div class="form-group">
+              <label class="ds-form-label" for="summary">摘要</label>
+              <input class="ds-input" id="summary" v-model="article.summary" type="text" placeholder="可选，显示在列表卡片中" />
+            </div>
 
-          <div class="form-group">
-            <label for="tags">标签（逗号分隔）</label>
-            <input id="tags" v-model="tagsInput" type="text" placeholder="Vue, JavaScript, CSS" />
-          </div>
+            <div class="form-group">
+              <label class="ds-form-label" for="tags">标签（逗号分隔）</label>
+              <input class="ds-input" id="tags" v-model="tagsInput" type="text" placeholder="Vue, JavaScript, CSS" />
+            </div>
 
-          <div class="form-group form-group-grow">
-            <label for="content">正文（Markdown）</label>
-            <textarea
-              id="content"
-              ref="contentRef"
-              v-model="article.content"
-              rows="20"
-              required
-            />
-          </div>
+            <div class="form-group form-group-grow">
+              <label class="ds-form-label" for="content">正文（Markdown）</label>
+              <textarea
+                id="content"
+                class="ds-textarea"
+                ref="contentRef"
+                v-model="article.content"
+                rows="20"
+                required
+              />
+            </div>
 
-          <div class="ai-meta-row">
-            <button
-              type="button"
-              class="ai-meta-btn"
-              :disabled="aiSummaryLoading || !article.content.trim()"
-              @click="fillSummary"
-            >
-              <span v-if="aiSummaryLoading" class="meta-spin" aria-hidden="true" />
-              AI 生成摘要
-            </button>
-            <button
-              type="button"
-              class="ai-meta-btn"
-              :disabled="aiTagsLoading || !article.content.trim()"
-              @click="fillTags"
-            >
-              <span v-if="aiTagsLoading" class="meta-spin" aria-hidden="true" />
-              AI 推荐标签
-            </button>
-          </div>
+            <div class="form-group">
+              <label class="ds-form-label" for="seoTitle">SEO 标题</label>
+              <input class="ds-input" id="seoTitle" v-model="article.seoTitle" type="text" />
+            </div>
 
-          <button type="submit" class="submit-button" :disabled="isLoading">
-            <span v-if="isLoading" class="btn-spinner" aria-hidden="true" />
+            <div class="form-group">
+              <label class="ds-form-label" for="seoDescription">SEO 描述</label>
+              <input class="ds-input" id="seoDescription" v-model="article.seoDescription" type="text" />
+            </div>
+
+            <div class="ai-meta-row">
+              <button
+                type="button"
+                class="ai-meta-btn ds-btn ds-btn--ghost"
+                :disabled="aiSummaryLoading || !article.content.trim()"
+                @click="fillSummary"
+              >
+                <span v-if="aiSummaryLoading" class="ds-spin" aria-hidden="true" />
+                AI 生成摘要
+              </button>
+              <button
+                type="button"
+                class="ai-meta-btn ds-btn ds-btn--ghost"
+                :disabled="aiTagsLoading || !article.content.trim()"
+                @click="fillTags"
+              >
+                <span v-if="aiTagsLoading" class="ds-spin" aria-hidden="true" />
+                AI 推荐标签
+              </button>
+              <button
+                type="button"
+                class="ai-meta-btn ds-btn ds-btn--ghost"
+                :disabled="zhSeoBusy || !article.id"
+                @click="runZhSeoAi"
+              >
+                <span v-if="zhSeoBusy" class="ds-spin" aria-hidden="true" />
+                中文 SEO AI
+              </button>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="form-group">
+              <label class="ds-form-label" :for="'tt-' + activeLang">标题</label>
+              <input class="ds-input" :id="'tt-' + activeLang" v-model="trans[activeLang].title" type="text" required />
+            </div>
+
+            <div class="form-group">
+              <label class="ds-form-label" :for="'ts-' + activeLang">摘要</label>
+              <input class="ds-input" :id="'ts-' + activeLang" v-model="trans[activeLang].summary" type="text" />
+            </div>
+
+            <div class="form-group form-group-grow">
+              <label class="ds-form-label" :for="'tc-' + activeLang">正文</label>
+              <textarea
+                class="ds-textarea"
+                :id="'tc-' + activeLang" v-model="trans[activeLang].content" rows="20" required />
+            </div>
+
+            <div class="form-group">
+              <label class="ds-form-label" :for="'st-' + activeLang">SEO 标题</label>
+              <input class="ds-input" :id="'st-' + activeLang" v-model="trans[activeLang].seoTitle" type="text" />
+            </div>
+
+            <div class="form-group">
+              <label class="ds-form-label" :for="'sd-' + activeLang">SEO 描述</label>
+              <input class="ds-input" :id="'sd-' + activeLang" v-model="trans[activeLang].seoDescription" type="text" />
+            </div>
+
+            <div class="ai-meta-row">
+              <button type="button" class="ai-meta-btn ds-btn ds-btn--ghost" :disabled="transBusy" @click="saveTrans">
+                保存译文
+              </button>
+              <button type="button" class="ai-meta-btn ds-btn ds-btn--ghost" :disabled="transBusy" @click="machineTrans">
+                机翻填充
+              </button>
+              <button type="button" class="ai-meta-btn ds-btn ds-btn--ghost" :disabled="transBusy" @click="seoTrans">
+                译文 SEO AI
+              </button>
+            </div>
+          </template>
+
+          <button
+            v-if="activeLang === 'zh'"
+            type="submit"
+            class="submit-button ds-btn ds-btn--primary"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading" class="ds-spin-lg" aria-hidden="true" />
             <span>{{ isLoading ? '提交中…' : '提交' }}</span>
           </button>
-          <p v-if="error" :key="error" class="error-message">{{ error }}</p>
+          <p v-if="error" :key="error" class="error-message ds-error-box">{{ error }}</p>
         </form>
 
         <ArticleAiSidebar
+          v-if="activeLang === 'zh'"
           :title="article.title"
           :tags-hint="tagsInput"
           :get-context="getTextareaContext"
@@ -74,11 +155,36 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createArticle, updateArticle, getArticleDetail } from '../../api/article';
 import { agentSuggestTags, agentSummary } from '../../api/agent';
+import {
+  getTranslation,
+  saveTranslation,
+  machineTranslateArticle,
+  translationSeoAi,
+  articleSeoAi,
+} from '../../api/translation';
 import ArticleAiSidebar from './ArticleAiSidebar.vue';
+
+const langTabs = [
+  { key: 'zh', label: '原文' },
+  { key: 'en', label: 'English' },
+  { key: 'ja', label: '日本語' },
+  { key: 'ko', label: '한국어' },
+];
+
+function emptyTrans() {
+  return {
+    title: '',
+    summary: '',
+    content: '',
+    seoTitle: '',
+    seoDescription: '',
+    status: 1,
+  };
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -86,18 +192,29 @@ const router = useRouter();
 const contentRef = ref(null);
 
 const isEditMode = ref(false);
+const activeLang = ref('zh');
 const article = ref({
   id: null,
   title: '',
   summary: '',
   content: '',
+  seoTitle: '',
+  seoDescription: '',
   tags: [],
 });
+const trans = reactive({
+  en: emptyTrans(),
+  ja: emptyTrans(),
+  ko: emptyTrans(),
+});
+const transLoaded = reactive({ en: false, ja: false, ko: false });
 const tagsInput = ref('');
 const isLoading = ref(false);
 const error = ref(null);
 const aiSummaryLoading = ref(false);
 const aiTagsLoading = ref(false);
+const transBusy = ref(false);
+const zhSeoBusy = ref(false);
 
 const tagNamesParam = () =>
   tagsInput.value
@@ -190,6 +307,107 @@ async function fillTags() {
   }
 }
 
+function resetTranslations() {
+  activeLang.value = 'zh';
+  ['en', 'ja', 'ko'].forEach((k) => {
+    Object.assign(trans[k], emptyTrans());
+    transLoaded[k] = false;
+  });
+}
+
+async function ensureTrans(locale, force = false) {
+  if (!article.value.id || locale === 'zh') return;
+  if (force) transLoaded[locale] = false;
+  if (transLoaded[locale]) return;
+  try {
+    const response = await getTranslation(article.value.id, locale);
+    const data = response?.data;
+    if (data && typeof data === 'object') {
+      trans[locale].title = data.title || '';
+      trans[locale].summary = data.summary || '';
+      trans[locale].content = data.content || '';
+      trans[locale].seoTitle = data.seoTitle || '';
+      trans[locale].seoDescription = data.seoDescription || '';
+      trans[locale].status = data.status != null ? data.status : 1;
+    }
+  } catch {
+    /* ignore */
+  }
+  transLoaded[locale] = true;
+}
+
+async function setLang(key) {
+  activeLang.value = key;
+  if (key !== 'zh') await ensureTrans(key);
+}
+
+async function saveTrans() {
+  const loc = activeLang.value;
+  if (loc === 'zh' || !article.value.id) return;
+  transBusy.value = true;
+  error.value = null;
+  try {
+    await saveTranslation(article.value.id, {
+      articleId: article.value.id,
+      locale: loc,
+      title: trans[loc].title,
+      summary: trans[loc].summary || '',
+      content: trans[loc].content,
+      seoTitle: trans[loc].seoTitle || '',
+      seoDescription: trans[loc].seoDescription || '',
+      status: trans[loc].status != null ? trans[loc].status : 1,
+    });
+  } catch (err) {
+    error.value = err?.message || '保存译文失败';
+  } finally {
+    transBusy.value = false;
+  }
+}
+
+async function machineTrans() {
+  const loc = activeLang.value;
+  if (loc === 'zh' || !article.value.id) return;
+  transBusy.value = true;
+  error.value = null;
+  try {
+    await machineTranslateArticle(article.value.id, loc);
+    await ensureTrans(loc, true);
+  } catch (err) {
+    error.value = err?.message || '机翻失败';
+  } finally {
+    transBusy.value = false;
+  }
+}
+
+async function seoTrans() {
+  const loc = activeLang.value;
+  if (loc === 'zh' || !article.value.id) return;
+  transBusy.value = true;
+  error.value = null;
+  try {
+    await translationSeoAi(article.value.id, loc);
+    await ensureTrans(loc, true);
+  } catch (err) {
+    error.value = err?.message || 'SEO 生成失败';
+  } finally {
+    transBusy.value = false;
+  }
+}
+
+async function runZhSeoAi() {
+  if (!article.value.id) return;
+  zhSeoBusy.value = true;
+  error.value = null;
+  try {
+    await articleSeoAi(article.value.id);
+    await fetchArticleForEdit(article.value.id);
+  } catch (err) {
+    error.value = err?.message || 'SEO 生成失败';
+  } finally {
+    zhSeoBusy.value = false;
+  }
+}
+
 const fetchArticleForEdit = async (id) => {
   error.value = null;
   try {
@@ -200,9 +418,12 @@ const fetchArticleForEdit = async (id) => {
       title: d.title,
       content: d.content,
       summary: d.summary || '',
+      seoTitle: d.seoTitle || '',
+      seoDescription: d.seoDescription || '',
       tags: d.tags || [],
     };
     tagsInput.value = (d.tags || []).map((t) => t.name).join(', ');
+    resetTranslations();
   } catch (err) {
     console.error('Failed to fetch article for edit:', err);
     error.value = '加载文章失败。';
@@ -210,6 +431,11 @@ const fetchArticleForEdit = async (id) => {
 };
 
 const handleSubmit = async () => {
+  if (activeLang.value !== 'zh') {
+    error.value = '请先切换到「原文」标签再提交。';
+    return;
+  }
+
   isLoading.value = true;
   error.value = null;
 
@@ -217,6 +443,8 @@ const handleSubmit = async () => {
     title: article.value.title,
     content: article.value.content,
     summary: article.value.summary || '',
+    seoTitle: article.value.seoTitle || '',
+    seoDescription: article.value.seoDescription || '',
     status: 1,
   };
   const tags = tagNamesParam();
@@ -226,8 +454,17 @@ const handleSubmit = async () => {
       await updateArticle(article.value.id, payload, tags);
     } else {
       await createArticle(payload, tags);
-      article.value = { id: null, title: '', content: '', summary: '', tags: [] };
+      article.value = {
+        id: null,
+        title: '',
+        content: '',
+        summary: '',
+        seoTitle: '',
+        seoDescription: '',
+        tags: [],
+      };
       tagsInput.value = '';
+      resetTranslations();
     }
     router.push('/admin');
   } catch (err) {
@@ -245,8 +482,17 @@ watch(
     if (isEditMode.value) {
       fetchArticleForEdit(newId);
     } else {
-      article.value = { id: null, title: '', summary: '', content: '', tags: [] };
+      article.value = {
+        id: null,
+        title: '',
+        summary: '',
+        content: '',
+        seoTitle: '',
+        seoDescription: '',
+        tags: [],
+      };
       tagsInput.value = '';
+      resetTranslations();
     }
   },
   { immediate: true }
@@ -254,31 +500,34 @@ watch(
 </script>
 
 <style scoped>
-.article-editor-page {
-  padding: 2.25rem 0 3.5rem;
-}
-
 .editor-shell {
   max-width: 1280px;
 }
 
-.editor-hero {
-  text-align: center;
-  margin-bottom: 2rem;
+.lang-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin-bottom: var(--space-5);
 }
 
-.page-title {
-  margin: 0;
-  font-size: clamp(1.85rem, 4vw, 2.35rem);
-  font-weight: 760;
-  letter-spacing: -0.03em;
-  color: var(--color-text);
-}
-
-.page-sub {
-  margin: 0.5rem 0 0;
-  font-size: 0.92rem;
+.lang-tab {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--surface-muted);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  cursor: pointer;
+  font-family: inherit;
   color: var(--color-text-muted);
+}
+
+.lang-tab.on {
+  border-color: transparent;
+  color: #fff;
+  background: var(--gradient-cta);
 }
 
 .editor-layout {
@@ -305,159 +554,39 @@ watch(
 }
 
 .form-group {
-  margin-bottom: 1.35rem;
+  margin-bottom: var(--space-5);
 }
 
 .form-group-grow {
   margin-bottom: 1.65rem;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.45rem;
-  font-size: 0.82rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.form-group input[type='text'],
-.form-group textarea {
-  width: 100%;
-  padding: 0.78rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
-  font-family: inherit;
-  background: rgba(248, 250, 252, 0.65);
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    background var(--transition-fast);
-}
-
-.form-group textarea {
-  font-family: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
-  font-size: 0.9rem;
-  line-height: 1.55;
-  min-height: 320px;
-  resize: vertical;
-}
-
-.form-group:focus-within input,
-.form-group:focus-within textarea {
-  outline: none;
-  border-color: rgba(79, 70, 229, 0.45);
-  box-shadow: 0 0 0 4px var(--color-primary-soft);
-  background: #fff;
-}
-
 .ai-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-bottom: 1rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .ai-meta-btn {
   flex: 1;
   min-width: 8rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  padding: 0.62rem 0.85rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: rgba(248, 250, 252, 0.85);
-  font-size: 0.86rem;
-  font-weight: 650;
-  font-family: inherit;
-  cursor: pointer;
-  color: var(--color-text);
-}
-
-.ai-meta-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.meta-spin {
-  width: 0.9rem;
-  height: 0.9rem;
-  border-radius: 50%;
-  border: 2px solid rgba(79, 70, 229, 0.2);
-  border-top-color: var(--color-primary);
-  animation: spin 0.72s linear infinite;
 }
 
 .submit-button {
   width: 100%;
-  padding: 0.95rem 1.25rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 1.05rem;
-  font-weight: 650;
-  font-family: inherit;
-  cursor: pointer;
-  color: #fff;
-  background: var(--gradient-cta);
-  box-shadow: 0 10px 28px rgba(79, 70, 229, 0.35);
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast),
-    opacity var(--transition-fast),
-    filter var(--transition-fast);
+  padding: 0.95rem var(--space-5);
+  font-size: var(--text-lg);
 }
 
-.submit-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: saturate(1.05);
-}
-
-.submit-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.submit-button:disabled {
-  opacity: 0.72;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-spinner {
-  width: 1.05rem;
-  height: 1.05rem;
-  border-radius: var(--radius-pill);
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
-  animation: spin 0.72s linear infinite;
-}
-
-.error-message {
-  margin-top: 1rem;
-  text-align: center;
-  padding: 0.7rem;
-  border-radius: var(--radius-md);
-  background: rgba(239, 68, 68, 0.1);
-  color: #b91c1c;
-  font-size: 0.88rem;
-  font-weight: 500;
+.ds-error-box.error-message {
+  margin-top: var(--space-4);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .submit-button:hover:not(:disabled) {
+  .submit-button.ds-btn:hover:not(:disabled) {
     transform: none;
-  }
-
-  .btn-spinner,
-  .meta-spin {
-    animation: spin 1.4s linear infinite;
+    filter: none;
   }
 }
 </style>

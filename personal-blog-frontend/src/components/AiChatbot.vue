@@ -16,12 +16,17 @@
         <button type="button" class="ai-chat-icon-btn" aria-label="关闭" @click="open = false">×</button>
       </div>
       <div ref="scrollRef" class="ai-chat-messages">
-        <div
-          v-for="(m, idx) in messages"
-          :key="idx"
-          :class="['ai-chat-bubble', m.role]"
-        >
-          {{ m.content }}
+        <div v-for="(m, idx) in messages" :key="idx" class="ai-msg-wrap">
+          <div :class="['ai-chat-bubble', m.role]">{{ m.content }}</div>
+          <div v-if="m.role === 'assistant' && m.sources?.length" class="ai-chat-sources">
+            <span class="src-label">参考</span>
+            <router-link
+              v-for="s in m.sources"
+              :key="s.id"
+              :to="`/article/${s.id}`"
+              class="src-chip"
+            >{{ s.title }}</router-link>
+          </div>
         </div>
       </div>
       <form class="ai-chat-form" @submit.prevent="send">
@@ -42,7 +47,7 @@
 import { ref, watch, nextTick, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import { agentChat, agentChatStream, buildAgentChatQuestion } from '../api/agent';
+import { agentChatFull, buildAgentChatQuestion } from '../api/agent';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -70,7 +75,11 @@ function loadStore() {
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (parsed && Array.isArray(parsed.messages)) {
-      messages.value = parsed.messages.slice(-MAX_MESSAGES);
+      messages.value = parsed.messages.slice(-MAX_MESSAGES).map((m) => ({
+        role: m.role,
+        content: m.content || '',
+        ...(Array.isArray(m.sources) ? { sources: m.sources } : {}),
+      }));
     }
   } catch {
     messages.value = [];
@@ -81,7 +90,13 @@ function saveStore() {
   try {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ messages: messages.value.slice(-MAX_MESSAGES) })
+      JSON.stringify({
+        messages: messages.value.slice(-MAX_MESSAGES).map(({ role, content, sources }) => ({
+          role,
+          content,
+          ...(sources?.length ? { sources } : {}),
+        })),
+      })
     );
   } catch {
     /* ignore */
@@ -127,7 +142,7 @@ async function send() {
   draft.value = '';
   messages.value.push({ role: 'user', content: text });
   messages.value = messages.value.slice(-MAX_MESSAGES);
-  const thread = messages.value.map(({ role, content }) => ({ role, content }));
+  const thread = messages.value.map(({ role, content, sources }) => ({ role, content, sources }));
   sending.value = true;
   nextTick(() => scrollToBottom());
 
@@ -139,23 +154,16 @@ async function send() {
   const assistantIdx = messages.value.length - 1;
 
   try {
-    let full = '';
-    try {
-      full = await agentChatStream(chatPayload, (delta) => {
-        full += delta;
-        messages.value[assistantIdx].content = full;
-        messages.value = [...messages.value];
-        nextTick(() => scrollToBottom());
-      });
-    } catch {
-      full = await agentChat(chatPayload);
-      messages.value[assistantIdx].content = full;
-      messages.value = [...messages.value];
+    const data = await agentChatFull(chatPayload);
+    const text = typeof data?.answer === 'string' ? data.answer : '';
+    const sources = Array.isArray(data?.sources) ? data.sources : [];
+    messages.value[assistantIdx].content = text;
+    if (sources.length) {
+      messages.value[assistantIdx].sources = sources
+        .filter((s) => s && s.id != null)
+        .map((s) => ({ id: s.id, title: s.title || '' }));
     }
-    if (!messages.value[assistantIdx].content && full) {
-      messages.value[assistantIdx].content = full;
-      messages.value = [...messages.value];
-    }
+    messages.value = [...messages.value];
   } catch (e) {
     messages.value[assistantIdx].content = e?.message || '请求失败';
     messages.value = [...messages.value];
@@ -186,7 +194,7 @@ async function send() {
   font-size: 0.95rem;
   color: #fff;
   background: var(--gradient-cta);
-  box-shadow: 0 10px 28px rgba(79, 70, 229, 0.4);
+  box-shadow: var(--shadow-chat);
 }
 
 .ai-chat-panel {
@@ -234,6 +242,53 @@ async function send() {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.ai-msg-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.ai-msg-wrap:has(.user) {
+  align-items: flex-end;
+}
+
+.ai-chat-sources {
+  max-width: 92%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.ai-msg-wrap .ai-chat-bubble.user {
+  align-self: flex-end;
+}
+
+.ai-msg-wrap .ai-chat-bubble.assistant {
+  align-self: flex-start;
+}
+
+.src-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.src-chip {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  text-decoration: none;
+  border: 1px solid var(--border-accent);
+}
+
+.src-chip:hover {
+  text-decoration: underline;
 }
 
 .ai-chat-bubble {

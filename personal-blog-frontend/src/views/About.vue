@@ -1,18 +1,18 @@
 <template>
-  <div class="about-page">
+  <div class="about-page ds-page">
     <div class="container">
-      <header class="page-hero">
-        <h1 class="page-title">关于我</h1>
+      <header class="ds-page-hero">
+        <h1 class="ds-page-title ds-page-title-md">关于我</h1>
       </header>
 
-      <div v-if="loading" class="about-skeleton">
+      <div v-if="loading" class="about-skeleton ds-surface-card">
         <div class="ui-skeleton sk-line" />
         <div class="ui-skeleton sk-line" />
         <div class="ui-skeleton sk-line short" />
         <div class="ui-skeleton sk-line" />
         <div class="ui-skeleton sk-line medium" />
       </div>
-      <div v-else class="about-content-wrapper">
+      <div v-else class="about-content-wrapper ds-surface-card">
         <MarkdownRenderer :markdown="aboutContent" />
       </div>
     </div>
@@ -46,30 +46,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.about-page {
-  padding: 2.5rem 0 3.75rem;
-}
-
-.page-hero {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.page-title {
-  margin: 0;
-  font-size: clamp(2rem, 4.6vw, 2.65rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--color-text);
-}
-
 .about-skeleton {
   max-width: 42rem;
   margin: 0 auto;
-  padding: 2rem;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  padding: var(--space-8);
   box-shadow: var(--shadow-sm);
 }
 
@@ -89,11 +69,7 @@ onMounted(() => {
 .about-content-wrapper {
   max-width: 42rem;
   margin: 0 auto;
-  background: var(--color-surface);
   padding: clamp(1.75rem, 4vw, 2.75rem);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
 }
 
 .about-content-wrapper :deep(.markdown-prose) {

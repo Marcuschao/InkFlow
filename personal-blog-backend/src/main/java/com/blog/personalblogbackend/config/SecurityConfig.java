@@ -4,6 +4,7 @@ import com.blog.personalblogbackend.common.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -18,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@Order(1)
 public class SecurityConfig {
 
     @Autowired
@@ -49,6 +51,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/tags/**", "/tags/**").permitAll() // 标签GET请求放行
                 .requestMatchers(HttpMethod.GET, "/api/categories/**", "/categories/**").permitAll() // 分类GET请求放行
                 .requestMatchers(HttpMethod.GET, "/api/about", "/about").permitAll() // 关于我GET请求放行
+                .requestMatchers(HttpMethod.POST, "/api/stat/view").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                .requestMatchers("/actuator/**").authenticated()
                 .anyRequest().authenticated() // 其他所有请求都需要认证
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // 添加JWT过滤器

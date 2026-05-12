@@ -1,9 +1,9 @@
 <template>
-  <div class="tags-page">
+  <div class="tags-page ds-page">
     <div class="container">
-      <header class="page-hero">
-        <h1 class="page-title">所有标签</h1>
-        <p class="page-sub">点击查看该标签下的文章</p>
+      <header class="ds-page-hero">
+        <h1 class="ds-page-title ds-page-title-md">所有标签</h1>
+        <p class="ds-page-sub">点击查看该标签下的文章</p>
       </header>
 
       <div v-if="articleStore.tags.length" class="tag-cloud-panel">
@@ -17,7 +17,7 @@
           {{ tag.name }}
         </router-link>
       </div>
-      <div v-else class="no-tags">
+      <div v-else class="no-tags ds-empty-panel">
         <p>暂无标签。</p>
       </div>
     </div>
@@ -36,28 +36,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.tags-page {
-  padding: 2.5rem 0 3.75rem;
-}
-
-.page-hero {
-  text-align: center;
-  margin-bottom: 2.25rem;
-}
-
-.page-title {
-  margin: 0;
-  font-size: clamp(2rem, 4.6vw, 2.65rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--color-text);
-}
-
-.page-sub {
-  margin: 0.65rem 0 0;
-  color: var(--color-text-muted);
-}
-
 .tag-cloud-panel {
   background: var(--color-surface-glass);
   backdrop-filter: blur(16px);
@@ -81,7 +59,7 @@ onMounted(() => {
   text-decoration: none;
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(79, 70, 229, 0.15);
+  border: 1px solid var(--border-accent-muted);
   box-shadow: var(--shadow-xs);
   animation: tag-pop-in 0.55s var(--ease-out-soft) backwards;
   animation-delay: var(--enter-delay, 0ms);
@@ -99,15 +77,12 @@ onMounted(() => {
 }
 
 .no-tags {
-  text-align: center;
-  padding: 3rem 1.5rem;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  color: var(--color-text-muted);
   max-width: 560px;
   margin: 0 auto;
+}
+
+.no-tags p {
+  margin: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

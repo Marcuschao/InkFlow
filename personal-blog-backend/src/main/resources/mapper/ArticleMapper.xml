@@ -8,7 +8,7 @@
             </foreach>
         </if>
     </insert>
-    
+
     <select id="selectArticleVOPage" resultType="com.blog.personalblogbackend.entity.Article">
         SELECT
         a.id, a.title, a.summary, a.cover, a.view_count,
@@ -32,7 +32,6 @@
                 AND (a.title LIKE CONCAT('%', #{keyword}, '%')
                 OR a.summary LIKE CONCAT('%', #{keyword}, '%'))
             </if>
-            <!-- 其他全局条件，例如只查已发布的 -->
             AND a.status = 1
         </where>
         GROUP BY a.id
@@ -55,6 +54,49 @@
                 OR content LIKE CONCAT('%', #{kw}, '%'))
             </foreach>
             )
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="searchPublishedByKeywordsExcludeIds" resultType="com.blog.personalblogbackend.entity.Article">
+        SELECT id, title, summary, content, cover, category_id AS categoryId, status, view_count AS viewCount,
+               create_time AS createTime, update_time AS updateTime,
+               freshness_status AS freshnessStatus, freshness_checked_at AS freshnessCheckedAt,
+               seo_title AS seoTitle, seo_description AS seoDescription
+        FROM article
+        WHERE status = 1
+        <if test="excludeIds != null and excludeIds.size() > 0">
+            AND id NOT IN
+            <foreach collection="excludeIds" item="eid" open="(" separator="," close=")">
+                #{eid}
+            </foreach>
+        </if>
+        <if test="keywords != null and keywords.size() > 0">
+            AND (
+            <foreach collection="keywords" item="kw" separator=" OR ">
+                (title LIKE CONCAT('%', #{kw}, '%')
+                OR summary LIKE CONCAT('%', #{kw}, '%')
+                OR content LIKE CONCAT('%', #{kw}, '%'))
+            </foreach>
+            )
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectPublishedExcludeIds" resultType="com.blog.personalblogbackend.entity.Article">
+        SELECT id, title, summary, content, cover, category_id AS categoryId, status, view_count AS viewCount,
+               create_time AS createTime, update_time AS updateTime,
+               freshness_status AS freshnessStatus, freshness_checked_at AS freshnessCheckedAt,
+               seo_title AS seoTitle, seo_description AS seoDescription
+        FROM article
+        WHERE status = 1
+        <if test="excludeIds != null and excludeIds.size() > 0">
+            AND id NOT IN
+            <foreach collection="excludeIds" item="eid" open="(" separator="," close=")">
+                #{eid}
+            </foreach>
         </if>
         ORDER BY create_time DESC
         LIMIT #{limit}

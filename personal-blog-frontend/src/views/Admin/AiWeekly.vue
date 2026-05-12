@@ -96,7 +96,7 @@ async function run() {
   color: #fff;
   background: var(--gradient-cta);
   font-family: inherit;
-  box-shadow: 0 8px 22px rgba(79, 70, 229, 0.32);
+  box-shadow: var(--shadow-card-accent);
 }
 
 .weekly-run:disabled {

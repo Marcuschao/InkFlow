@@ -15,6 +15,14 @@ function unwrapText(payload) {
   return '';
 }
 
+function unwrapList(res) {
+  const d = res.data;
+  if (Array.isArray(d)) return d;
+  if (d && Array.isArray(d.articles)) return d.articles;
+  if (d && Array.isArray(d.items)) return d.items;
+  return [];
+}
+
 export function agentEditorOutline(body) {
   return request({
     url: '/agent/editor/outline',
@@ -77,13 +85,25 @@ export function agentRecommend(articleId) {
     method: 'get',
     params: { articleId },
     timeout: AGENT_TIMEOUT,
-  }).then((res) => {
-    const d = res.data;
-    if (Array.isArray(d)) return d;
-    if (d && Array.isArray(d.articles)) return d.articles;
-    if (d && Array.isArray(d.items)) return d.items;
-    return [];
-  });
+  }).then((res) => unwrapList(res));
+}
+
+export function agentRecommendContext(payload) {
+  return request({
+    url: '/agent/recommend/context',
+    method: 'post',
+    data: payload,
+    timeout: AGENT_TIMEOUT,
+  }).then((res) => unwrapList(res));
+}
+
+export function agentRecommendHome(payload) {
+  return request({
+    url: '/agent/recommend/home',
+    method: 'post',
+    data: payload || {},
+    timeout: AGENT_TIMEOUT,
+  }).then((res) => unwrapList(res));
 }
 
 export function agentWeeklyReport(body) {
@@ -108,14 +128,20 @@ function chatRequestBody(questionPayload) {
   const question =
     typeof questionPayload === 'string'
       ? questionPayload
-      : questionPayload?.question ??
-        buildAgentChatQuestion(questionPayload?.messages);
+      : questionPayload?.question ?? buildAgentChatQuestion(questionPayload?.messages);
   const rawId = questionPayload?.articleId;
   const articleId =
-    rawId != null && rawId !== '' && Number.isFinite(Number(rawId))
-      ? Number(rawId)
-      : undefined;
+    rawId != null && rawId !== '' && Number.isFinite(Number(rawId)) ? Number(rawId) : undefined;
   return articleId != null ? { question, articleId } : { question };
+}
+
+export function agentChatFull(questionPayload) {
+  return request({
+    url: '/agent/chat',
+    method: 'post',
+    data: chatRequestBody(questionPayload),
+    timeout: AGENT_TIMEOUT,
+  }).then((res) => res.data);
 }
 
 export function agentChat(questionPayload) {

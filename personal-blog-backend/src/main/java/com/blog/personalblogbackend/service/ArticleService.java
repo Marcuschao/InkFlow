@@ -1,9 +1,10 @@
 package com.blog.personalblogbackend.service;
 
+import com.blog.personalblogbackend.dto.ArticlePageQuery;
+import com.blog.personalblogbackend.dto.ArticleVO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.blog.personalblogbackend.entity.Article;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.blog.personalblogbackend.dto.ArticlePageQuery;
 
 import java.util.List;
 
@@ -22,6 +23,12 @@ public interface ArticleService extends IService<Article> {
      * @return 文章实体
      */
     Article getArticleDetail(Long id);
+
+    ArticleVO getArticleVo(Long id, String lang);
+
+    Long duplicateArticleAsDraft(Long sourceArticleId);
+
+    void generateSeoByAi(Long articleId);
 
     /**
      * 创建文章，并处理文章-标签关联

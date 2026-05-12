@@ -216,12 +216,12 @@ onUnmounted(() => {
 }
 
 .markdown-prose :deep(blockquote) {
-  border-left: 4px solid rgba(79, 70, 229, 0.45);
+  border-left: 4px solid var(--border-focus-input);
   padding: 0.65rem 1rem 0.65rem 1.15rem;
   margin: 1.15em 0;
   background: linear-gradient(
     90deg,
-    rgba(79, 70, 229, 0.06),
+    var(--surface-primary-tint),
     rgba(248, 250, 252, 0.4)
   );
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -250,7 +250,7 @@ onUnmounted(() => {
 }
 
 .markdown-prose :deep(th) {
-  background: rgba(79, 70, 229, 0.08);
+  background: var(--surface-primary-misty);
   font-weight: 600;
 }
 

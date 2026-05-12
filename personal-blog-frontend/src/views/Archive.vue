@@ -1,9 +1,9 @@
 <template>
-  <div class="archive-page">
+  <div class="archive-page ds-page">
     <div class="container">
-      <header class="page-hero">
-        <h1 class="page-title">文章归档</h1>
-        <p class="page-sub">按时间浏览全部文章</p>
+      <header class="ds-page-hero">
+        <h1 class="ds-page-title ds-page-title-md">文章归档</h1>
+        <p class="ds-page-sub">按时间浏览全部文章</p>
       </header>
 
       <div v-if="loading" class="timeline-skeleton">
@@ -38,7 +38,7 @@
           </ul>
         </div>
       </div>
-      <div v-else class="no-articles">
+      <div v-else class="no-articles ds-empty-panel">
         <p>暂无归档文章。</p>
       </div>
     </div>
@@ -114,29 +114,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.archive-page {
-  padding: 2.25rem 0 3.75rem;
-}
-
-.page-hero {
-  text-align: center;
-  margin-bottom: 2.5rem;
-}
-
-.page-title {
-  margin: 0;
-  font-size: clamp(2rem, 4.6vw, 2.65rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--color-text);
-}
-
-.page-sub {
-  margin: 0.65rem 0 0;
-  color: var(--color-text-muted);
-  font-size: 1rem;
-}
-
 .timeline-skeleton {
   max-width: 720px;
   margin: 0 auto;
@@ -217,7 +194,7 @@ onMounted(() => {
   height: 16px;
   border-radius: var(--radius-pill);
   background: var(--gradient-cta);
-  box-shadow: 0 0 0 4px var(--color-page), 0 4px 14px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 0 0 4px var(--color-page), var(--shadow-accent-dot);
   flex-shrink: 0;
 }
 
@@ -249,7 +226,7 @@ onMounted(() => {
 }
 
 .month-count {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-soft);
   background: var(--color-primary-soft);
@@ -282,7 +259,7 @@ onMounted(() => {
 .article-row:hover {
   transform: translateX(6px);
   box-shadow: var(--shadow-hover);
-  border-color: rgba(79, 70, 229, 0.18);
+  border-color: var(--border-accent-faint);
 }
 
 .article-row a {
@@ -298,19 +275,13 @@ onMounted(() => {
 }
 
 .article-date {
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   color: var(--color-text-soft);
   font-variant-numeric: tabular-nums;
 }
 
-.no-articles {
-  text-align: center;
-  padding: 3rem 1.5rem;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  color: var(--color-text-muted);
+.no-articles p {
+  margin: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

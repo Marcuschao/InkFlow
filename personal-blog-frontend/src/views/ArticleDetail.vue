@@ -1,5 +1,5 @@
 <template>
-  <div class="article-detail-page">
+  <div class="article-detail-page ds-page">
     <div class="container article-grid">
       <div v-if="loading" class="detail-skeleton">
         <div class="ui-skeleton sk-head" />
@@ -11,6 +11,31 @@
       <template v-else>
         <div class="article-main-stack">
           <article v-if="articleStore.currentArticle" class="article-content">
+            <nav class="lang-bar" aria-label="语言切换">
+              <router-link
+                class="lang-pill"
+                :class="{ 'lang-on': !route.query.lang }"
+                :to="{ name: 'ArticleDetail', params: { id: route.params.id } }"
+              >原文</router-link>
+              <router-link
+                class="lang-pill"
+                :class="{ 'lang-on': route.query.lang === 'en' }"
+                :to="{ name: 'ArticleDetail', params: { id: route.params.id }, query: { lang: 'en' } }"
+              >EN</router-link>
+              <router-link
+                class="lang-pill"
+                :class="{ 'lang-on': route.query.lang === 'ja' }"
+                :to="{ name: 'ArticleDetail', params: { id: route.params.id }, query: { lang: 'ja' } }"
+              >JA</router-link>
+              <router-link
+                class="lang-pill"
+                :class="{ 'lang-on': route.query.lang === 'ko' }"
+                :to="{ name: 'ArticleDetail', params: { id: route.params.id }, query: { lang: 'ko' } }"
+              >KO</router-link>
+            </nav>
+            <p v-if="articleStore.currentArticle.translationActive" class="trans-hint">
+              当前为译文 · {{ (articleStore.currentArticle.viewingLocale || '').toUpperCase() }}
+            </p>
             <h1 class="article-title">{{ articleStore.currentArticle.title }}</h1>
             <div class="article-meta">
               <span class="meta-date">
@@ -58,6 +83,7 @@
                 v-for="item in recommendArticles"
                 :key="item.id"
                 :article="item"
+                :reason="item.reason"
               />
             </div>
             <p v-else class="ai-recommend-empty">暂无推荐</p>
@@ -90,15 +116,50 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useHead } from '@vueuse/head';
 import { useArticleStore } from '../stores/article';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import ArticleCard from '../components/ArticleCard.vue';
-import { agentRecommend } from '../api/agent';
+import { agentRecommendContext } from '../api/agent';
+import { usePageViewArticle } from '../composables/usePageView';
+import { useReadingHistory } from '../composables/useReadingHistory';
 
 const route = useRoute();
 const articleStore = useArticleStore();
+const { recordVisit, updateProgress, getRecentArticleIds } = useReadingHistory();
+usePageViewArticle(() => articleStore.currentArticle?.id);
+
+useHead(() => {
+  const a = articleStore.currentArticle;
+  const title = a ? `${a.seoTitle || a.title || '文章'} · 博客` : '博客';
+  const desc = (a?.seoDescription || a?.summary || '').slice(0, 160);
+  return {
+    title,
+    meta: [
+      { name: 'description', content: desc },
+      { property: 'og:title', content: (a?.seoTitle || a?.title || '').slice(0, 120) },
+      {
+        property: 'og:description',
+        content: (a?.seoDescription || a?.summary || '').slice(0, 220),
+      },
+    ],
+  };
+});
+
+let scrollTimer = null;
+function onReadingScroll() {
+  const id = Number(route.params.id);
+  if (!Number.isFinite(id) || !articleStore.currentArticle) return;
+  const doc = document.documentElement;
+  const max = doc.scrollHeight - doc.clientHeight;
+  const st = window.scrollY || doc.scrollTop || 0;
+  const pct = max <= 0 ? 100 : Math.round((st / max) * 100);
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => updateProgress(id, pct), 450);
+}
+
 const headings = ref([]);
 const loading = ref(false);
 const activeTocId = ref('');
@@ -180,25 +241,31 @@ function normalizeRecommendItem(raw, idx) {
     createTime: raw.createTime || raw.createdAt,
     createdAt: raw.createdAt || raw.createTime,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
+    reason: raw.reason || '',
   };
 }
 
 watch(
-  () => route.params.id,
-  async (newId) => {
+  () => ({ id: route.params.id, lang: route.query.lang }),
+  async ({ id: newId, lang }) => {
     headings.value = [];
     activeTocId.value = '';
     recommendArticles.value = [];
     recommendError.value = '';
     teardownObserver();
     if (!newId) return;
+    const langParam =
+      typeof lang === 'string' && lang.trim() ? String(lang).trim().toLowerCase() : undefined;
     loading.value = true;
-    await articleStore.fetchArticleDetail(newId);
+    await articleStore.fetchArticleDetail(String(newId), langParam);
     loading.value = false;
     if (articleStore.currentArticle) {
+      recordVisit(articleStore.currentArticle);
       recommendLoading.value = true;
       try {
-        const list = await agentRecommend(String(newId));
+        const rid = Number(newId);
+        const recent = getRecentArticleIds(24).filter((x) => x !== rid);
+        const list = await agentRecommendContext({ articleId: rid, recentArticleIds: recent });
         recommendArticles.value = list
           .slice(0, 3)
           .map(normalizeRecommendItem)
@@ -215,16 +282,18 @@ watch(
   { immediate: true }
 );
 
+onMounted(() => {
+  window.addEventListener('scroll', onReadingScroll, { passive: true });
+});
+
 onUnmounted(() => {
   teardownObserver();
+  window.removeEventListener('scroll', onReadingScroll);
+  if (scrollTimer) clearTimeout(scrollTimer);
 });
 </script>
 
 <style scoped>
-.article-detail-page {
-  padding: 2.25rem 0 3.5rem;
-}
-
 .detail-skeleton {
   max-width: 44rem;
   margin: 0 auto;
@@ -303,6 +372,46 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-md);
+}
+
+.lang-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.lang-pill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  background: rgba(248, 250, 252, 0.85);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.lang-pill:hover {
+  border-color: var(--border-accent-strong);
+  color: var(--color-primary);
+}
+
+.lang-pill.lang-on {
+  border-color: transparent;
+  color: #fff;
+  background: var(--gradient-cta);
+}
+
+.trans-hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.78rem;
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .article-title {

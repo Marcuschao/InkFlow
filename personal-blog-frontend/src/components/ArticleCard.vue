@@ -3,6 +3,7 @@
     <span class="card-accent" aria-hidden="true" />
     <div class="card-body">
       <h3 class="title">{{ article.title }}</h3>
+      <p v-if="reasonLine" class="reason">{{ reasonLine }}</p>
       <p class="excerpt">{{ excerpt }}</p>
       <div class="meta">
         <time>{{ formatDate(article.createTime || article.createdAt) }}</time>
@@ -22,6 +23,12 @@ import { computed } from 'vue';
 
 const props = defineProps({
   article: { type: Object, required: true },
+  reason: { type: String, default: '' },
+});
+
+const reasonLine = computed(() => {
+  const r = (props.reason || props.article.reason || '').trim();
+  return r;
 });
 
 const excerpt = computed(() => {
@@ -71,7 +78,7 @@ const formatDate = (dateString) => {
 .article-card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-hover);
-  border-color: rgba(79, 70, 229, 0.2);
+  border-color: var(--border-accent);
 }
 
 .article-card:hover .card-accent {
@@ -83,6 +90,14 @@ const formatDate = (dateString) => {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.reason {
+  margin: -0.35rem 0 0.65rem;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  color: var(--color-primary);
+  line-height: 1.35;
 }
 
 .title {
@@ -131,9 +146,9 @@ const formatDate = (dateString) => {
 }
 
 .read-hint {
-  margin-top: 1rem;
+  margin-top: var(--space-4);
   align-self: flex-start;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-primary);
   opacity: 0;

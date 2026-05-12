@@ -9,10 +9,11 @@ export function getArticles(params) {
   });
 }
 
-export function getArticleDetail(id) {
+export function getArticleDetail(id, lang) {
   return request({
     url: `/articles/${id}`,
     method: 'get',
+    params: lang ? { lang } : {},
   });
 }
 

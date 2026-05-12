@@ -25,10 +25,10 @@ export const useArticleStore = defineStore('article', {
         console.error('Failed to fetch articles:', error);
       }
     },
-    async fetchArticleDetail(id) {
+    async fetchArticleDetail(id, lang) {
       this.currentArticle = null;
       try {
-        const response = await getArticleDetail(id);
+        const response = await getArticleDetail(id, lang);
         this.currentArticle = response.data;
       } catch (error) {
         console.error(`Failed to fetch article ${id}:`, error);

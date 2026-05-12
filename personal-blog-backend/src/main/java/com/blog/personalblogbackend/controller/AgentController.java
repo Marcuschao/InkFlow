@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.controller;
 
+import com.blog.personalblogbackend.audit.Audit;
 import com.blog.personalblogbackend.common.Result;
 import com.blog.personalblogbackend.dto.agent.*;
 import com.blog.personalblogbackend.service.AgentService;
@@ -55,11 +56,13 @@ public class AgentController {
         return Result.success(agentService.tags(request));
     }
 
+    @Audit("AGENT_CHAT")
     @PostMapping("/chat")
     public Result<ChatResponse> chat(@RequestBody ChatRequest request) {
         return Result.success(agentService.chat(request));
     }
 
+    @Audit("AGENT_WEEKLY")
     @PostMapping("/weekly-report")
     public Result<String> weeklyReport(@RequestBody(required = false) WeeklyReportRequest request) {
         if (request == null) {
@@ -71,5 +74,19 @@ public class AgentController {
     @GetMapping("/recommend")
     public Result<List<RecommendArticleDto>> recommend(@RequestParam Long articleId) {
         return Result.success(agentService.recommend(articleId));
+    }
+
+    @PostMapping("/recommend/context")
+    public Result<List<RecommendArticleDto>> recommendContext(@RequestBody RecommendContextRequest request) {
+        if (request == null || request.getArticleId() == null) {
+            return Result.fail(400, "articleId 不能为空");
+        }
+        return Result.success(agentService.recommendWithContext(request.getArticleId(), request.getRecentArticleIds()));
+    }
+
+    @PostMapping("/recommend/home")
+    public Result<List<RecommendArticleDto>> recommendHome(@RequestBody(required = false) RecommendHomeRequest request) {
+        List<Long> ids = request != null ? request.getRecentArticleIds() : null;
+        return Result.success(agentService.recommendHome(ids));
     }
 }
