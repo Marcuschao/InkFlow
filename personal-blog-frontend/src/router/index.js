@@ -34,6 +34,11 @@ const routes = [
     component: () => import('../views/ReadingHistory.vue'),
   },
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+  },
+  {
     path: '/admin/translations',
     name: 'AdminTranslations',
     component: () => import('../views/Admin/AdminTranslations.vue'),
