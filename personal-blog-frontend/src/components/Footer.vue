@@ -97,6 +97,12 @@ onUnmounted(() => {
   position: relative;
 }
 
+@media (max-width: 1023px) {
+  .footer {
+    margin-bottom: calc(25px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .footer-inner {
   text-align: center;
   position: relative;
@@ -115,9 +121,12 @@ onUnmounted(() => {
   font-weight: 650;
   color: var(--color-primary);
   text-decoration: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
 }
 
 .footer-link:hover {
+  color: var(--color-primary-hover);
   text-decoration: underline;
 }
 
@@ -141,7 +150,7 @@ onUnmounted(() => {
 
 .sub-msg {
   font-size: 0.78rem;
-  color: #b91c1c;
+  color: var(--color-danger);
   margin-bottom: 0.5rem;
 }
 

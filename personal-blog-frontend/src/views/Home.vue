@@ -58,22 +58,27 @@
       />
       </div>
 
-      <aside v-if="authStore.isLoggedIn" class="home-aside" aria-label="猜你喜欢">
+      <aside class="home-aside" aria-label="猜你喜欢">
         <div class="aside-card">
           <h2 class="aside-title">猜你喜欢</h2>
-          <div v-if="recLoading" class="rec-skel">
-            <div v-for="n in 4" :key="'rsk-' + n" class="rec-skel-row ui-skeleton" />
-          </div>
-          <div v-else-if="!recItems.length" class="aside-empty">暂无推荐</div>
-          <div v-else class="rec-list">
-            <ArticleCard
-              v-for="(item, ix) in recItems"
-              :key="item.id + '-' + ix"
-              class="rec-card"
-              :article="normalizeRecArticle(item)"
-              :reason="item.reason"
-            />
-          </div>
+          <template v-if="!authStore.isLoggedIn">
+            <p class="aside-login-hint">请先登录</p>
+          </template>
+          <template v-else>
+            <div v-if="recLoading" class="rec-skel">
+              <div v-for="n in 4" :key="'rsk-' + n" class="rec-skel-row ui-skeleton" />
+            </div>
+            <div v-else-if="!recItems.length" class="aside-empty">暂无推荐</div>
+            <div v-else class="rec-list">
+              <ArticleCard
+                v-for="(item, ix) in recItems"
+                :key="item.id + '-' + ix"
+                class="rec-card"
+                :article="normalizeRecArticle(item)"
+                :reason="item.reason"
+              />
+            </div>
+          </template>
         </div>
       </aside>
     </div>
@@ -200,7 +205,7 @@ watch(
 
 .home-aside {
   position: sticky;
-  top: calc(var(--nav-height) + var(--space-4));
+  top: calc(var(--layout-navbar-bottom) + var(--space-4));
 }
 
 .aside-card {
@@ -249,6 +254,12 @@ watch(
 }
 
 .aside-empty {
+  font-size: var(--text-88);
+  color: var(--color-text-muted);
+}
+
+.aside-login-hint {
+  margin: 0;
   font-size: var(--text-88);
   color: var(--color-text-muted);
 }
@@ -303,7 +314,7 @@ watch(
 
 .home-list-err {
   text-align: center;
-  color: #b91c1c;
+  color: var(--color-danger);
   margin-bottom: 1rem;
 }
 

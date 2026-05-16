@@ -1,5 +1,5 @@
 <template>
-  <div class="diary-list-page ds-page">
+  <div class="diary-list-page admin-page">
     <div class="container">
       <header class="list-head ds-admin-header">
         <div>
@@ -155,10 +155,6 @@ onMounted(load);
 </script>
 
 <style scoped>
-.list-head {
-  margin-bottom: var(--space-6);
-}
-
 .head-actions {
   display: flex;
   flex-wrap: wrap;
@@ -198,8 +194,10 @@ onMounted(load);
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   cursor: pointer;
   font-weight: var(--weight-semibold);
 }

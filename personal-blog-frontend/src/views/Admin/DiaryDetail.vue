@@ -1,5 +1,5 @@
 <template>
-  <div class="diary-detail-page ds-page">
+  <div class="diary-detail-page admin-page">
     <div class="container narrow">
       <p v-if="loading" class="muted">加载中…</p>
       <p v-else-if="err" class="err">{{ err }}</p>

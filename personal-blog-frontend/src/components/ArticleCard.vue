@@ -58,6 +58,7 @@ const formatDate = (dateString) => {
   box-shadow: var(--shadow-xs);
   text-decoration: none;
   color: inherit;
+  cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast),
     border-color var(--transition-fast);
   height: 100%;

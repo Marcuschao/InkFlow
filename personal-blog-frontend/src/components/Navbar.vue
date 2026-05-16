@@ -102,11 +102,19 @@ onUnmounted(() => {
 <style scoped>
 .navbar {
   position: fixed;
-  top: 0;
+  top: var(--layout-navbar-top);
   left: 0;
   right: 0;
   z-index: var(--z-nav);
   transition: transform var(--transition-smooth), box-shadow var(--transition-fast);
+}
+
+@media (min-width: 1024px) {
+  .navbar {
+    left: var(--nav-float-gap);
+    right: var(--nav-float-gap);
+    width: auto;
+  }
 }
 
 .navbar.nav-hidden:not(.navbar-menu-open) {
@@ -134,6 +142,15 @@ onUnmounted(() => {
     min-height var(--transition-fast);
 }
 
+@media (min-width: 1024px) {
+  .nav-inner {
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+}
+
 .navbar.scrolled .nav-inner {
   min-height: 3.5rem;
 }
@@ -146,10 +163,10 @@ onUnmounted(() => {
 }
 
 .logo {
-  font-family: var(--font-ui);
+  font-family: var(--font-display), var(--font-ui);
   font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -0.02em;
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
   text-decoration: none;
   color: var(--color-text);
   transition: color var(--transition-fast);
@@ -220,6 +237,7 @@ onUnmounted(() => {
   font-size: 0.92rem;
   font-weight: 500;
   border-radius: var(--radius-pill);
+  cursor: pointer;
   transition: color var(--transition-fast), background var(--transition-fast);
 }
 
@@ -258,7 +276,7 @@ onUnmounted(() => {
 .nav-backdrop {
   position: fixed;
   inset: 0;
-  top: var(--nav-height);
+  top: var(--layout-navbar-bottom);
   z-index: var(--z-nav-backdrop);
   background: var(--color-overlay-nav);
   backdrop-filter: blur(4px);

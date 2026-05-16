@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Quicksand:wght@400;500;600;700&display=swap');
 @import './tokens.css';
 
 *,
@@ -12,8 +12,26 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  scroll-padding-top: 5.75rem;
   min-height: 100%;
-  background-color: #faf7f2;
+  background-color: var(--color-page);
+}
+
+@media (min-width: 1024px) {
+  html {
+    scroll-padding-top: calc(
+      env(safe-area-inset-top, 0px) + var(--nav-float-gap) + var(--nav-height) + var(--nav-float-gap)
+    );
+  }
+}
+
+@media (max-width: 1023px) {
+  html {
+    scroll-padding-top: calc(
+      env(safe-area-inset-top, 0px) + var(--nav-float-gap) + var(--nav-height) + var(--nav-float-gap) +
+        var(--space-5)
+    );
+  }
 }
 
 body::before {
@@ -22,15 +40,19 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-color: #faf7f2;
+  background-color: var(--color-page);
   background-image:
-    radial-gradient(ellipse 88% 72% at 10% 14%, rgba(249, 168, 112, 0.42), transparent 54%),
-    radial-gradient(ellipse 72% 58% at 92% 10%, rgba(214, 184, 121, 0.38), transparent 50%),
-    radial-gradient(ellipse 78% 72% at 74% 88%, rgba(134, 168, 138, 0.32), transparent 56%),
-    radial-gradient(ellipse 52% 48% at 6% 82%, rgba(232, 165, 152, 0.26), transparent 52%);
-  background-size: 125% 125%, 118% 118%, 130% 130%, 112% 112%;
-  background-position: 0% 0%, 100% 0%, 72% 100%, 0% 100%;
-  animation: ambient-drift 42s ease-in-out infinite alternate;
+    radial-gradient(ellipse 100% 70% at 50% -15%, rgba(37, 99, 235, 0.07), transparent 52%),
+    radial-gradient(ellipse 55% 45% at 100% 100%, rgba(63, 63, 70, 0.04), transparent 55%),
+    linear-gradient(rgba(24, 24, 27, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24, 24, 27, 0.04) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    32px 32px,
+    32px 32px;
+  background-position: 0 0, 0 0, 0 0, 0 0;
+  animation: ambient-drift 56s ease-in-out infinite alternate;
 }
 
 body::after {
@@ -45,10 +67,10 @@ body::after {
 
 @keyframes ambient-drift {
   0% {
-    background-position: 0% 0%, 100% 0%, 72% 100%, 0% 100%;
+    background-position: 0 0, 0 0, 0 0, 0 0;
   }
   100% {
-    background-position: 20% 16%, 78% 24%, 58% 84%, 14% 76%;
+    background-position: 0 8%, -4% 4%, 12px 12px, 12px 12px;
   }
 }
 
@@ -61,6 +83,27 @@ body::after {
 #app {
   position: relative;
   z-index: 0;
+}
+
+main.main-content {
+  padding-top: 5.75rem;
+}
+
+@media (min-width: 1024px) {
+  main.main-content {
+    padding-top: calc(
+      env(safe-area-inset-top, 0px) + var(--nav-float-gap) + var(--nav-height) + var(--nav-float-gap)
+    );
+  }
+}
+
+@media (max-width: 1023px) {
+  main.main-content {
+    padding-top: calc(
+      env(safe-area-inset-top, 0px) + var(--nav-float-gap) + var(--nav-height) + var(--nav-float-gap) +
+        var(--space-5)
+    );
+  }
 }
 
 @media (min-width: 768px) {
@@ -129,6 +172,12 @@ body {
   color: var(--color-text);
 }
 
+@media (max-width: 1023px) {
+  .ds-page-title {
+    margin-top: 40px;
+  }
+}
+
 .ds-page-title-lg {
   font-size: var(--text-display);
 }
@@ -186,7 +235,7 @@ body {
 
 .ds-btn--primary:hover:not(:disabled) {
   transform: none;
-  background: var(--color-admin-hover);
+  background: var(--color-primary-hover);
   filter: none;
 }
 
@@ -279,28 +328,98 @@ body {
   background: var(--color-surface);
 }
 
+.admin-page {
+  padding: 2.25rem 0 3.5rem;
+  width: 100%;
+}
+
+.admin-link-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 1.1rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  text-decoration: none;
+  font-weight: var(--weight-semibold);
+  font-size: 0.88rem;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.admin-link-btn:hover {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: var(--color-border-strong);
+}
+
+.admin-type-badge {
+  font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
 .ds-admin-header {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-5);
-  margin-bottom: var(--space-8);
-  position: sticky;
-  top: var(--nav-height);
-  z-index: var(--z-admin-sticky);
-  padding: var(--space-4) 0 var(--space-3);
-  margin-top: calc(var(--space-1) * -1);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 8px 24px rgba(41, 37, 36, 0.06);
+  margin-bottom: 1.5rem;
+  position: static;
+  top: auto;
+  z-index: auto;
+  padding: 0;
+  margin-top: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.ds-admin-header .ds-page-title {
+  margin: 0;
+  font-size: clamp(1.85rem, 4vw, 2.2rem);
+  font-weight: var(--weight-bold);
+}
+
+.ds-admin-header .ds-page-sub {
+  margin: 0.35rem 0 0;
+}
+
+.ds-admin-header .dash-actions,
+.ds-admin-header .head-actions,
+.ds-admin-header .fresh-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--admin-header-gap);
+  align-items: center;
+}
+
+.ds-admin-header .ds-btn.ds-btn--secondary.ds-btn--pill {
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+.ds-admin-header .ds-btn.ds-btn--secondary.ds-btn--pill:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: var(--color-border-strong);
 }
 
 .ds-table-shell {
-  background: var(--color-surface);
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -322,7 +441,7 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-soft);
-  background: var(--surface-muted);
+  background: var(--admin-thead-bg);
 }
 
 .ds-table-shell tbody tr {
@@ -330,11 +449,25 @@ body {
 }
 
 .ds-table-shell tbody tr:hover {
-  background: rgba(180, 83, 9, 0.04);
+  background: rgba(255, 255, 255, 0.32);
 }
 
 .ds-table-shell tbody tr:last-child td {
   border-bottom: none;
+}
+
+.admin-page .ds-empty-panel {
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: none;
+}
+
+.admin-page .ds-surface-card {
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: none;
 }
 
 .ds-tag-row {
@@ -404,9 +537,12 @@ body {
   color: var(--color-primary);
   font-weight: var(--weight-semibold);
   text-decoration: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
 }
 
 .ds-link-inline:hover {
+  color: var(--color-primary-hover);
   text-decoration: underline;
 }
 
@@ -426,7 +562,7 @@ body {
   padding: 0.7rem;
   border-radius: var(--radius-md);
   background: var(--color-danger-soft);
-  color: #b91c1c;
+  color: var(--color-danger);
   font-size: var(--text-88);
   font-weight: var(--weight-medium);
 }
@@ -435,7 +571,7 @@ body {
   width: 0.9rem;
   height: 0.9rem;
   border-radius: 50%;
-  border: 2px solid rgba(180, 83, 9, 0.22);
+  border: 2px solid rgba(37, 99, 235, 0.22);
   border-top-color: var(--color-primary);
   animation: spin 0.72s linear infinite;
 }
@@ -540,7 +676,7 @@ body {
 
   .ui-skeleton {
     animation: none;
-    background: rgba(214, 203, 192, 0.45);
+    background: rgba(212, 212, 216, 0.55);
   }
 
   .ds-spin,

@@ -1,9 +1,12 @@
 <template>
-  <div class="article-editor-page ds-page">
+  <div class="article-editor-page admin-page">
     <div class="container editor-shell">
-      <header class="editor-hero ds-page-hero">
-        <h1 class="ds-page-title">{{ isEditMode ? '编辑文章' : '新建文章' }}</h1>
-        <p class="ds-page-sub">支持 Markdown，提交后将在后台列表中显示</p>
+      <header class="editor-head ds-admin-header">
+        <div>
+          <h1 class="ds-page-title">{{ isEditMode ? '编辑文章' : '新建文章' }}</h1>
+          <p class="ds-page-sub">支持 Markdown，提交后将在后台列表中显示</p>
+        </div>
+        <router-link to="/admin" class="admin-link-btn">返回管理</router-link>
       </header>
 
       <div v-if="isEditMode" class="lang-tabs">
@@ -167,6 +170,7 @@ import {
   articleSeoAi,
 } from '../../api/translation';
 import ArticleAiSidebar from './ArticleAiSidebar.vue';
+import { useToastStore } from '../../stores/toast';
 
 const langTabs = [
   { key: 'zh', label: '原文' },
@@ -188,6 +192,7 @@ function emptyTrans() {
 
 const route = useRoute();
 const router = useRouter();
+const toastStore = useToastStore();
 
 const contentRef = ref(null);
 
@@ -253,9 +258,11 @@ function applyAiResult({ mode, text }) {
     const start = ctx.selectionStart;
     const end = ctx.selectionEnd;
     if (start === end && el) {
+      toastStore.push('请先选中要替换的文本', 'error');
       return;
     }
     article.value.content = c.slice(0, start) + text + c.slice(end);
+    toastStore.push('已替换选中文本', 'success');
     nextTick(() => {
       if (!el) return;
       el.focus();
@@ -267,6 +274,7 @@ function applyAiResult({ mode, text }) {
   const insertAt = el ? el.selectionStart : c.length;
   const safeAt = typeof insertAt === 'number' ? insertAt : c.length;
   article.value.content = c.slice(0, safeAt) + text + c.slice(safeAt);
+  toastStore.push('已插入到光标处', 'success');
   nextTick(() => {
     if (!el) return;
     el.focus();

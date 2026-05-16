@@ -94,6 +94,7 @@ export function agentRecommendContext(payload) {
     method: 'post',
     data: payload,
     timeout: AGENT_TIMEOUT,
+    skipErrorToast: true,
   }).then((res) => unwrapList(res));
 }
 
@@ -103,6 +104,7 @@ export function agentRecommendHome(payload) {
     method: 'post',
     data: payload || {},
     timeout: AGENT_TIMEOUT,
+    skipErrorToast: true,
   }).then((res) => unwrapList(res));
 }
 

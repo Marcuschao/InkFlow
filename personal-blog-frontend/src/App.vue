@@ -51,7 +51,6 @@ onUnmounted(() => {
 
 .main-content {
   flex: 1;
-  padding-top: var(--nav-height);
   width: 100%;
 }
 

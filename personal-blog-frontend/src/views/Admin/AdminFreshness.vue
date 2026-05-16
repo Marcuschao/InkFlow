@@ -1,5 +1,5 @@
 <template>
-  <div class="fresh-page ds-page">
+  <div class="fresh-page admin-page">
     <div class="container">
       <header class="fresh-head ds-admin-header">
         <div>
@@ -174,10 +174,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.fresh-head.ds-admin-header {
-  margin-bottom: var(--space-5);
-}
-
 .fresh-head-actions {
   display: flex;
   flex-wrap: wrap;
@@ -210,13 +206,13 @@ onMounted(async () => {
 }
 
 .chip.warn {
-  background: rgba(245, 158, 11, 0.18);
-  color: #b45309;
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
 }
 
 .chip.bad {
   background: rgba(239, 68, 68, 0.15);
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .last {
@@ -247,8 +243,10 @@ onMounted(async () => {
   margin-bottom: var(--space-5);
   padding: var(--space-4) 1.15rem;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-accent-muted);
-  background: var(--surface-primary-tint);
+  border: 1px solid var(--color-border);
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .draft-h {
@@ -338,7 +336,7 @@ th {
 }
 
 .err {
-  color: #b91c1c;
+  color: var(--color-danger);
   margin-top: 0.75rem;
 }
 </style>

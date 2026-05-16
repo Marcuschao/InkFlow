@@ -144,7 +144,7 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - var(--nav-height) - 140px);
+  min-height: calc(100vh - var(--layout-main-pad-top) - 140px);
   padding: 2.5rem 0;
   overflow: hidden;
 }
@@ -153,8 +153,8 @@ const handleLogin = async () => {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 55% at 20% 30%, rgba(99, 102, 241, 0.14), transparent),
-    radial-gradient(ellipse 60% 45% at 85% 65%, rgba(168, 85, 247, 0.11), transparent);
+    radial-gradient(ellipse 70% 55% at 20% 30%, rgba(37, 99, 235, 0.14), transparent),
+    radial-gradient(ellipse 60% 45% at 85% 65%, rgba(63, 63, 70, 0.08), transparent);
   pointer-events: none;
 }
 
@@ -184,8 +184,8 @@ const handleLogin = async () => {
   border-radius: inherit;
   background: linear-gradient(
     135deg,
-    rgba(99, 102, 241, 0.35),
-    rgba(168, 85, 247, 0.12),
+    rgba(37, 99, 235, 0.35),
+    rgba(63, 63, 70, 0.12),
     transparent 55%
   );
   opacity: 0.45;

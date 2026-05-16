@@ -26,6 +26,7 @@ service.interceptors.response.use(
         const err = new Error(data.message || 'Error');
         err.code = data.code;
         err.payload = data.data;
+        err.responseStatus = response.status;
         if (!response.config?.skipErrorToast) {
           try {
             useToastStore().push(err.message, 'error');
@@ -62,6 +63,9 @@ service.interceptors.response.use(
       err = new Error(error.message || '未授权');
     } else {
       err = new Error(error.message || '网络异常');
+    }
+    if (res?.status != null) {
+      err.responseStatus = res.status;
     }
     if (!cfg.skipErrorToast) {
       try {

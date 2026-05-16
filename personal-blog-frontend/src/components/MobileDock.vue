@@ -36,10 +36,14 @@
     color: var(--color-text-muted);
     text-decoration: none;
     padding: 0.35rem 0.15rem;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast), background var(--transition-fast);
   }
 
   .dock-link.router-link-active {
     color: var(--color-primary);
+    background: var(--surface-primary-tint);
   }
 }
 </style>

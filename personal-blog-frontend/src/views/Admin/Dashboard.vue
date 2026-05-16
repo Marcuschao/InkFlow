@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-dashboard-page ds-page">
+  <div class="admin-dashboard-page admin-page">
     <div class="container">
       <header class="dash-header ds-admin-header">
         <div>
@@ -97,12 +97,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dash-header.ds-admin-header {
-  background: transparent;
-  box-shadow: none;
-  border-bottom: 1px solid var(--color-border);
-}
-
 .dash-actions {
   display: flex;
   flex-wrap: wrap;
@@ -149,15 +143,6 @@ onMounted(() => {
 @media (max-width: 768px) {
   .article-management-list {
     overflow-x: auto;
-  }
-
-  .dash-header.ds-admin-header {
-    position: sticky;
-    top: var(--nav-height);
-    z-index: var(--z-admin-sticky);
-    background: transparent;
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: none;
   }
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-site-page ds-page">
+  <div class="admin-site-page admin-page">
     <div class="container">
       <header class="dash-header ds-admin-header">
         <div>
@@ -101,7 +101,7 @@ async function save() {
 }
 
 .err {
-  color: #b91c1c;
+  color: var(--color-danger);
   font-size: 0.88rem;
   margin-bottom: 0.75rem;
 }

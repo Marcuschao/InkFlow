@@ -1,15 +1,15 @@
 <template>
-  <div class="stats-dash-page">
+  <div class="admin-page">
     <div class="container">
-      <header class="dash-header">
+      <header class="dash-header ds-admin-header">
         <div>
-          <h1 class="page-title">数据看板</h1>
-          <p class="page-sub">PV、热门内容与模型调用概览</p>
+          <h1 class="ds-page-title">数据看板</h1>
+          <p class="ds-page-sub">PV、热门内容与模型调用概览</p>
         </div>
         <div class="dash-actions">
-          <router-link to="/admin" class="link-btn">文章管理</router-link>
-          <router-link to="/admin/logs" class="link-btn">操作日志</router-link>
-          <button type="button" class="primary-btn" :disabled="weeklyLoading" @click="openWeekly">
+          <router-link to="/admin" class="admin-link-btn">文章管理</router-link>
+          <router-link to="/admin/logs" class="admin-link-btn">操作日志</router-link>
+          <button type="button" class="ds-btn ds-btn--primary ds-btn--pill" :disabled="weeklyLoading" @click="openWeekly">
             {{ weeklyLoading ? '生成中…' : '周报' }}
           </button>
         </div>
@@ -219,59 +219,6 @@ async function openWeekly() {
 </script>
 
 <style scoped>
-.stats-dash-page {
-  padding: 2rem 0 3rem;
-}
-
-.dash-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.75rem;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.85rem;
-  font-weight: 700;
-}
-
-.page-sub {
-  margin: 0.35rem 0 0;
-  color: var(--color-text-muted);
-}
-
-.dash-actions {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.link-btn {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  text-decoration: none;
-  color: var(--color-text);
-  font-weight: 600;
-}
-
-.primary-btn {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  font-weight: 650;
-  color: #fff;
-  background: var(--gradient-cta);
-}
-
-.primary-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
 .summary-grid {
   display: grid;
   gap: 1rem;
@@ -280,11 +227,13 @@ async function openWeekly() {
 }
 
 .stat-card {
-  background: var(--color-surface);
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 1rem 1.15rem;
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
 }
 
 .stat-label {
@@ -299,12 +248,14 @@ async function openWeekly() {
 }
 
 .panel {
-  background: var(--color-surface);
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 1.15rem 1.25rem;
   margin-bottom: 1.25rem;
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
 }
 
 .panel-head {
@@ -368,9 +319,18 @@ async function openWeekly() {
 
 .mini-table th,
 .mini-table td {
-  padding: 0.45rem 0.35rem;
+  padding: 0.55rem 0.45rem;
   border-bottom: 1px solid var(--color-border);
   text-align: left;
+}
+
+.mini-table th {
+  background: var(--admin-thead-bg);
+  font-size: 0.76rem;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-soft);
 }
 
 .mini-table .num {
@@ -432,7 +392,7 @@ async function openWeekly() {
 }
 
 .state-msg {
-  color: #b91c1c;
+  color: var(--color-danger);
   margin-bottom: 1rem;
 }
 

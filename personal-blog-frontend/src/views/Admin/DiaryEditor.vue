@@ -1,5 +1,5 @@
 <template>
-  <div class="diary-editor-page ds-page">
+  <div class="diary-editor-page admin-page">
     <div class="container editor-wrap">
       <header class="editor-head ds-admin-header">
         <div>

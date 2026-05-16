@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-comments-page ds-page">
+  <div class="admin-comments-page admin-page">
     <div class="container">
       <header class="dash-header ds-admin-header">
         <div>

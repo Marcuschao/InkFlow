@@ -40,6 +40,10 @@
 <script setup>
 import { ref } from 'vue';
 import { agentEditorContinue, agentEditorOutline, agentEditorPolish } from '../../api/agent';
+import { useToastStore } from '../../stores/toast';
+import { copyTextToClipboard } from '../../utils/clipboard';
+
+const toastStore = useToastStore();
 
 const props = defineProps({
   title: { type: String, default: '' },
@@ -72,6 +76,7 @@ const runOutline = async () => {
       keywords: keywordsMerged(),
       content: ctx.content,
     });
+    toastStore.push('大纲已生成', 'success');
   } catch (e) {
     aiError.value = e?.message || '生成失败';
   } finally {
@@ -91,6 +96,7 @@ const runContinue = async () => {
       selectionStart: ctx.selectionStart,
       selectionEnd: ctx.selectionEnd,
     });
+    toastStore.push('续写完成', 'success');
   } catch (e) {
     aiError.value = e?.message || '续写失败';
   } finally {
@@ -121,6 +127,7 @@ const runPolish = async () => {
       selectionStart: ctx.selectionStart,
       selectionEnd: ctx.selectionEnd,
     });
+    toastStore.push('润色完成', 'success');
   } catch (e) {
     aiError.value = e?.message || '润色失败';
   } finally {
@@ -129,10 +136,12 @@ const runPolish = async () => {
 };
 
 const copyResult = async () => {
-  try {
-    await navigator.clipboard.writeText(resultText.value);
-  } catch {
-    aiError.value = '复制失败';
+  const ok = await copyTextToClipboard(resultText.value);
+  if (ok) {
+    toastStore.push('已复制到剪贴板', 'success');
+    aiError.value = '';
+  } else {
+    toastStore.push('复制失败，请检查浏览器权限或使用 HTTPS', 'error');
   }
 };
 
@@ -280,7 +289,7 @@ const applyReplace = () => {
 .ai-error {
   margin: 0.65rem 0 0;
   font-size: 0.78rem;
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .mini-spin {

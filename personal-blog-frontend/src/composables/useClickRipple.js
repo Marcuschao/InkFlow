@@ -22,7 +22,7 @@ export function mountClickRipple() {
       'border-radius:50%',
       'pointer-events:none',
       'z-index:12500',
-      'background:radial-gradient(circle,rgba(194,65,12,0.38) 0%,rgba(180,83,9,0.12) 42%,transparent 72%)',
+      'background:radial-gradient(circle,rgba(37,99,235,0.38) 0%,rgba(37,99,235,0.12) 42%,transparent 72%)',
       'transform:scale(0.3)',
       `opacity:${prefersReducedMotion ? '0.45' : '1'}`,
       `transition:transform ${prefersReducedMotion ? '0.06s' : '0.52s'} cubic-bezier(0.22,1,0.36,1),opacity ${prefersReducedMotion ? '0.08s' : '0.48s'} ease-out`,

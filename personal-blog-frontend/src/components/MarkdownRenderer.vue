@@ -9,6 +9,7 @@ import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 const props = defineProps({
   markdown: {
@@ -72,18 +73,11 @@ const attachCodeCopyButtons = () => {
     btn.className = 'code-copy-btn';
     btn.textContent = '复制';
     btn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(code.innerText || '');
-        btn.textContent = '已复制';
-        setTimeout(() => {
-          btn.textContent = '复制';
-        }, 1600);
-      } catch {
-        btn.textContent = '失败';
-        setTimeout(() => {
-          btn.textContent = '复制';
-        }, 1600);
-      }
+      const ok = await copyTextToClipboard(code.innerText || '');
+      btn.textContent = ok ? '已复制' : '失败';
+      setTimeout(() => {
+        btn.textContent = '复制';
+      }, 1600);
     });
     pre.style.position = 'relative';
     pre.insertBefore(btn, pre.firstChild);

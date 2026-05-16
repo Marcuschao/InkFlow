@@ -186,10 +186,12 @@ import { fetchArticleComments, fetchMathCaptcha, submitComment } from '../api/co
 import { usePageViewArticle } from '../composables/usePageView';
 import { useReadingHistory } from '../composables/useReadingHistory';
 import { useToastStore } from '../stores/toast';
+import { useAuthStore } from '../stores/auth';
 
 const route = useRoute();
 const articleStore = useArticleStore();
 const toastStore = useToastStore();
+const authStore = useAuthStore();
 const { recordVisit, updateProgress, getRecentArticleIds } = useReadingHistory();
 usePageViewArticle(() => articleStore.currentArticle?.id);
 
@@ -428,23 +430,36 @@ watch(
     loading.value = false;
     if (articleStore.currentArticle) {
       recordVisit(articleStore.currentArticle);
-      recommendLoading.value = true;
-      try {
-        const rid = Number(newId);
-        const recent = getRecentArticleIds(24).filter((x) => x !== rid);
-        const list = await agentRecommendContext({ articleId: rid, recentArticleIds: recent });
-        recommendArticles.value = list
-          .slice(0, 3)
-          .map(normalizeRecommendItem)
-          .filter(Boolean);
-      } catch (e) {
-        const status = e?.response?.status;
-        recommendError.value =
-          status === 401 || status === 403 ? loginHintText : e?.message || '推荐加载失败';
-      } finally {
-        recommendLoading.value = false;
-      }
       const rid = Number(newId);
+      if (!authStore.isLoggedIn) {
+        recommendArticles.value = [];
+        recommendError.value = loginHintText;
+        recommendLoading.value = false;
+      } else {
+        recommendLoading.value = true;
+        recommendError.value = '';
+        try {
+          const recent = getRecentArticleIds(24).filter((x) => x !== rid);
+          const list = await agentRecommendContext({ articleId: rid, recentArticleIds: recent });
+          recommendArticles.value = list
+            .slice(0, 3)
+            .map(normalizeRecommendItem)
+            .filter(Boolean);
+        } catch (e) {
+          const status = e?.response?.status ?? e?.responseStatus;
+          const msg = String(e?.message || '');
+          const authDenied =
+            status === 401 ||
+            status === 403 ||
+            e?.code === 401 ||
+            e?.code === 403 ||
+            /\b401\b/.test(msg) ||
+            /\b403\b/.test(msg);
+          recommendError.value = authDenied ? loginHintText : msg || '推荐加载失败';
+        } finally {
+          recommendLoading.value = false;
+        }
+      }
       if (Number.isFinite(rid)) {
         await loadComments(rid);
         await loadCaptcha();
@@ -541,6 +556,7 @@ onUnmounted(() => {
 }
 
 .article-content {
+  margin: 0;
   background: var(--color-surface);
   padding: clamp(1.5rem, 3vw, 2.5rem);
   border-radius: var(--radius-lg);
@@ -659,7 +675,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
   position: sticky;
-  top: calc(var(--nav-height) + 1rem);
+  top: calc(var(--layout-navbar-bottom) + 1rem);
 }
 
 .toc-title {
@@ -786,12 +802,15 @@ onUnmounted(() => {
 .ai-recommend-fail {
   margin: 0;
   font-size: 0.88rem;
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 @media (max-width: 1023px) {
   .sidebar {
     display: none;
+  }
+  .article-content {
+    margin-top: 40px;
   }
 }
 
@@ -803,7 +822,7 @@ onUnmounted(() => {
   height: 3px;
   z-index: 1350;
   transform-origin: left center;
-  background: linear-gradient(90deg, var(--color-primary), #ca8a04);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
   pointer-events: none;
   opacity: 0.95;
 }

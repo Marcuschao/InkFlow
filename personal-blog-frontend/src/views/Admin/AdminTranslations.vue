@@ -1,9 +1,12 @@
 <template>
-  <div class="tr-page ds-page">
+  <div class="tr-page admin-page">
     <div class="container">
-      <header class="ds-page-hero tr-head-tight">
-        <h1 class="ds-page-title">批量翻译</h1>
-        <p class="ds-page-sub">机翻任务 · en / ja / ko</p>
+      <header class="ds-admin-header">
+        <div>
+          <h1 class="ds-page-title">批量翻译</h1>
+          <p class="ds-page-sub">机翻任务 · en / ja / ko</p>
+        </div>
+        <router-link to="/admin" class="admin-link-btn">返回管理</router-link>
       </header>
 
       <div class="panel ds-surface-card">
@@ -101,10 +104,6 @@ onUnmounted(stopPoll);
 </script>
 
 <style scoped>
-.tr-head-tight {
-  margin-bottom: var(--space-8);
-}
-
 .lb-block {
   margin-bottom: var(--space-2);
 }
@@ -123,7 +122,7 @@ onUnmounted(stopPoll);
 .panel {
   padding: var(--space-5) 1.35rem;
   max-width: 560px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .go {
@@ -151,7 +150,9 @@ onUnmounted(stopPoll);
   padding: 1rem 1.15rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  background: rgba(248, 250, 252, 0.85);
+  background: var(--admin-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .job-id {
@@ -169,12 +170,12 @@ onUnmounted(stopPoll);
 
 .job-err {
   margin: 0.5rem 0 0;
-  color: #b91c1c;
+  color: var(--color-danger);
   font-size: 0.85rem;
 }
 
 .err {
   margin-top: 1rem;
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 </style>

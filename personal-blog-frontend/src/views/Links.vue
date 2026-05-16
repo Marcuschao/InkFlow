@@ -57,7 +57,7 @@ onMounted(async () => {
 }
 
 .state-err {
-  color: #b91c1c;
+  color: var(--color-danger);
   margin-bottom: 1rem;
 }
 
