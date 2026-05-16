@@ -11,7 +11,9 @@ import com.blog.personalblogbackend.llm.AiService;
 import com.blog.personalblogbackend.mapper.ArticleMapper;
 import com.blog.personalblogbackend.mapper.ArticleTranslationMapper;
 import com.blog.personalblogbackend.mapper.TagMapper;
+import com.blog.personalblogbackend.revision.RevisionTargetType;
 import com.blog.personalblogbackend.service.ArticleService;
+import com.blog.personalblogbackend.service.ContentRevisionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -45,6 +47,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private ObjectMapper objectMapper;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
+    @Autowired
+    private ContentRevisionService contentRevisionService;
 
     private static boolean isPublished(Integer status) {
         return status != null && status == 1;
@@ -197,6 +201,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         handleArticleTags(article.getId(), tagNames);
         Article fresh = articleMapper.selectById(article.getId());
         fireFirstPublishIfNeeded(null, fresh);
+        List<String> tagNamesAfter = articleMapper.selectTagNamesByArticleId(fresh.getId());
+        contentRevisionService.snapshotArticle(fresh, String.join(",", tagNamesAfter), "创建");
         return true;
     }
 
@@ -204,6 +210,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Transactional
     public boolean updateArticle(Article article, List<String> tagNames) {
         Article previous = articleMapper.selectById(article.getId());
+        if (previous == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        List<String> prevTagNames = articleMapper.selectTagNamesByArticleId(previous.getId());
+        contentRevisionService.snapshotArticle(previous, String.join(",", prevTagNames), "保存");
         // 1. 更新文章
         articleMapper.updateById(article);
 
@@ -218,6 +229,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     @Transactional
     public boolean deleteArticle(Long id) {
+        contentRevisionService.deleteByTarget(RevisionTargetType.ARTICLE, id);
         // 1. 删除文章-标签关联
         articleMapper.deleteArticleTagsByArticleId(id);
         // 2. 删除文章

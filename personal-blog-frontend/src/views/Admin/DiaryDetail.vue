@@ -4,12 +4,14 @@
       <p v-if="loading" class="muted">加载中…</p>
       <p v-else-if="err" class="err">{{ err }}</p>
       <article v-else-if="diary" class="detail-card ds-surface-card">
-        <header class="dh">
-          <h1 class="title">{{ diary.title || '未命名' }}</h1>
-          <div class="meta">
-            <time>{{ diary.diaryDate }}</time>
-            <span v-if="diary.tags" class="tags">{{ diary.tags }}</span>
-            <span v-if="Number(diary.isPublic) === 1" class="pub">公开</span>
+        <header class="dh ds-admin-header ds-admin-header--stack">
+          <div class="dh-inner">
+            <h1 class="ds-page-title">{{ diary.title || '未命名' }}</h1>
+            <div class="meta">
+              <time>{{ diary.diaryDate }}</time>
+              <span v-if="diary.tags" class="tags">{{ diary.tags }}</span>
+              <span v-if="Number(diary.isPublic) === 1" class="pub">公开</span>
+            </div>
           </div>
         </header>
         <div v-if="Number(diary.contentType) === 1" class="body markdown-renderer markdown-prose">
@@ -67,15 +69,6 @@ watch(
 
 .detail-card {
   padding: var(--space-8);
-}
-
-.dh {
-  margin-bottom: var(--space-6);
-}
-
-.title {
-  font-size: var(--text-display-sm);
-  margin: 0 0 var(--space-3);
 }
 
 .meta {

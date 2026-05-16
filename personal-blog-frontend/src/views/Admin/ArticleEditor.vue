@@ -63,6 +63,14 @@
 
             <div class="ai-meta-row">
               <button
+                v-if="isEditMode && article.id && activeLang === 'zh'"
+                type="button"
+                class="ai-meta-btn ds-btn ds-btn--ghost"
+                @click="revisionDrawerOpen = true"
+              >
+                历史版本
+              </button>
+              <button
                 type="button"
                 class="ai-meta-btn ds-btn ds-btn--ghost"
                 :disabled="aiSummaryLoading || !article.content.trim()"
@@ -153,6 +161,14 @@
           @apply="applyAiResult"
         />
       </div>
+
+      <RevisionHistoryDrawer
+        v-if="isEditMode && article.id && activeLang === 'zh'"
+        v-model="revisionDrawerOpen"
+        kind="article"
+        :resource-id="article.id"
+        @restored="fetchArticleForEdit(article.id)"
+      />
     </div>
   </div>
 </template>
@@ -170,6 +186,7 @@ import {
   articleSeoAi,
 } from '../../api/translation';
 import ArticleAiSidebar from './ArticleAiSidebar.vue';
+import RevisionHistoryDrawer from '../../components/RevisionHistoryDrawer.vue';
 import { useToastStore } from '../../stores/toast';
 
 const langTabs = [
@@ -220,6 +237,7 @@ const aiSummaryLoading = ref(false);
 const aiTagsLoading = ref(false);
 const transBusy = ref(false);
 const zhSeoBusy = ref(false);
+const revisionDrawerOpen = ref(false);
 
 const tagNamesParam = () =>
   tagsInput.value

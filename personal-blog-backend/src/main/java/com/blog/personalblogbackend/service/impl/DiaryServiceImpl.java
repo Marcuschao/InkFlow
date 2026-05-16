@@ -9,6 +9,8 @@ import com.blog.personalblogbackend.dto.diary.DiaryVo;
 import com.blog.personalblogbackend.entity.Diary;
 import com.blog.personalblogbackend.exception.ServiceException;
 import com.blog.personalblogbackend.mapper.DiaryMapper;
+import com.blog.personalblogbackend.revision.RevisionTargetType;
+import com.blog.personalblogbackend.service.ContentRevisionService;
 import com.blog.personalblogbackend.service.DiaryService;
 import com.blog.personalblogbackend.support.PageResult;
 import com.blog.personalblogbackend.util.DiaryTitleHelper;
@@ -27,8 +29,11 @@ public class DiaryServiceImpl implements DiaryService {
 
     private final DiaryMapper diaryMapper;
 
-    public DiaryServiceImpl(DiaryMapper diaryMapper) {
+    private final ContentRevisionService contentRevisionService;
+
+    public DiaryServiceImpl(DiaryMapper diaryMapper, ContentRevisionService contentRevisionService) {
         this.diaryMapper = diaryMapper;
+        this.contentRevisionService = contentRevisionService;
     }
 
     @Override
@@ -71,6 +76,7 @@ public class DiaryServiceImpl implements DiaryService {
         d.setIsPublic(Boolean.TRUE.equals(req.getIsPublic()) ? 1 : 0);
         d.setTitle(DiaryTitleHelper.resolveTitle(req.getTitle(), req.getContent()));
         diaryMapper.insert(d);
+        contentRevisionService.snapshotDiary(diaryMapper.selectById(d.getId()), "创建");
         return d.getId();
     }
 
@@ -80,6 +86,7 @@ public class DiaryServiceImpl implements DiaryService {
         if (existing == null || !userId.equals(existing.getUserId())) {
             throw new ServiceException(404, "日记不存在");
         }
+        contentRevisionService.snapshotDiary(existing, "保存");
         existing.setDiaryDate(req.getDiaryDate() != null ? req.getDiaryDate() : existing.getDiaryDate());
         existing.setContent(req.getContent());
         existing.setContentType(req.getContentType() != null ? req.getContentType() : 0);
@@ -96,6 +103,7 @@ public class DiaryServiceImpl implements DiaryService {
         if (existing == null || !userId.equals(existing.getUserId())) {
             throw new ServiceException(404, "日记不存在");
         }
+        contentRevisionService.deleteByTarget(RevisionTargetType.DIARY, id);
         diaryMapper.deleteById(id);
     }
 

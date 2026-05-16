@@ -47,6 +47,8 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 无状态会话
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**", "/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/*/versions").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/articles/*/versions/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/articles/**", "/articles/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/tags/**", "/tags/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**", "/categories/**").permitAll()

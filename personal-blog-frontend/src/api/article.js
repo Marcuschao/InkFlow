@@ -41,3 +41,19 @@ export function deleteArticle(id) {
     method: 'delete',
   });
 }
+
+export function listArticleVersions(articleId) {
+  return request({ url: `/articles/${articleId}/versions`, method: 'get' });
+}
+
+export function getArticleVersion(articleId, versionId) {
+  return request({ url: `/articles/${articleId}/versions/${versionId}`, method: 'get' });
+}
+
+export function restoreArticleVersion(articleId, versionId) {
+  return request({ url: `/articles/${articleId}/versions/${versionId}/restore`, method: 'post' });
+}
+
+export function diffArticleVersions(articleId, v1, v2) {
+  return request({ url: `/articles/${articleId}/versions/${v1}/diff/${v2}`, method: 'get' });
+}

@@ -27,3 +27,19 @@ export function listPublicDiaries(params) {
 export function getPublicDiary(id) {
   return request({ url: `/diary/public/${id}`, method: 'get', skipErrorToast: true });
 }
+
+export function listDiaryVersions(diaryId) {
+  return request({ url: `/diary/${diaryId}/versions`, method: 'get' });
+}
+
+export function getDiaryVersion(diaryId, versionId) {
+  return request({ url: `/diary/${diaryId}/versions/${versionId}`, method: 'get' });
+}
+
+export function restoreDiaryVersion(diaryId, versionId) {
+  return request({ url: `/diary/${diaryId}/versions/${versionId}/restore`, method: 'post' });
+}
+
+export function diffDiaryVersions(diaryId, v1, v2) {
+  return request({ url: `/diary/${diaryId}/versions/${v1}/diff/${v2}`, method: 'get' });
+}

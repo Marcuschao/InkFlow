@@ -8,6 +8,14 @@
         </div>
         <div class="head-actions">
           <router-link to="/admin/diary/list" class="ds-btn ds-btn--secondary ds-btn--pill">日记列表</router-link>
+          <button
+            v-if="isEdit"
+            type="button"
+            class="ds-btn ds-btn--ghost ds-btn--pill"
+            @click="revisionDrawerOpen = true"
+          >
+            历史版本
+          </button>
           <button type="button" class="ds-btn ds-btn--primary ds-btn--pill" :disabled="saving" @click="save">
             {{ saving ? '保存中…' : '保存' }}
           </button>
@@ -69,6 +77,14 @@
         <div v-if="showPreview && useMarkdown" class="pane preview-pane markdown-renderer markdown-prose" v-html="previewHtml" />
       </div>
     </div>
+
+    <RevisionHistoryDrawer
+      v-if="isEdit"
+      v-model="revisionDrawerOpen"
+      kind="diary"
+      :resource-id="Number(props.id)"
+      @restored="load()"
+    />
   </div>
 </template>
 
@@ -78,6 +94,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { marked } from 'marked';
 import { createDiary, getDiary, updateDiary } from '../../api/diary';
 import { uploadDiaryImage } from '../../api/upload';
+import RevisionHistoryDrawer from '../../components/RevisionHistoryDrawer.vue';
 import { useToastStore } from '../../stores/toast';
 
 const route = useRoute();
@@ -98,6 +115,7 @@ const isPublic = ref(false);
 const showPreview = ref(false);
 const saving = ref(false);
 const uploading = ref(false);
+const revisionDrawerOpen = ref(false);
 
 const isEdit = computed(() => props.id != null && props.id !== '' && !Number.isNaN(Number(props.id)));
 
@@ -225,10 +243,6 @@ watch(
 <style scoped>
 .editor-wrap {
   max-width: 960px;
-}
-
-.editor-head {
-  margin-bottom: var(--space-6);
 }
 
 .head-actions {
