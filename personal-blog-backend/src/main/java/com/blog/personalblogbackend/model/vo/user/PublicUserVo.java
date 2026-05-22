@@ -4,8 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,4 +15,6 @@ public class PublicUserVo {
     private Integer gender;
     private String region;
     private String bio;
+    private Integer followerCount;
+    private Integer followingCount;
 }

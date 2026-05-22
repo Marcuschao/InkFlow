@@ -128,6 +128,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         dup.setContent(src.getContent());
         dup.setCover(src.getCover());
         dup.setCategoryId(src.getCategoryId());
+        dup.setAuthorId(src.getAuthorId());
         dup.setStatus(0);
         dup.setViewCount(0);
         dup.setFreshnessStatus(0);

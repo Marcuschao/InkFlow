@@ -1,6 +1,7 @@
 package com.blog.personalblogbackend.config.security;
 
 import com.blog.personalblogbackend.config.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,10 +23,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 @Order(1)
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
 //    @Bean
 //    public PasswordEncoder passwordEncoder() {
@@ -51,7 +52,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/*/versions").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/articles/*/versions/**").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/articles/**", "/articles/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/*/like/status").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/articles/*/favorite/status").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/articles/*/like").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/articles/*/favorite").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/tags/**", "/tags/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**", "/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/about", "/about").permitAll()
@@ -67,7 +71,15 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/stat/view").permitAll()
                 .requestMatchers(HttpMethod.GET, "/upload/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/diary/public", "/api/diary/public/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/*/likes/count").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/**", "/articles/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/user/feed").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/user/me/favorites").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/user/{id:\\d+}/followers").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/user/{id:\\d+}/following").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/user/{id:\\d+}/follow/status").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/user/{id:\\d+}").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/user/{id:\\d+}/follow").authenticated()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
                 .requestMatchers("/actuator/**").authenticated()

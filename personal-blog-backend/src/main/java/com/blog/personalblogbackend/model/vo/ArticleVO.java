@@ -11,4 +11,8 @@ import lombok.EqualsAndHashCode;
 public class ArticleVO extends Article {
     private String viewingLocale;
     private Boolean translationActive;
+    private Boolean liked;
+    private Boolean favorited;
+    private String authorNickname;
+    private String authorAvatar;
 }

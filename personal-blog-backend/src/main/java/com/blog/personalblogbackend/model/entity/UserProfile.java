@@ -17,6 +17,8 @@ public class UserProfile {
     private Integer gender;
     private String bio;
     private String region;
+    private Integer followerCount;
+    private Integer followingCount;
     private String lastLoginIp;
     private String lastLoginRegion;
     private LocalDateTime lastLoginTime;

@@ -22,4 +22,6 @@ public class UserProfileVo {
     private String region;
     private String registerRegion;
     private LocalDateTime lastLoginTime;
+    private Integer followerCount;
+    private Integer followingCount;
 }

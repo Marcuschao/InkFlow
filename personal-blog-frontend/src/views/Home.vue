@@ -3,11 +3,26 @@
     <div class="container home-layout">
       <div class="home-main">
       <header class="ds-page-hero">
-        <h1 class="ds-page-title ds-page-title-lg">最新文章</h1>
-        <p class="ds-page-sub">探索想法、笔记与技术碎片</p>
+        <h1 class="ds-page-title ds-page-title-lg">{{ homeTab === 'feed' ? '关注动态' : '最新文章' }}</h1>
+        <p class="ds-page-sub">{{ homeTab === 'feed' ? '你关注的人最近 7 天发布的内容' : '探索想法、笔记与技术碎片' }}</p>
       </header>
 
-      <div class="ds-tag-row">
+      <nav v-if="authStore.isLoggedIn" class="home-tabs" aria-label="首页内容">
+        <button
+          type="button"
+          class="home-tab-btn"
+          :class="{ active: homeTab === 'latest' }"
+          @click="switchHomeTab('latest')"
+        >最新</button>
+        <button
+          type="button"
+          class="home-tab-btn"
+          :class="{ active: homeTab === 'feed' }"
+          @click="switchHomeTab('feed')"
+        >动态</button>
+      </nav>
+
+      <div v-if="homeTab === 'latest'" class="ds-tag-row">
         <span
           v-for="tag in displayedHomeTags"
           :key="tag.id"
@@ -25,6 +40,7 @@
         </span>
       </div>
 
+      <template v-if="homeTab === 'latest'">
       <div v-if="listingLoading" class="article-list skeleton-grid ds-grid-cards">
         <div v-for="n in 6" :key="'sk-' + n" class="card-skeleton">
           <div class="ui-skeleton sk-title" />
@@ -56,6 +72,39 @@
         :current-page="articleStore.pagination.currentPage"
         @changePage="handlePageChange"
       />
+      </template>
+
+      <template v-else>
+        <div v-if="feedLoading" class="article-list skeleton-grid ds-grid-cards">
+          <div v-for="n in 6" :key="'fsk-' + n" class="card-skeleton">
+            <div class="ui-skeleton sk-title" />
+            <div class="ui-skeleton sk-line" />
+            <div class="ui-skeleton sk-line short" />
+          </div>
+        </div>
+        <div v-else-if="!feedArticles.length" class="ds-empty-panel home-empty">
+          <p>关注用户后，这里会显示他们的新文章</p>
+        </div>
+        <div v-else class="article-list ds-grid-cards">
+          <ArticleCard
+            v-for="(article, idx) in feedArticles"
+            :key="article.id"
+            class="card-enter"
+            :article="article"
+            :like-count="article.likeCount"
+            :liked="article.liked"
+            show-like
+            :style="{ '--stagger': `${Math.min(idx, 8) * 45}ms` }"
+          />
+        </div>
+        <Pagination
+          v-if="feedTotal > feedSize"
+          :total="feedTotal"
+          :page-size="feedSize"
+          :current-page="feedPage"
+          @changePage="handleFeedPageChange"
+        />
+      </template>
       </div>
 
       <aside class="home-aside" aria-label="猜你喜欢">
@@ -94,6 +143,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { usePageViewHome } from '../composables/usePageView';
 import { useAuthStore } from '../stores/auth';
 import { agentRecommendHome } from '../api/agent';
+import { fetchFeed } from '../api/interaction';
 import { useReadingHistory } from '../composables/useReadingHistory';
 
 usePageViewHome();
@@ -105,6 +155,12 @@ const { getRecentArticleIds } = useReadingHistory();
 
 const currentTagId = ref(null);
 const listingLoading = ref(false);
+const homeTab = ref('latest');
+const feedLoading = ref(false);
+const feedArticles = ref([]);
+const feedPage = ref(1);
+const feedSize = ref(10);
+const feedTotal = ref(0);
 const recItems = ref([]);
 const recLoading = ref(false);
 
@@ -114,6 +170,43 @@ function normalizeRecArticle(item) {
     tags: item.tags || [],
     createTime: item.createTime ?? item.createdAt,
   };
+}
+
+async function loadFeed(page = 1) {
+  if (!authStore.isLoggedIn) {
+    feedArticles.value = [];
+    return;
+  }
+  feedLoading.value = true;
+  feedPage.value = page;
+  try {
+    const res = await fetchFeed({ page, size: feedSize.value });
+    const d = res.data;
+    feedArticles.value = d?.records || [];
+    feedTotal.value = d?.total || 0;
+  } catch {
+    feedArticles.value = [];
+    feedTotal.value = 0;
+  } finally {
+    feedLoading.value = false;
+  }
+}
+
+function switchHomeTab(tab) {
+  homeTab.value = tab;
+  const query = { ...route.query };
+  if (tab === 'feed') {
+    query.view = 'feed';
+    delete query.page;
+    delete query.tag;
+  } else {
+    delete query.view;
+  }
+  router.push({ query });
+}
+
+function handleFeedPageChange(newPage) {
+  router.push({ query: { ...route.query, page: newPage, view: 'feed' } });
 }
 
 async function loadRecommendations() {
@@ -168,6 +261,15 @@ const filterByTag = (tagId) => {
 watch(
   () => route.query,
   async (newQuery) => {
+    const view = newQuery.view === 'feed' && authStore.isLoggedIn ? 'feed' : 'latest';
+    homeTab.value = view;
+
+    if (view === 'feed') {
+      const page = Math.max(1, parseInt(newQuery.page, 10) || 1);
+      await loadFeed(page);
+      return;
+    }
+
     const page = Math.max(1, parseInt(newQuery.page, 10) || 1);
     let tag = null;
     const raw = newQuery.tag;
@@ -201,6 +303,29 @@ watch(
 
 .home-main {
   min-width: 0;
+}
+
+.home-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.home-tab-btn {
+  border: none;
+  background: none;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+}
+
+.home-tab-btn.active {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
 }
 
 .home-aside {

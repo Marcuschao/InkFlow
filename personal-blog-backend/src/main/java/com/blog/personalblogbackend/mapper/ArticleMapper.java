@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -65,4 +66,10 @@ public interface ArticleMapper extends BaseMapper<Article> {
 
     @Select("SELECT t.name FROM article_tag at INNER JOIN tag t ON at.tag_id = t.id WHERE at.article_id = #{articleId} ORDER BY t.id")
     List<String> selectTagNamesByArticleId(@Param("articleId") Long articleId);
+
+    @Update("UPDATE article SET like_count = like_count + 1 WHERE id = #{articleId}")
+    int incrementLikeCount(@Param("articleId") Long articleId);
+
+    @Update("UPDATE article SET like_count = GREATEST(like_count - 1, 0) WHERE id = #{articleId}")
+    int decrementLikeCount(@Param("articleId") Long articleId);
 }

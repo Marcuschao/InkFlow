@@ -391,13 +391,15 @@ public class UserServiceImpl implements UserService {
 
                 user.getRegisterRegion(),
 
-                profile != null ? profile.getLastLoginTime() : null
-
+                profile != null ? profile.getLastLoginTime() : null,
+                profile != null ? countOrZero(profile.getFollowerCount()) : 0,
+                profile != null ? countOrZero(profile.getFollowingCount()) : 0
         );
-
     }
 
-
+    private static int countOrZero(Integer n) {
+        return n != null ? n : 0;
+    }
 
     static PublicUserVo toPublic(User user, UserProfile profile) {
 
@@ -425,12 +427,11 @@ public class UserServiceImpl implements UserService {
 
                 region,
 
-                profile != null ? profile.getBio() : null
-
+                profile != null ? profile.getBio() : null,
+                profile != null ? countOrZero(profile.getFollowerCount()) : 0,
+                profile != null ? countOrZero(profile.getFollowingCount()) : 0
         );
-
     }
-
 }
 
 

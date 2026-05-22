@@ -12,6 +12,17 @@
           :key="tag.id"
           class="tag-pill"
         >{{ tag.name }}</span>
+        <span v-if="showLike" class="like-stat" @click.prevent>
+          <svg class="like-icon" :class="{ liked: displayLiked }" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              :fill="displayLiked ? 'currentColor' : 'none'"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+          </svg>
+          {{ displayLikeCount }}
+        </span>
       </div>
       <span class="read-hint">阅读正文</span>
     </div>
@@ -24,6 +35,19 @@ import { computed } from 'vue';
 const props = defineProps({
   article: { type: Object, required: true },
   reason: { type: String, default: '' },
+  showLike: { type: Boolean, default: false },
+  likeCount: { type: Number, default: undefined },
+  liked: { type: Boolean, default: undefined },
+});
+
+const displayLikeCount = computed(() => {
+  if (props.likeCount !== undefined) return props.likeCount;
+  return props.article.likeCount ?? 0;
+});
+
+const displayLiked = computed(() => {
+  if (props.liked !== undefined) return props.liked;
+  return !!props.article.liked;
 });
 
 const reasonLine = computed(() => {
@@ -143,6 +167,23 @@ const formatDate = (dateString) => {
   border-radius: var(--radius-pill);
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+.like-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: auto;
+  color: var(--color-text-soft);
+}
+
+.like-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.like-icon.liked {
+  color: var(--color-primary);
 }
 
 .read-hint {

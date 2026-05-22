@@ -6,7 +6,9 @@ import com.blog.personalblogbackend.common.support.Result;
 import com.blog.personalblogbackend.model.dto.ArticlePageQuery;
 import com.blog.personalblogbackend.model.vo.ArticleVO;
 import com.blog.personalblogbackend.model.entity.Article;
+import com.blog.personalblogbackend.service.ArticleInteractionEnricher;
 import com.blog.personalblogbackend.service.ArticleService;
+import com.blog.personalblogbackend.config.security.CurrentUserService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,10 @@ public class ArticleController {
 
     @Autowired
     private ArticleService articleService;
+    @Autowired
+    private ArticleInteractionEnricher articleInteractionEnricher;
+    @Autowired
+    private CurrentUserService currentUserService;
 
     /**
      * 分页获取文章列表
@@ -67,6 +73,7 @@ public class ArticleController {
         if (vo == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "文章不存在"));
         }
+        articleInteractionEnricher.enrich(vo, currentUserService.optionalUserId());
         long lm = 0L;
         if (vo.getUpdateTime() != null) {
             lm = vo.getUpdateTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
@@ -89,6 +96,9 @@ public class ArticleController {
     @PostMapping
     public Result<String> createArticle(@RequestBody Article article, @RequestParam(required = false) String tagNames) {
         List<String> tags = tagNames != null ? Arrays.asList(tagNames.split(",")) : null;
+        if (article.getAuthorId() == null) {
+            article.setAuthorId(currentUserService.requireUserId());
+        }
         articleService.createArticle(article, tags);
         return Result.success("文章创建成功");
     }

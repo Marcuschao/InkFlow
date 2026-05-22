@@ -57,6 +57,33 @@
                 >{{ tag.name }}</span>
               </span>
             </div>
+            <div v-if="articleStore.currentArticle.authorId" class="author-row">
+              <router-link :to="`/user/${articleStore.currentArticle.authorId}`" class="author-link">
+                <img
+                  v-if="articleStore.currentArticle.authorAvatar"
+                  :src="articleStore.currentArticle.authorAvatar"
+                  alt=""
+                  class="author-avatar"
+                />
+                <span v-else class="author-avatar letter">{{ authorInitial }}</span>
+                <span class="author-name">{{ articleStore.currentArticle.authorNickname || '作者' }}</span>
+              </router-link>
+              <FollowButton
+                :user-id="articleStore.currentArticle.authorId"
+                :following="authorFollowing"
+                @update:following="authorFollowing = $event"
+              />
+            </div>
+            <ArticleActionBar
+              v-if="articleIdNum"
+              :article-id="articleIdNum"
+              :liked="liked"
+              :favorited="favorited"
+              :like-count="likeCount"
+              @update:liked="liked = $event"
+              @update:favorited="favorited = $event"
+              @update:like-count="likeCount = $event"
+            />
             <div class="prose-shell">
               <MarkdownRenderer
                 :markdown="articleStore.currentArticle.content || ''"
@@ -185,6 +212,9 @@ import { useHead } from '@vueuse/head';
 import { useArticleStore } from '../stores/article';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import ArticleCard from '../components/ArticleCard.vue';
+import ArticleActionBar from '../components/ArticleActionBar.vue';
+import FollowButton from '../components/FollowButton.vue';
+import { getFollowStatus } from '../api/interaction';
 import { agentRecommendContext } from '../api/agent';
 import { fetchArticleComments, submitComment, deleteComment } from '../api/comments';
 import { usePageViewArticle } from '../composables/usePageView';
@@ -257,6 +287,10 @@ const commentsLoading = ref(false);
 const commentSubmitting = ref(false);
 const deletingId = ref(null);
 const replyParentId = ref(null);
+const liked = ref(false);
+const favorited = ref(false);
+const likeCount = ref(0);
+const authorFollowing = ref(false);
 const cf = reactive({
   content: '',
 });
@@ -265,6 +299,36 @@ const loginRedirect = computed(() => ({
   path: '/login',
   query: { redirect: route.fullPath },
 }));
+
+const articleIdNum = computed(() => {
+  const id = Number(route.params.id);
+  return Number.isFinite(id) ? id : null;
+});
+
+const authorInitial = computed(() => {
+  const n = articleStore.currentArticle?.authorNickname || '?';
+  return String(n).slice(0, 1);
+});
+
+function syncInteractionFromArticle(a) {
+  if (!a) return;
+  liked.value = !!a.liked;
+  favorited.value = !!a.favorited;
+  likeCount.value = a.likeCount ?? 0;
+  if (a.authorId && authStore.isLoggedIn) {
+    getFollowStatus(a.authorId)
+      .then((res) => { authorFollowing.value = !!res.data?.following; })
+      .catch(() => { authorFollowing.value = false; });
+  } else {
+    authorFollowing.value = false;
+  }
+}
+
+watch(
+  () => articleStore.currentArticle,
+  (a) => syncInteractionFromArticle(a),
+  { immediate: true }
+);
 
 const loginHintText = '请先登录';
 
@@ -628,11 +692,52 @@ onUnmounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1.25rem;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border);
   font-size: 0.88rem;
   color: var(--color-text-muted);
+}
+
+.author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.author-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.author-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.author-avatar.letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.author-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 
 .meta-date {

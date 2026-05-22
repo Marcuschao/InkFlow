@@ -20,10 +20,12 @@ public class Article {
     private String content; // Markdown内容
     private String cover;
     private Long categoryId;
+    private Long authorId;
     private Integer status; // 0-草稿 1-发布
     private Integer freshnessStatus;
     private LocalDateTime freshnessCheckedAt;
     private Integer viewCount;
+    private Integer likeCount;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
