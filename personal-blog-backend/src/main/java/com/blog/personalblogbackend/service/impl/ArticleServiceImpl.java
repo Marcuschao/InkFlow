@@ -1,5 +1,8 @@
 package com.blog.personalblogbackend.service.impl;
 
+import com.blog.personalblogbackend.cache.ArticleBloomFilter;
+import com.blog.personalblogbackend.cache.ArticleCacheService;
+import com.blog.personalblogbackend.datasource.ReadOnly;
 import com.blog.personalblogbackend.model.dto.ArticlePageQuery;
 import com.blog.personalblogbackend.model.vo.ArticleVO;
 import com.blog.personalblogbackend.model.entity.Article;
@@ -11,6 +14,8 @@ import com.blog.personalblogbackend.mapper.ArticleMapper;
 import com.blog.personalblogbackend.mapper.ArticleTranslationMapper;
 import com.blog.personalblogbackend.mapper.TagMapper;
 import com.blog.personalblogbackend.common.revision.RevisionTargetType;
+import com.blog.personalblogbackend.messaging.ContentChangeEventType;
+import com.blog.personalblogbackend.messaging.ContentChangeProducer;
 import com.blog.personalblogbackend.service.ArticleService;
 import com.blog.personalblogbackend.service.ContentRevisionService;
 import com.blog.personalblogbackend.notification.DomainEvent;
@@ -49,6 +54,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private NotificationProducer notificationProducer;
     @Autowired
     private ContentRevisionService contentRevisionService;
+    @Autowired
+    private ArticleCacheService articleCacheService;
+    @Autowired
+    private ArticleBloomFilter articleBloomFilter;
+    @Autowired
+    private ContentChangeProducer contentChangeProducer;
 
     private static boolean isPublished(Integer status) {
         return status != null && status == 1;
@@ -61,31 +72,82 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (previous == null || !isPublished(previous.getStatus())) {
             notificationProducer.sendArticlePublished(fresh);
             notificationProducer.sendDomainEvent(DomainEvent.articlePublished(fresh));
+            contentChangeProducer.send(fresh.getId(), ContentChangeEventType.ARTICLE_UPDATED);
         } else {
             notificationProducer.sendDomainEvent(DomainEvent.articleUpdated(fresh));
+            contentChangeProducer.send(fresh.getId(), ContentChangeEventType.ARTICLE_UPDATED);
         }
     }
 
     @Override
+    @ReadOnly
     public IPage<Article> getArticlePage(ArticlePageQuery query) {
+        if (query.getLastId() != null || (query.getPage() != null && query.getPage() > 3)) {
+            List<Article> records = articleMapper.selectArticleVOPageByCursor(
+                    query.getLastId(), query.getSize(), query.getCategoryId(), query.getTagId(), query.getKeyword());
+            Page<Article> page = new Page<>(query.getPage() != null ? query.getPage() : 1, query.getSize());
+            page.setRecords(records);
+            page.setTotal(-1);
+            return page;
+        }
+        String listKey = articleCacheService.buildListKey(
+                query.getCategoryId(), query.getTagId(), query.getPage(), query.getSize(), query.getKeyword());
+        if (articleCacheService.shouldCacheList(query.getPage(), query.getKeyword())) {
+            List<Article> cached = articleCacheService.getList(listKey);
+            if (cached != null) {
+                Page<Article> countProbe = new Page<>(1, 1);
+                IPage<Article> counted = articleMapper.selectArticleVOPage(
+                        countProbe, query.getCategoryId(), query.getTagId(), query.getKeyword());
+                Page<Article> page = new Page<>(query.getPage(), query.getSize());
+                page.setRecords(cached);
+                page.setTotal(counted.getTotal());
+                return page;
+            }
+        }
         Page<Article> page = new Page<>(query.getPage(), query.getSize());
-        return articleMapper.selectArticleVOPage(page, query.getCategoryId(), query.getTagId(), query.getKeyword());
+        IPage<Article> result = articleMapper.selectArticleVOPage(
+                page, query.getCategoryId(), query.getTagId(), query.getKeyword());
+        if (articleCacheService.shouldCacheList(query.getPage(), query.getKeyword())) {
+            articleCacheService.putList(listKey, result.getRecords());
+        }
+        return result;
     }
 
     @Override
     public Article getArticleDetail(Long id) {
+        if (!articleBloomFilter.mightContain(id)) {
+            return null;
+        }
         return articleMapper.selectArticleVOById(id);
     }
 
     @Override
+    @ReadOnly
     public ArticleVO getArticleVo(Long id, String lang) {
-        Article article = articleMapper.selectArticleVOById(id);
-        if (article == null) {
+        if (!articleBloomFilter.mightContain(id)) {
             return null;
         }
+        String loc = normalizeLocale(lang);
+        ArticleVO cached = articleCacheService.getDetail(id, loc);
+        if (cached != null) {
+            return cached;
+        }
+        if (articleCacheService.isDetailNullCached(id, loc)) {
+            return null;
+        }
+        Article article = articleMapper.selectArticleVOById(id);
+        if (article == null) {
+            articleCacheService.putDetailNull(id, loc);
+            return null;
+        }
+        ArticleVO vo = toArticleVo(article, id, loc);
+        articleCacheService.putDetail(id, loc, vo);
+        return vo;
+    }
+
+    private ArticleVO toArticleVo(Article article, Long id, String loc) {
         ArticleVO vo = new ArticleVO();
         BeanUtils.copyProperties(article, vo);
-        String loc = normalizeLocale(lang);
         vo.setViewingLocale(loc);
         vo.setTranslationActive(Boolean.FALSE);
         if (loc != null && !"zh".equals(loc)) {
@@ -197,10 +259,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     @Transactional
     public boolean createArticle(Article article, List<String> tagNames) {
-        // 1. 插入文章
         articleMapper.insert(article);
-
-        // 2. 处理标签
+        articleBloomFilter.add(article.getId());
         handleArticleTags(article.getId(), tagNames);
         Article fresh = articleMapper.selectById(article.getId());
         publishArticleEvents(null, fresh);
@@ -216,12 +276,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (previous == null) {
             throw new ServiceException(404, "文章不存在");
         }
+        if (article.getVersion() == null) {
+            article.setVersion(previous.getVersion());
+        }
         List<String> prevTagNames = articleMapper.selectTagNamesByArticleId(previous.getId());
         contentRevisionService.snapshotArticle(previous, String.join(",", prevTagNames), "保存");
-        // 1. 更新文章
-        articleMapper.updateById(article);
-
-        // 2. 处理标签 (先删除旧的，再插入新的)
+        if (!updateById(article)) {
+            throw new ServiceException(409, "内容已被他人修改，请刷新后重试");
+        }
         articleMapper.deleteArticleTagsByArticleId(article.getId());
         handleArticleTags(article.getId(), tagNames);
         Article fresh = articleMapper.selectById(article.getId());
@@ -233,10 +295,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Transactional
     public boolean deleteArticle(Long id) {
         contentRevisionService.deleteByTarget(RevisionTargetType.ARTICLE, id);
-        // 1. 删除文章-标签关联
         articleMapper.deleteArticleTagsByArticleId(id);
-        // 2. 删除文章
         articleMapper.deleteById(id);
+        contentChangeProducer.send(id, ContentChangeEventType.ARTICLE_DELETED);
         return true;
     }
 
@@ -244,21 +305,19 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (CollectionUtils.isEmpty(tagNames)) {
             return;
         }
-
         List<Long> tagIdsToInsert = new ArrayList<>();
         for (String tagName : tagNames) {
-            if (!StringUtils.hasText(tagName)) continue;
-
+            if (!StringUtils.hasText(tagName)) {
+                continue;
+            }
             Tag tag = tagMapper.selectOne(new QueryWrapper<Tag>().eq("name", tagName));
             if (tag == null) {
-                // 标签不存在，则创建新标签
                 tag = new Tag();
                 tag.setName(tagName);
                 tagMapper.insert(tag);
             }
             tagIdsToInsert.add(tag.getId());
         }
-
         if (!CollectionUtils.isEmpty(tagIdsToInsert)) {
             articleMapper.insertArticleTags(articleId, tagIdsToInsert);
         }

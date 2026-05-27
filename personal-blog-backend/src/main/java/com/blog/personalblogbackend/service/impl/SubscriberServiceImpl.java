@@ -2,11 +2,11 @@ package com.blog.personalblogbackend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.blog.personalblogbackend.config.properties.BlogSiteProperties;
+import com.blog.personalblogbackend.mapper.SubscriberMapper;
 import com.blog.personalblogbackend.model.dto.subscribe.SubscribeRequest;
 import com.blog.personalblogbackend.model.entity.Subscriber;
-import com.blog.personalblogbackend.mapper.SubscriberMapper;
 import com.blog.personalblogbackend.service.BlogMailService;
+import com.blog.personalblogbackend.service.BlogSiteService;
 import com.blog.personalblogbackend.service.SubscriberService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,11 +20,11 @@ import java.util.stream.Collectors;
 public class SubscriberServiceImpl extends ServiceImpl<SubscriberMapper, Subscriber> implements SubscriberService {
 
     private final BlogMailService blogMailService;
-    private final BlogSiteProperties blogSiteProperties;
+    private final BlogSiteService blogSiteService;
 
-    public SubscriberServiceImpl(BlogMailService blogMailService, BlogSiteProperties blogSiteProperties) {
+    public SubscriberServiceImpl(BlogMailService blogMailService, BlogSiteService blogSiteService) {
         this.blogMailService = blogMailService;
-        this.blogSiteProperties = blogSiteProperties;
+        this.blogSiteService = blogSiteService;
     }
 
     @Override
@@ -72,9 +72,9 @@ public class SubscriberServiceImpl extends ServiceImpl<SubscriberMapper, Subscri
     }
 
     private void sendConfirmation(String email, String token) {
-        String base = blogSiteProperties.getSiteUrl().replaceAll("/$", "");
+        String base = blogSiteService.getSiteUrl().replaceAll("/$", "");
         String url = base + "/api/subscribe/confirm?token=" + token;
-        String subject = "[" + blogSiteProperties.getSiteTitle() + "] 确认订阅";
+        String subject = "[" + blogSiteService.getSiteTitle() + "] 确认订阅";
         String body = "请点击链接确认订阅（如需忽略请勿点开）：\n" + url + "\n";
         blogMailService.sendIfConfigured(email, subject, body);
     }

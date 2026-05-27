@@ -1,15 +1,19 @@
 package com.blog.personalblogbackend.notification.consumer;
 
-import com.blog.personalblogbackend.config.properties.BlogSiteProperties;
 import com.blog.personalblogbackend.notification.NotificationMessage;
 import com.blog.personalblogbackend.service.BlogMailService;
+import com.blog.personalblogbackend.service.BlogSiteService;
 import com.blog.personalblogbackend.service.SubscriberService;
+import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -21,42 +25,39 @@ public class MailNotificationConsumer {
 
     private final SubscriberService subscriberService;
     private final BlogMailService blogMailService;
-    private final BlogSiteProperties blogSiteProperties;
+    private final BlogSiteService blogSiteService;
 
     public MailNotificationConsumer(SubscriberService subscriberService,
                                     BlogMailService blogMailService,
-                                    BlogSiteProperties blogSiteProperties) {
+                                    BlogSiteService blogSiteService) {
         this.subscriberService = subscriberService;
         this.blogMailService = blogMailService;
-        this.blogSiteProperties = blogSiteProperties;
+        this.blogSiteService = blogSiteService;
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.mailQueue}")
-    public void onMessage(NotificationMessage message) {
+    public void onMessage(NotificationMessage message, Channel channel,
+                          @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
         try {
             List<String> emails = subscriberService.listActiveEmails();
-            if (emails.isEmpty()) {
-                return;
-            }
             Map<String, Object> p = message.getPayload();
-            if (p == null) {
-                return;
+            if (!emails.isEmpty() && p != null) {
+                Long articleId = toLong(p.get("articleId"));
+                String title = p.get("title") != null ? String.valueOf(p.get("title")) : "";
+                String summary = p.get("summary") != null ? String.valueOf(p.get("summary")) : "";
+                if (articleId != null) {
+                    String url = blogSiteService.resolvePublicUrl("/article/" + articleId);
+                    String subject = "[" + blogSiteService.getSiteTitle() + "] 新文章：" + title;
+                    String body = title + "\n\n" + summary + "\n\n阅读：" + url + "\n";
+                    for (String email : emails) {
+                        blogMailService.sendIfConfigured(email, subject, body);
+                    }
+                }
             }
-            Long articleId = toLong(p.get("articleId"));
-            String title = p.get("title") != null ? String.valueOf(p.get("title")) : "";
-            String summary = p.get("summary") != null ? String.valueOf(p.get("summary")) : "";
-            if (articleId == null) {
-                return;
-            }
-            String url = blogSiteProperties.resolvePublicUrl("/article/" + articleId);
-            String subject = "[" + blogSiteProperties.getSiteTitle() + "] 新文章：" + title;
-            String body = title + "\n\n" + summary + "\n\n阅读：" + url + "\n";
-            for (String email : emails) {
-                blogMailService.sendIfConfigured(email, subject, body);
-            }
+            channel.basicAck(tag, false);
         } catch (Exception ex) {
             log.warn("[notification] mail consume failed: {}", ex.toString());
-            throw ex;
+            channel.basicNack(tag, false, false);
         }
     }
 

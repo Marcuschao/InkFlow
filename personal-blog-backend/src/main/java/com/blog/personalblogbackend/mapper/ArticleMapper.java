@@ -64,6 +64,15 @@ public interface ArticleMapper extends BaseMapper<Article> {
 
     List<Article> selectPublishedExcludeIds(@Param("excludeIds") List<Long> excludeIds, @Param("limit") int limit);
 
+    List<Article> selectArticleVOPageByCursor(@Param("lastId") Long lastId,
+                                              @Param("size") Integer size,
+                                              @Param("categoryId") Long categoryId,
+                                              @Param("tagId") Long tagId,
+                                              @Param("keyword") String keyword);
+
+    @Update("UPDATE article SET comment_count = comment_count + 1 WHERE id = #{articleId}")
+    int incrementCommentCount(@Param("articleId") Long articleId);
+
     @Select("SELECT t.name FROM article_tag at INNER JOIN tag t ON at.tag_id = t.id WHERE at.article_id = #{articleId} ORDER BY t.id")
     List<String> selectTagNamesByArticleId(@Param("articleId") Long articleId);
 

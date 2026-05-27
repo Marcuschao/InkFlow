@@ -18,6 +18,7 @@
           <router-link to="/admin/dashboard"><n-button size="small">数据看板</n-button></router-link>
           <router-link to="/admin/push"><n-button size="small">推送管理</n-button></router-link>
           <router-link to="/admin/stream"><n-button size="small">消息监控</n-button></router-link>
+          <router-link to="/admin/monitor"><n-button size="small">性能监控</n-button></router-link>
           <router-link to="/admin/new"><n-button size="small" type="primary">＋ 新建文章</n-button></router-link>
           <router-link to="/admin/ai-weekly"><n-button size="small">AI 周报</n-button></router-link>
         </n-space>

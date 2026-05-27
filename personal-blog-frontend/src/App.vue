@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import { RouterView } from 'vue-router';
 import {
   NConfigProvider,
@@ -17,14 +17,48 @@ import ToastHost from './components/ToastHost.vue';
 import MobileDock from './components/MobileDock.vue';
 import { useSiteStore } from './stores/site';
 import { useAuthStore } from './stores/auth';
+import { useNotificationStore } from './stores/notification';
+import { useToastStore } from './stores/toast';
 import { useTheme } from './composables/useTheme';
 import { mountClickRipple } from './composables/useClickRipple';
+import { connect, disconnect, onNotification } from './services/websocket';
+import { pingPresence } from './api/chat';
 
 const siteStore = useSiteStore();
 const authStore = useAuthStore();
+const notificationStore = useNotificationStore();
+const toastStore = useToastStore();
 const { isDark, naiveTheme } = useTheme();
 
 let stopRipple = () => {};
+let stopNotifListener = () => {};
+let presenceTimer = null;
+
+function startPresence() {
+  stopPresence();
+  if (!authStore.isLoggedIn) return;
+  pingPresence().catch(() => {});
+  presenceTimer = setInterval(() => pingPresence().catch(() => {}), 20000);
+}
+
+function stopPresence() {
+  if (presenceTimer) {
+    clearInterval(presenceTimer);
+    presenceTimer = null;
+  }
+}
+
+function syncWebSocket(loggedIn) {
+  if (loggedIn) {
+    connect(authStore.token);
+    notificationStore.refreshUnread();
+    startPresence();
+  } else {
+    connect(null);
+    notificationStore.clearUnread();
+    stopPresence();
+  }
+}
 
 onMounted(() => {
   siteStore.loadPublicConfig();
@@ -32,10 +66,47 @@ onMounted(() => {
   if (authStore.isLoggedIn && !authStore.user) {
     authStore.fetchMe().catch(() => authStore.logout());
   }
+  connect(authStore.token || null);
+  stopNotifListener = onNotification((vo) => {
+    if (!authStore.isLoggedIn) return;
+    notificationStore.applyRealtimeNotification(vo);
+    if (vo?.content) {
+      toastStore.push(vo.content, 'success');
+    }
+  });
+  if (authStore.isLoggedIn) {
+    notificationStore.refreshUnread();
+    startPresence();
+  }
 });
+
+watch(
+  () => authStore.isLoggedIn,
+  (loggedIn) => syncWebSocket(loggedIn)
+);
+
+watch(
+  () => authStore.token,
+  (token, prev) => {
+    if (token !== prev) {
+      connect(token || null);
+    }
+  }
+);
+
+watch(
+  () => siteStore.siteTitle,
+  (title) => {
+    if (title) document.title = title;
+  },
+  { immediate: true }
+);
 
 onUnmounted(() => {
   stopRipple();
+  stopNotifListener();
+  stopPresence();
+  disconnect();
 });
 </script>
 

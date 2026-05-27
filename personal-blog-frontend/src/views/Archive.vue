@@ -6,15 +6,7 @@
         <p class="ds-page-sub">按时间浏览全部文章</p>
       </header>
 
-      <div v-if="loading">
-        <n-space vertical :size="16">
-          <n-card v-for="n in 3" :key="n">
-            <n-skeleton height="24px" width="30%" :sharp="false" style="margin-bottom: 12px;" />
-            <n-skeleton height="16px" width="100%" :sharp="false" style="margin-bottom: 8px;" />
-            <n-skeleton height="16px" width="80%" :sharp="false" />
-          </n-card>
-        </n-space>
-      </div>
+      <ListSkeleton v-if="loading" :count="3" span="24" />
 
       <div v-else-if="archives.length">
         <n-timeline>
@@ -57,8 +49,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { NCard, NEmpty, NList, NListItem, NSkeleton, NSpace, NTimeline, NTimelineItem } from 'naive-ui';
+import { NCard, NEmpty, NList, NListItem, NSpace, NTimeline, NTimelineItem } from 'naive-ui';
 import { getArticles } from '../api/article';
+import ListSkeleton from '../components/ListSkeleton.vue';
 
 const archives = ref([]);
 const loading = ref(true);

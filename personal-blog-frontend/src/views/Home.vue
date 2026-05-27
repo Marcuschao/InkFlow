@@ -38,11 +38,7 @@
         </n-space>
 
         <template v-if="homeTab === 'latest'">
-          <n-grid v-if="listingLoading" :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-            <n-gi v-for="n in 6" :key="'sk-' + n" span="24 m:12 l:8">
-              <n-card><n-skeleton text :repeat="3" /></n-card>
-            </n-gi>
-          </n-grid>
+          <ListSkeleton v-if="listingLoading" />
           <n-alert v-else-if="articleStore.listError" type="error" class="home-list-err">{{ articleStore.listError }}</n-alert>
           <n-empty v-else-if="!articleStore.articles.length" description="暂无文章" />
           <n-grid v-else :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
@@ -118,6 +114,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { NAlert, NCard, NEmpty, NGi, NGrid, NSkeleton, NSpace, NTab, NTabs, NTag } from 'naive-ui';
 import { useArticleStore } from '../stores/article';
 import ArticleCard from '../components/ArticleCard.vue';
+import ListSkeleton from '../components/ListSkeleton.vue';
 import Pagination from '../components/Pagination.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usePageViewHome } from '../composables/usePageView';

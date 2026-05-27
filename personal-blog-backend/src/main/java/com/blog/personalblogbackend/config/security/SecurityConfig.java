@@ -1,6 +1,7 @@
 package com.blog.personalblogbackend.config.security;
 
 import com.blog.personalblogbackend.config.security.JwtAuthenticationFilter;
+import com.blog.personalblogbackend.concurrency.ApiRateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ApiRateLimitFilter apiRateLimitFilter;
 
 //    @Bean
 //    public PasswordEncoder passwordEncoder() {
@@ -71,6 +73,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/stat/view").permitAll()
                 .requestMatchers(HttpMethod.GET, "/upload/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/diary/public", "/api/diary/public/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/chat/history", "/api/chat/online-users").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chat/send", "/api/chat/presence", "/api/chat/offline").authenticated()
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/*/likes/count").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/**", "/articles/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/user/feed").authenticated()
@@ -86,7 +91,8 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").authenticated()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // 添加JWT过滤器
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

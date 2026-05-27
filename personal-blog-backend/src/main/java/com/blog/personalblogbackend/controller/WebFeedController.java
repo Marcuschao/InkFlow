@@ -1,9 +1,9 @@
 package com.blog.personalblogbackend.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.blog.personalblogbackend.config.properties.BlogSiteProperties;
 import com.blog.personalblogbackend.model.entity.Article;
 import com.blog.personalblogbackend.service.ArticleService;
+import com.blog.personalblogbackend.service.BlogSiteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +27,7 @@ public class WebFeedController {
     @Autowired
     private ArticleService articleService;
     @Autowired
-    private BlogSiteProperties blogSiteProperties;
+    private BlogSiteService blogSiteService;
 
     private static String xmlEscape(String s) {
         if (s == null) {
@@ -37,7 +37,7 @@ public class WebFeedController {
     }
 
     private String baseUrl() {
-        String u = blogSiteProperties.getSiteUrl();
+        String u = blogSiteService.getSiteUrl();
         if (u.endsWith("/")) {
             return u.substring(0, u.length() - 1);
         }
@@ -50,8 +50,8 @@ public class WebFeedController {
                 .eq(Article::getStatus, 1)
                 .orderByDesc(Article::getCreateTime)
                 .last("LIMIT 20"));
-        String title = xmlEscape(blogSiteProperties.getSiteTitle());
-        String desc = xmlEscape(blogSiteProperties.getSiteDescription());
+        String title = xmlEscape(blogSiteService.getSiteTitle());
+        String desc = xmlEscape(blogSiteService.getSiteDescription());
         String link = xmlEscape(baseUrl());
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");

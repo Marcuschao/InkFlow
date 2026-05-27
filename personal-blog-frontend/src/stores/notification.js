@@ -17,6 +17,13 @@ export const useNotificationStore = defineStore('notification', {
     clearUnread() {
       this.unreadCount = 0;
     },
+    incrementUnread(n = 1) {
+      this.unreadCount += n;
+    },
+    applyRealtimeNotification(vo) {
+      if (!vo || vo.read) return;
+      this.incrementUnread();
+    },
     decrementUnread(n = 1) {
       this.unreadCount = Math.max(0, this.unreadCount - n);
     },

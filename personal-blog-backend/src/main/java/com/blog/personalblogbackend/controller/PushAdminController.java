@@ -1,9 +1,9 @@
 package com.blog.personalblogbackend.controller;
 
-import com.blog.personalblogbackend.config.properties.BlogSiteProperties;
 import com.blog.personalblogbackend.model.dto.push.AdminPushSendRequest;
 import com.blog.personalblogbackend.model.dto.push.PushStatsResponse;
 import com.blog.personalblogbackend.common.exception.ServiceException;
+import com.blog.personalblogbackend.service.BlogSiteService;
 import com.blog.personalblogbackend.service.WebPushService;
 import com.blog.personalblogbackend.service.impl.PushSubscriptionServiceImpl;
 import com.blog.personalblogbackend.common.support.Result;
@@ -20,14 +20,14 @@ public class PushAdminController {
 
     private final WebPushService webPushService;
     private final PushSubscriptionServiceImpl pushSubscriptionService;
-    private final BlogSiteProperties blogSiteProperties;
+    private final BlogSiteService blogSiteService;
 
     public PushAdminController(WebPushService webPushService,
                                PushSubscriptionServiceImpl pushSubscriptionService,
-                               BlogSiteProperties blogSiteProperties) {
+                               BlogSiteService blogSiteService) {
         this.webPushService = webPushService;
         this.pushSubscriptionService = pushSubscriptionService;
-        this.blogSiteProperties = blogSiteProperties;
+        this.blogSiteService = blogSiteService;
     }
 
     @GetMapping("/stats")
@@ -50,7 +50,7 @@ public class PushAdminController {
         }
         String url = StringUtils.hasText(body.getUrl())
                 ? body.getUrl()
-                : blogSiteProperties.resolvePublicUrl("/");
+                : blogSiteService.resolvePublicUrl("/");
         webPushService.sendCustom(body.getTitle(), body.getBody(), url);
         return Result.success(null);
     }

@@ -44,6 +44,11 @@ const routes = [
     component: () => import('../views/Links.vue'),
   },
   {
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('../views/Chat.vue'),
+  },
+  {
     path: '/diary',
     name: 'PublicDiary',
     component: () => import('../views/PublicDiary.vue'),
@@ -124,6 +129,12 @@ const routes = [
     path: '/admin/stream',
     name: 'AdminStream',
     component: () => import('../views/Admin/AdminStream.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/monitor',
+    name: 'AdminMonitor',
+    component: () => import('../views/Admin/AdminMonitor.vue'),
     meta: { requiresAdmin: true },
   },
   {

@@ -61,6 +61,10 @@ service.interceptors.response.use(
         useAuthStore().clearAuth();
       }
       err = new Error(error.message || '未授权');
+    } else if (res?.status === 429) {
+      err = new Error('请求过于频繁，请稍后再试');
+    } else if (error.code === 'ECONNABORTED') {
+      err = new Error('请求超时，请检查网络');
     } else {
       err = new Error(error.message || '网络异常');
     }

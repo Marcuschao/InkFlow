@@ -1,6 +1,9 @@
 package com.blog.personalblogbackend.llm;
 
 import com.blog.personalblogbackend.common.exception.ServiceException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -14,23 +17,34 @@ import java.util.List;
 
 @Service
 public class AiService {
+    private static final String FALLBACK = "AI 服务暂时不可用，请稍后再试。";
 
     private final ChatModel chatModel;
     private final String apiKey;
+    private final CircuitBreaker circuitBreaker;
 
-    public AiService(ChatModel chatModel, @Value("${spring.ai.openai.api-key:}") String apiKey) {
+    public AiService(ChatModel chatModel,
+                     @Value("${spring.ai.openai.api-key:}") String apiKey,
+                     CircuitBreakerRegistry circuitBreakerRegistry) {
         this.chatModel = chatModel;
         this.apiKey = apiKey;
+        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker("aiService");
     }
 
-    /**
-     * 调用 LLM 进行对话
-     *
-     * @param systemPrompt
-     * @param userPrompt
-     * @return
-     */
     public String chat(String systemPrompt, String userPrompt) {
+        try {
+            return circuitBreaker.executeSupplier(() -> doChat(systemPrompt, userPrompt));
+        } catch (CallNotPermittedException ex) {
+            return FALLBACK;
+        } catch (Exception ex) {
+            if (ex.getCause() instanceof ServiceException se) {
+                throw se;
+            }
+            return FALLBACK;
+        }
+    }
+
+    private String doChat(String systemPrompt, String userPrompt) {
         if (!StringUtils.hasText(apiKey)) {
             throw new ServiceException(503, "未配置 LLM API Key（spring.ai.openai.api-key）");
         }

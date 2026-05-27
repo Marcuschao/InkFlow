@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 @Service
 public class TranslationServiceImpl implements TranslationService {
@@ -41,7 +41,7 @@ public class TranslationServiceImpl implements TranslationService {
     private ObjectMapper objectMapper;
     @Autowired
     @Qualifier("translationBatchExecutor")
-    private ExecutorService translationBatchExecutor;
+    private Executor translationBatchExecutor;
 
     @Override
     public ArticleTranslation getTranslation(Long articleId, String locale) {

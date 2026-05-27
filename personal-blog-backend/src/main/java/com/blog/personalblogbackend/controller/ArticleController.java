@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.controller;
 
+import com.blog.personalblogbackend.concurrency.ArticleDetailRequestCoalescer;
 import com.blog.personalblogbackend.config.audit.Audit;
 import com.blog.personalblogbackend.common.support.PageResult;
 import com.blog.personalblogbackend.common.support.Result;
@@ -40,6 +41,8 @@ public class ArticleController {
     private ArticleInteractionEnricher articleInteractionEnricher;
     @Autowired
     private CurrentUserService currentUserService;
+    @Autowired
+    private ArticleDetailRequestCoalescer articleDetailRequestCoalescer;
 
     /**
      * 分页获取文章列表
@@ -69,7 +72,7 @@ public class ArticleController {
     public ResponseEntity<Result<ArticleVO>> getArticleDetail(WebRequest request,
                                                                 @PathVariable Long id,
                                                                 @RequestParam(required = false) String lang) {
-        ArticleVO vo = articleService.getArticleVo(id, lang);
+        ArticleVO vo = articleDetailRequestCoalescer.coalesce(id, () -> articleService.getArticleVo(id, lang));
         if (vo == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "文章不存在"));
         }

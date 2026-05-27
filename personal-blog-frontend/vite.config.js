@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   const normalizedBase = base.endsWith('/') ? base : `${base}/`;
   return {
     base: normalizedBase,
+    define: {
+      global: 'globalThis',
+    },
     plugins: [
       vue(),
       VitePWA({
@@ -27,6 +30,11 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/ws': {
+          target: 'http://localhost:8080',
+          ws: true,
           changeOrigin: true,
         },
         '/upload': {

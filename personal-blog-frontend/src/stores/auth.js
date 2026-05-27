@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { fetchMe } from '../api/user';
+import { pingOffline } from '../api/chat';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -39,7 +40,14 @@ export const useAuthStore = defineStore('auth', {
       }
       return u;
     },
-    logout() {
+    async logout() {
+      if (this.token) {
+        try {
+          await pingOffline();
+        } catch {
+          /* ignore */
+        }
+      }
       this.token = null;
       this.user = null;
       this.role = null;

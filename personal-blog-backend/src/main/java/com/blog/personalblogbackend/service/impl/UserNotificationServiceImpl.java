@@ -10,6 +10,7 @@ import com.blog.personalblogbackend.model.entity.UserNotification;
 import com.blog.personalblogbackend.model.entity.UserProfile;
 import com.blog.personalblogbackend.model.vo.notification.NotificationVo;
 import com.blog.personalblogbackend.notification.NotificationMessage;
+import com.blog.personalblogbackend.notification.RealtimeNotificationService;
 import com.blog.personalblogbackend.service.UserNotificationService;
 import com.blog.personalblogbackend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,8 @@ public class UserNotificationServiceImpl implements UserNotificationService {
     private UserNotificationMapper userNotificationMapper;
     @Autowired
     private UserService userService;
+    @Autowired
+    private RealtimeNotificationService realtimeNotificationService;
 
     @Override
     public PageResult<NotificationVo> pageForUser(Long userId, int page, int size) {
@@ -103,6 +106,13 @@ public class UserNotificationServiceImpl implements UserNotificationService {
         n.setIsRead(0);
         n.setCreateTime(LocalDateTime.now());
         userNotificationMapper.insert(n);
+        UserProfile actorProfile = null;
+        if (message.getActorUserId() != null) {
+            actorProfile = userService.mapProfilesByUserIds(Set.of(message.getActorUserId()))
+                    .get(message.getActorUserId());
+        }
+        NotificationVo vo = toVo(n, actorProfile);
+        realtimeNotificationService.pushToUser(message.getRecipientUserId(), vo);
     }
 
     private UserNotification requireOwned(Long userId, Long notificationId) {

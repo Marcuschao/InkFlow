@@ -5,7 +5,7 @@
   >
     <nav class="nav-inner" aria-label="主导航">
       <div class="container nav-row">
-        <router-link to="/" class="logo" @click="closeMenu">晓晓博客</router-link>
+        <router-link to="/" class="logo" @click="closeMenu">{{ siteStore.siteTitle }}</router-link>
         <button
           type="button"
           class="menu-toggle"
@@ -105,6 +105,7 @@ import { NMenu, NBadge, NDropdown, NSwitch, NIcon } from 'naive-ui';
 import { NotificationsOutline, Moon, SunnyOutline } from '@vicons/ionicons5';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
+import { useSiteStore } from '../stores/site';
 import UserAvatar from './UserAvatar.vue';
 
 const dark = defineModel('dark', { type: Boolean, default: false });
@@ -113,12 +114,12 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
+const siteStore = useSiteStore();
 const isMenuOpen = ref(false);
 const isScrolled = ref(false);
 const hideNav = ref(false);
 const userMenuOpen = ref(false);
 const navUserWrapRef = ref(null);
-let pollTimer = null;
 let lastY = 0;
 
 const unreadCount = computed(() => notificationStore.unreadCount);
@@ -131,6 +132,7 @@ const STATIC_NAV_KEYS = [
   '/links',
   '/diary',
   '/reading-history',
+  '/chat',
 ];
 
 const navMenuActiveKey = computed(() => {
@@ -148,6 +150,7 @@ const navMenuOptions = computed(() => {
     { label: '搜索', key: '/search' },
     { label: '友链', key: '/links' },
     { label: '日记', key: '/diary' },
+    { label: '聊天室', key: '/chat' },
     { label: '阅读记录', key: '/reading-history' },
   ];
   if (!authStore.isLoggedIn) {
@@ -178,20 +181,6 @@ async function refreshUnread() {
     return;
   }
   await notificationStore.refreshUnread();
-}
-
-function startPoll() {
-  stopPoll();
-  refreshUnread();
-  pollTimer = setInterval(refreshUnread, 30000);
-}
-
-function stopPoll() {
-  if (pollTimer) {
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-  notificationStore.clearUnread();
 }
 
 const toggleUserMenu = () => {
@@ -252,14 +241,14 @@ onMounted(() => {
   lastY = window.scrollY || 0;
   window.addEventListener('scroll', onScroll, { passive: true });
   document.addEventListener('click', onDocClick);
-  if (authStore.isLoggedIn) startPoll();
+  if (authStore.isLoggedIn) refreshUnread();
 });
 
 watch(
   () => authStore.isLoggedIn,
   (loggedIn) => {
-    if (loggedIn) startPoll();
-    else stopPoll();
+    if (loggedIn) refreshUnread();
+    else notificationStore.clearUnread();
   }
 );
 
@@ -285,7 +274,6 @@ watch(
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll);
   document.removeEventListener('click', onDocClick);
-  stopPoll();
 });
 </script>
 

@@ -5,32 +5,30 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 @EnableAsync
 public class AsyncConfig {
 
-    @Bean(name = "statExecutor")
-    public Executor statExecutor() {
-        ThreadPoolTaskExecutor ex = new ThreadPoolTaskExecutor();
-        ex.setCorePoolSize(2);
-        ex.setMaxPoolSize(4);
-        ex.setQueueCapacity(500);
-        ex.setThreadNamePrefix("stat-");
-        ex.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        ex.initialize();
-        return ex;
+    @Bean(name = "statExecutor", destroyMethod = "shutdown")
+    public ThreadPoolTaskExecutor statExecutor() {
+        return buildExecutor("stat-", 2, 4, 500);
     }
 
-    @Bean(name = "streamExecutor")
-    public Executor streamExecutor() {
+    @Bean(name = "streamExecutor", destroyMethod = "shutdown")
+    public ThreadPoolTaskExecutor streamExecutor() {
+        return buildExecutor("stream-", 1, 2, 100);
+    }
+
+    private static ThreadPoolTaskExecutor buildExecutor(String prefix, int core, int max, int queue) {
         ThreadPoolTaskExecutor ex = new ThreadPoolTaskExecutor();
-        ex.setCorePoolSize(1);
-        ex.setMaxPoolSize(2);
-        ex.setQueueCapacity(100);
-        ex.setThreadNamePrefix("stream-");
+        ex.setCorePoolSize(core);
+        ex.setMaxPoolSize(max);
+        ex.setQueueCapacity(queue);
+        ex.setThreadNamePrefix(prefix);
+        ex.setWaitForTasksToCompleteOnShutdown(true);
+        ex.setAwaitTerminationSeconds(30);
         ex.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         ex.initialize();
         return ex;

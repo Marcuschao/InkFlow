@@ -1,7 +1,14 @@
 server:
   port: 8080
+  shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  data:
+    redis:
+      lettuce:
+        shutdown-timeout: 200ms
   security:
     jwt:
       secret: YourSecretKeyForJWTGenerationAndValidation1234567890
@@ -18,7 +25,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics
+        include: health,metrics,env
   endpoint:
     health:
       show-details: when_authorized
@@ -36,14 +43,32 @@ mybatis-plus:
     map-underscore-to-camel-case: true 
 
 blog:
-  site-url: http://localhost:5173
+  chat:
+    guest-readonly: true
+    history-limit: 50
+    online-ttl-seconds: 90
+  websocket:
+    endpoint: /ws
+    heartbeat: 10000
+  cache:
+    l1-max-size: 1000
+    l1-write-ttl-minutes: 5
+    null-ttl-seconds: 30
+    list-cache-max-page: 3
+    evict-delay-ms: 500
+  content:
+    exchange: blog.content
+    queue: content.cache.queue
+    routing-key: content.change
+  datasource:
+    read-url: ${spring.datasource.url}
+    write-url: ${spring.datasource.url}
   site-base-path: ""
-  site-title: 晓晓博客
-  site-description: 个人博客与技术笔记
   notify-mail-enabled: false
   notify-from: ""
   notification:
     enabled: true
+    dead-letter-enabled: true
     exchange: blog.notification
     inbox-queue: notification.queue
     push-queue: notification.push.queue
@@ -52,3 +77,12 @@ blog:
 
 app:
   upload-dir: upload
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      aiService:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 3

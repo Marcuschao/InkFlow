@@ -40,7 +40,7 @@
       <n-alert v-if="subMsg" type="error" size="small" class="footer-alert">{{ subMsg }}</n-alert>
 
       <div class="footer-meta">
-        <span class="copyright">&copy; 2026 晓晓博客 · All rights reserved.</span>
+        <span class="copyright">&copy; 2026 {{ siteStore.siteTitle }} · All rights reserved.</span>
         <span class="uptime">{{ uptimeText }}</span>
       </div>
     </div>
@@ -48,10 +48,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { NAlert, NButton, NInput } from 'naive-ui';
 import { subscribeEmail } from '../api/subscribe';
 import { useToastStore } from '../stores/toast';
+import { useSiteStore } from '../stores/site';
 import { useInstallPrompt } from '../composables/useInstallPrompt';
 import { subscribeWebPush } from '../composables/useWebPush';
 
@@ -64,8 +65,9 @@ const subEmail = ref('');
 const subBusy = ref(false);
 const subMsg = ref('');
 const toastStore = useToastStore();
+const siteStore = useSiteStore();
 
-const LAUNCH = new Date(2026, 4, 1, 0, 0, 0);
+const launchAt = ref(null);
 
 const footerNavItems = computed(() => {
   const items = [
@@ -132,8 +134,19 @@ function pad(n) {
   return n < 10 ? '0' + n : n;
 }
 
+function parseLaunchTime(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function updateUptime() {
-  const diff = Date.now() - LAUNCH.getTime();
+  const launch = launchAt.value;
+  if (!launch) {
+    uptimeText.value = '';
+    return;
+  }
+  const diff = Date.now() - launch.getTime();
   if (diff <= 0) {
     uptimeText.value = '运行时间：0天00小时00分00秒';
     return;
@@ -148,9 +161,18 @@ function updateUptime() {
 
 let timer;
 onMounted(() => {
+  launchAt.value = parseLaunchTime(siteStore.launchTime);
   updateUptime();
   timer = setInterval(updateUptime, 1000);
 });
+
+watch(
+  () => siteStore.launchTime,
+  (value) => {
+    launchAt.value = parseLaunchTime(value);
+    updateUptime();
+  }
+);
 
 onUnmounted(() => {
   clearInterval(timer);

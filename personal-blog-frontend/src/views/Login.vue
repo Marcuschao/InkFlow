@@ -6,7 +6,7 @@
         <template #header>
           <div class="card-header-inner">
             <h1 class="card-title">登录</h1>
-            <p class="card-hint">管理员与普通用户统一登录</p>
+            <!-- <p class="card-hint">管理员与普通用户统一登录</p> -->
           </div>
         </template>
         <n-form class="login-form" @submit.prevent="handleLogin">

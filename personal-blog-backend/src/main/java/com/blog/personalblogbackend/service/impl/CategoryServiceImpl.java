@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.service.impl;
 
+import com.blog.personalblogbackend.cache.MetaCacheService;
 import com.blog.personalblogbackend.model.entity.Category;
 import com.blog.personalblogbackend.mapper.CategoryMapper;
 import com.blog.personalblogbackend.service.CategoryService;
@@ -11,8 +12,20 @@ import java.util.List;
 @Service
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements CategoryService {
 
+    private final MetaCacheService metaCacheService;
+
+    public CategoryServiceImpl(MetaCacheService metaCacheService) {
+        this.metaCacheService = metaCacheService;
+    }
+
     @Override
     public List<Category> getAllCategories() {
-        return list(); // 使用 MyBatis-Plus 提供的 list 方法查询所有分类
+        List<Category> cached = metaCacheService.getCategories();
+        if (cached != null) {
+            return cached;
+        }
+        List<Category> categories = list();
+        metaCacheService.putCategories(categories);
+        return categories;
     }
 }

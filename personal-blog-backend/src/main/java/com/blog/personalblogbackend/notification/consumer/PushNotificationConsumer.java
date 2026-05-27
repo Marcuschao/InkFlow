@@ -2,12 +2,16 @@ package com.blog.personalblogbackend.notification.consumer;
 
 import com.blog.personalblogbackend.notification.NotificationMessage;
 import com.blog.personalblogbackend.service.WebPushService;
+import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.Map;
 
 @Component
@@ -23,20 +27,21 @@ public class PushNotificationConsumer {
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.pushQueue}")
-    public void onMessage(NotificationMessage message) {
+    public void onMessage(NotificationMessage message, Channel channel,
+                          @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
         try {
             Map<String, Object> p = message.getPayload();
-            if (p == null) {
-                return;
+            if (p != null) {
+                Long articleId = toLong(p.get("articleId"));
+                String title = p.get("title") != null ? String.valueOf(p.get("title")) : null;
+                if (articleId != null) {
+                    webPushService.notifyNewArticle(articleId, title);
+                }
             }
-            Long articleId = toLong(p.get("articleId"));
-            String title = p.get("title") != null ? String.valueOf(p.get("title")) : null;
-            if (articleId != null) {
-                webPushService.notifyNewArticle(articleId, title);
-            }
+            channel.basicAck(tag, false);
         } catch (Exception ex) {
             log.warn("[notification] push consume failed: {}", ex.toString());
-            throw ex;
+            channel.basicNack(tag, false, false);
         }
     }
 

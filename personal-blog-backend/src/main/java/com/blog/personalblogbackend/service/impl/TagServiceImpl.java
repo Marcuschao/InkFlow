@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.service.impl;
 
+import com.blog.personalblogbackend.cache.MetaCacheService;
 import com.blog.personalblogbackend.model.entity.Tag;
 import com.blog.personalblogbackend.mapper.TagMapper;
 import com.blog.personalblogbackend.service.TagService;
@@ -11,8 +12,20 @@ import java.util.List;
 @Service
 public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagService {
 
+    private final MetaCacheService metaCacheService;
+
+    public TagServiceImpl(MetaCacheService metaCacheService) {
+        this.metaCacheService = metaCacheService;
+    }
+
     @Override
     public List<Tag> getAllTags() {
-        return list(); // 使用 MyBatis-Plus 提供的 list 方法查询所有标签
+        List<Tag> cached = metaCacheService.getTags();
+        if (cached != null) {
+            return cached;
+        }
+        List<Tag> tags = list();
+        metaCacheService.putTags(tags);
+        return tags;
     }
 }

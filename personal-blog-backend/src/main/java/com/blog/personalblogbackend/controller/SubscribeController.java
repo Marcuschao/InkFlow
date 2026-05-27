@@ -1,8 +1,8 @@
 package com.blog.personalblogbackend.controller;
 
-import com.blog.personalblogbackend.config.properties.BlogSiteProperties;
 import com.blog.personalblogbackend.common.support.Result;
 import com.blog.personalblogbackend.model.dto.subscribe.SubscribeRequest;
+import com.blog.personalblogbackend.service.BlogSiteService;
 import com.blog.personalblogbackend.service.SubscriberService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,11 +18,11 @@ import org.springframework.web.servlet.view.RedirectView;
 public class SubscribeController {
 
     private final SubscriberService subscriberService;
-    private final BlogSiteProperties blogSiteProperties;
+    private final BlogSiteService blogSiteService;
 
-    public SubscribeController(SubscriberService subscriberService, BlogSiteProperties blogSiteProperties) {
+    public SubscribeController(SubscriberService subscriberService, BlogSiteService blogSiteService) {
         this.subscriberService = subscriberService;
-        this.blogSiteProperties = blogSiteProperties;
+        this.blogSiteService = blogSiteService;
     }
 
     @PostMapping
@@ -34,7 +34,7 @@ public class SubscribeController {
     @GetMapping("/confirm")
     public RedirectView confirm(@RequestParam String token) {
         boolean ok = subscriberService.confirmSubscribe(token);
-        String base = blogSiteProperties.getSiteUrl().replaceAll("/$", "");
+        String base = blogSiteService.getSiteUrl().replaceAll("/$", "");
         return new RedirectView(ok ? base + "?subscribe=confirmed" : base + "?subscribe=invalid");
     }
 }

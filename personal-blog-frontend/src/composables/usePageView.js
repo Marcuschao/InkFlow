@@ -2,6 +2,7 @@ import { onMounted, watch } from 'vue';
 import request from '../utils/request';
 
 const VISITOR_KEY = 'blog-visitor-id';
+const VIEW_KEY_PREFIX = 'blog-pv:';
 
 function getVisitorId() {
   try {
@@ -19,8 +20,30 @@ function getVisitorId() {
   }
 }
 
+function viewDedupKey(body) {
+  if (body.page === 'article') return `${body.page}:${body.articleId}`;
+  return body.page || 'unknown';
+}
+
+function shouldTrack(body) {
+  const key = VIEW_KEY_PREFIX + viewDedupKey(body);
+  try {
+    if (sessionStorage.getItem(key)) return false;
+    sessionStorage.setItem(key, '1');
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 function postView(body) {
-  request({ url: '/stat/view', method: 'post', data: body }).catch(() => {});
+  if (!shouldTrack(body)) return;
+  request({
+    url: '/stat/view',
+    method: 'post',
+    data: body,
+    skipErrorToast: true,
+  }).catch(() => {});
 }
 
 export function usePageViewHome() {

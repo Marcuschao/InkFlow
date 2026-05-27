@@ -15,6 +15,8 @@ import com.blog.personalblogbackend.common.exception.ServiceException;
 import com.blog.personalblogbackend.mapper.CommentMapper;
 import com.blog.personalblogbackend.notification.DomainEvent;
 import com.blog.personalblogbackend.notification.NotificationProducer;
+import com.blog.personalblogbackend.messaging.ContentChangeEventType;
+import com.blog.personalblogbackend.messaging.ContentChangeProducer;
 import com.blog.personalblogbackend.service.CommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     private CurrentUserService currentUserService;
     @Autowired
     private com.blog.personalblogbackend.service.UserService userService;
+    @Autowired
+    private ContentChangeProducer contentChangeProducer;
 
     @Override
     public List<CommentPublicVo> listApprovedForArticle(Long articleId) {
@@ -138,6 +142,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
             }
         }
         notificationProducer.sendDomainEvent(DomainEvent.commentApproved(c));
+        contentChangeProducer.send(c.getArticleId(), ContentChangeEventType.COMMENT_APPROVED);
     }
 
     @Override

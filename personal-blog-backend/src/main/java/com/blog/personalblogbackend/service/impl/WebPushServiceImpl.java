@@ -5,6 +5,7 @@ import com.blog.personalblogbackend.model.entity.Article;
 import com.blog.personalblogbackend.model.entity.PushSubscription;
 import com.blog.personalblogbackend.common.exception.ServiceException;
 import com.blog.personalblogbackend.mapper.ArticleMapper;
+import com.blog.personalblogbackend.service.BlogSiteService;
 import com.blog.personalblogbackend.service.WebPushService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -39,6 +40,9 @@ public class WebPushServiceImpl implements WebPushService {
 
     @Autowired
     private BlogSiteProperties blogSiteProperties;
+
+    @Autowired
+    private BlogSiteService blogSiteService;
 
     @Autowired
     private PushSubscriptionServiceImpl pushSubscriptionService;
@@ -81,8 +85,8 @@ public class WebPushServiceImpl implements WebPushService {
         if (!p.isEnabled() || pushService == null) {
             return;
         }
-        String url = blogSiteProperties.resolvePublicUrl("/article/" + articleId);
-        String siteTitle = blogSiteProperties.getSiteTitle();
+        String url = blogSiteService.resolvePublicUrl("/article/" + articleId);
+        String siteTitle = blogSiteService.getSiteTitle();
         String title = "[" + siteTitle + "] 新文章：" + (articleTitle != null ? articleTitle : "");
         String body = articleTitle != null ? ("《" + articleTitle + "》") : "新文章已发布";
         sendPayload(title, body, url, articleId);
