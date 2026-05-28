@@ -31,6 +31,7 @@ import com.blog.personalblogbackend.model.vo.user.PublicUserVo;
 
 import com.blog.personalblogbackend.model.vo.user.UserProfileVo;
 
+import com.blog.personalblogbackend.service.FileStorageService;
 import com.blog.personalblogbackend.service.UserService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +85,10 @@ public class UserServiceImpl implements UserService {
     @Autowired
 
     private IpRegionService ipRegionService;
+
+    @Autowired
+
+    private FileStorageService fileStorageService;
 
 
 
@@ -299,6 +304,30 @@ public class UserServiceImpl implements UserService {
 
         return toProfile(user, profile);
 
+    }
+
+    @Override
+    @Transactional
+    public UserProfileVo uploadAvatar(Long userId, org.springframework.web.multipart.MultipartFile file) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new ServiceException(404, "用户不存在");
+        }
+        String url = fileStorageService.saveAvatar(userId, file);
+        UserProfile profile = userProfileMapper.selectById(userId);
+        if (profile == null) {
+            profile = new UserProfile();
+            profile.setUserId(userId);
+            profile.setNickname(user.getUsername());
+            profile.setAvatar(url);
+            profile.setUpdateTime(LocalDateTime.now());
+            userProfileMapper.insert(profile);
+        } else {
+            profile.setAvatar(url);
+            profile.setUpdateTime(LocalDateTime.now());
+            userProfileMapper.updateById(profile);
+        }
+        return toProfile(user, profile);
     }
 
 

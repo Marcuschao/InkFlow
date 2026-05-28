@@ -16,6 +16,10 @@
         </n-space>
       </header>
 
+      <n-alert type="info" style="margin-bottom: 16px;">
+        超过 90 天的操作日志每周日 02:00 归档至 MinIO blog-logs 后从库中删除；慢接口快照同期导出。
+      </n-alert>
+
       <n-alert v-if="loadErr" type="error" class="state-msg" style="margin-bottom: 16px;">{{ loadErr }}</n-alert>
 
       <div v-else class="logs-stack">

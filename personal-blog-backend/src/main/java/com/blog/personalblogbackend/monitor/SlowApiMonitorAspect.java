@@ -44,6 +44,10 @@ public class SlowApiMonitorAspect {
                 .toList();
     }
 
+    public List<SlowApiRecord> snapshotAll() {
+        return List.copyOf(records);
+    }
+
     private void trim() {
         if (records.size() <= MAX) {
             return;

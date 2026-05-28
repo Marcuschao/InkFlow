@@ -9,6 +9,7 @@ import com.blog.personalblogbackend.common.exception.ServiceException;
 import com.blog.personalblogbackend.llm.AiService;
 import com.blog.personalblogbackend.mapper.ArticleMapper;
 import com.blog.personalblogbackend.service.AgentService;
+import com.blog.personalblogbackend.service.ReportStorageService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,15 +43,18 @@ public class AgentServiceImpl implements AgentService {
     private final ObjectMapper objectMapper;
     private final Optional<BlogChatAssistant> blogChatAssistant;
     private final ArticleSearchTools articleSearchTools;
+    private final ReportStorageService reportStorageService;
 
     public AgentServiceImpl(AiService aiService, ArticleMapper articleMapper, ObjectMapper objectMapper,
                             @Autowired(required = false) BlogChatAssistant blogChatAssistant,
-                            ArticleSearchTools articleSearchTools) {
+                            ArticleSearchTools articleSearchTools,
+                            @Autowired(required = false) ReportStorageService reportStorageService) {
         this.aiService = aiService;
         this.articleMapper = articleMapper;
         this.objectMapper = objectMapper;
         this.blogChatAssistant = Optional.ofNullable(blogChatAssistant);
         this.articleSearchTools = articleSearchTools;
+        this.reportStorageService = reportStorageService;
     }
 
     @Override
@@ -462,7 +466,22 @@ public class AgentServiceImpl implements AgentService {
             user = user + "\n编排侧重点：" + request.getFocus().trim();
         }
 
-        return aiService.chat(sys, user);
+        String result = aiService.chat(sys, user);
+        persistWeeklyReport(result, weekStart);
+        return result;
+    }
+
+    private void persistWeeklyReport(String markdown, LocalDate weekStart) {
+        if (reportStorageService == null || !StringUtils.hasText(markdown)) {
+            return;
+        }
+        if (markdown.startsWith("暂无")) {
+            return;
+        }
+        try {
+            reportStorageService.saveWeeklyReport("周报 " + weekStart, markdown);
+        } catch (Exception ignored) {
+        }
     }
 
     private ChatResponse refusalResponse() {

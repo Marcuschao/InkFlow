@@ -10,6 +10,7 @@ import {
   NList,
   NListItem,
   NTag,
+  NVirtualList,
   useMessage,
 } from 'naive-ui';
 import UserAvatar from '../components/UserAvatar.vue';
@@ -17,16 +18,27 @@ import { fetchChatHistory, fetchOnlineUsers, sendChatMessage, pingPresence } fro
 import { useAuthStore } from '../stores/auth';
 import { connect, onChatMessage, onStatusChange } from '../services/websocket';
 
+const INITIAL_LIMIT = 50;
+const PAGE_SIZE = 30;
+const MAX_RENDER = 200;
+const TRIM_COUNT = 50;
+const NEAR_BOTTOM_PX = 100;
+
 const authStore = useAuthStore();
 const message = useMessage();
 const messages = ref([]);
 const onlineUsers = ref([]);
 const draft = ref('');
 const loading = ref(true);
+const loadingMore = ref(false);
+const hasMore = ref(true);
 const sending = ref(false);
 const showOnlineDrawer = ref(false);
+const showNewHint = ref(false);
 const isMobile = ref(false);
-const messageListRef = ref(null);
+const isNearBottom = ref(true);
+const virtualListRef = ref(null);
+const renderedIds = new Set();
 let onlineTimer = null;
 let stopChatListener = () => {};
 let stopStatusListener = () => {};
@@ -34,37 +46,136 @@ let stopStatusListener = () => {};
 function formatTime(t) {
   if (!t) return '';
   const d = new Date(t);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Shanghai',
+  });
 }
 
 function isMine(msg) {
   return authStore.user?.id != null && msg.userId === authStore.user.id;
 }
 
-function appendMessage(msg) {
-  if (!msg?.id) return;
-  if (messages.value.some((m) => m.id === msg.id)) return;
-  messages.value.push(msg);
-  scrollToBottom();
+function trimMessages() {
+  if (messages.value.length <= MAX_RENDER) return;
+  const removed = messages.value.splice(0, TRIM_COUNT);
+  removed.forEach((m) => renderedIds.delete(m.id));
+  hasMore.value = true;
 }
 
 async function scrollToBottom() {
   await nextTick();
-  const el = messageListRef.value;
-  if (el) el.scrollTop = el.scrollHeight;
+  const inst = virtualListRef.value;
+  if (!inst || !messages.value.length) return;
+  inst.scrollTo({ index: messages.value.length - 1, debounce: false });
+  isNearBottom.value = true;
+  showNewHint.value = false;
+}
+
+function prependMessages(list) {
+  const incoming = [];
+  for (const msg of list) {
+    if (!msg?.id || renderedIds.has(msg.id)) continue;
+    renderedIds.add(msg.id);
+    incoming.push(msg);
+  }
+  if (incoming.length) {
+    messages.value = [...incoming, ...messages.value];
+  }
+}
+
+function appendMessage(msg, forceScroll = false) {
+  if (!msg?.id || renderedIds.has(msg.id)) return;
+  renderedIds.add(msg.id);
+  messages.value.push(msg);
+  trimMessages();
+  if (forceScroll || isNearBottom.value) {
+    scrollToBottom();
+  } else {
+    showNewHint.value = true;
+  }
 }
 
 async function loadHistory() {
   loading.value = true;
+  renderedIds.clear();
   try {
-    const res = await fetchChatHistory();
-    messages.value = res.data || [];
+    const res = await fetchChatHistory({ limit: INITIAL_LIMIT });
+    const data = res?.data ?? res;
+    const rows = data?.messages || [];
+    hasMore.value = !!data?.hasMore;
+    rows.forEach((msg) => {
+      if (msg?.id) renderedIds.add(msg.id);
+    });
+    messages.value = rows;
     await scrollToBottom();
   } catch {
     messages.value = [];
+    hasMore.value = false;
   } finally {
     loading.value = false;
   }
+}
+
+async function loadOlder() {
+  if (loadingMore.value || !hasMore.value || !messages.value.length) return;
+  loadingMore.value = true;
+  const anchorId = messages.value[0].id;
+  try {
+    const res = await fetchChatHistory({ cursor: anchorId, limit: PAGE_SIZE });
+    const data = res?.data ?? res;
+    const older = data?.messages || [];
+    hasMore.value = !!data?.hasMore;
+    if (!older.length) {
+      hasMore.value = false;
+      return;
+    }
+    prependMessages(older);
+    await nextTick();
+    const idx = messages.value.findIndex((m) => m.id === anchorId);
+    if (idx >= 0) {
+      virtualListRef.value?.scrollTo({ index: idx, debounce: false });
+    }
+  } catch {
+    /* ignore */
+  } finally {
+    loadingMore.value = false;
+  }
+}
+
+async function syncMissedMessages() {
+  const last = messages.value[messages.value.length - 1];
+  if (!last?.id) return;
+  try {
+    const res = await fetchChatHistory({ afterId: last.id, limit: 100 });
+    const data = res?.data ?? res;
+    const rows = data?.messages || [];
+    rows.forEach((msg) => appendMessage(msg, false));
+    if (isNearBottom.value) {
+      await scrollToBottom();
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function onListScroll(e) {
+  const el = e?.target;
+  if (!el) return;
+  const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+  isNearBottom.value = distance <= NEAR_BOTTOM_PX;
+  if (isNearBottom.value) {
+    showNewHint.value = false;
+  }
+  if (el.scrollTop <= 8 && !loadingMore.value && hasMore.value) {
+    loadOlder();
+  }
+}
+
+function onJumpNew() {
+  scrollToBottom();
 }
 
 async function loadOnlineUsers() {
@@ -87,7 +198,7 @@ async function onSend() {
   try {
     const res = await sendChatMessage(content);
     draft.value = '';
-    if (res.data) appendMessage(res.data);
+    if (res.data) appendMessage(res.data, true);
   } catch (err) {
     message.error(err?.message || '发送失败');
   } finally {
@@ -103,14 +214,18 @@ function onVisibilityChange() {
   if (document.visibilityState === 'visible') {
     loadOnlineUsers();
     ensureConnected();
+    syncMissedMessages();
     if (authStore.isLoggedIn) pingPresence().catch(() => {});
   }
 }
 
 function setupListeners() {
-  stopChatListener = onChatMessage((msg) => appendMessage(msg));
+  stopChatListener = onChatMessage((msg) => appendMessage(msg, false));
   stopStatusListener = onStatusChange((connected) => {
-    if (connected) loadOnlineUsers();
+    if (connected) {
+      loadOnlineUsers();
+      syncMissedMessages();
+    }
   });
 }
 
@@ -134,6 +249,7 @@ onActivated(async () => {
   await ensureConnected();
   if (authStore.isLoggedIn) pingPresence().catch(() => {});
   await loadOnlineUsers();
+  await syncMissedMessages();
 });
 
 onUnmounted(() => {
@@ -165,37 +281,55 @@ onUnmounted(() => {
 
     <div class="chat-layout">
       <section class="chat-main">
-        <div ref="messageListRef" class="message-list">
-          <n-empty v-if="!messages.length && !loading" description="暂无消息，来聊两句吧" />
-          <div
-            v-for="msg in messages"
-            :key="msg.id"
-            class="message-row"
-            :class="{ mine: isMine(msg) }"
+        <div class="message-list-wrap">
+          <n-virtual-list
+            v-if="messages.length"
+            ref="virtualListRef"
+            class="message-list"
+            :items="messages"
+            :item-size="88"
+            item-resizable
+            key-field="id"
+            @scroll="onListScroll"
           >
-            <UserAvatar
-              v-if="!isMine(msg)"
-              class="msg-avatar"
-              :src="msg.avatar"
-              :name="msg.username"
-              :size="36"
-            />
-            <div class="bubble-wrap">
-              <div class="bubble-meta">
-                <span class="name">{{ msg.username }}</span>
-                <n-tag v-if="msg.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
-                <time class="time">{{ formatTime(msg.createTime) }}</time>
+            <template #default="{ item }">
+              <div class="message-row" :class="{ mine: isMine(item) }">
+                <UserAvatar
+                  v-if="!isMine(item)"
+                  class="msg-avatar"
+                  :src="item.avatar"
+                  :name="item.username"
+                  :size="36"
+                />
+                <div class="bubble-wrap">
+                  <div class="bubble-meta">
+                    <span class="name">{{ item.username }}</span>
+                    <n-tag v-if="item.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
+                    <time class="time">{{ formatTime(item.createTime) }}</time>
+                  </div>
+                  <div class="bubble">{{ item.content }}</div>
+                </div>
+                <UserAvatar
+                  v-if="isMine(item)"
+                  class="msg-avatar"
+                  :src="item.avatar"
+                  :name="item.username"
+                  :size="36"
+                />
               </div>
-              <div class="bubble">{{ msg.content }}</div>
-            </div>
-            <UserAvatar
-              v-if="isMine(msg)"
-              class="msg-avatar"
-              :src="msg.avatar"
-              :name="msg.username"
-              :size="36"
-            />
-          </div>
+            </template>
+          </n-virtual-list>
+          <n-empty v-else-if="!loading" description="暂无消息，来聊两句吧" />
+          <n-button
+            v-if="showNewHint"
+            class="new-msg-hint"
+            size="small"
+            type="primary"
+            secondary
+            @click="onJumpNew"
+          >
+            新消息
+          </n-button>
         </div>
 
         <form v-if="authStore.isLoggedIn" class="composer" @submit.prevent="onSend">
@@ -296,15 +430,15 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.message-list {
+.message-list-wrap {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+}
+
+.message-list {
+  height: 100%;
   padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
 }
 
 .message-row {
@@ -313,6 +447,7 @@ onUnmounted(() => {
   gap: var(--space-2);
   max-width: 85%;
   width: fit-content;
+  padding-bottom: var(--space-3);
 }
 
 .message-row.mine {
@@ -366,6 +501,14 @@ onUnmounted(() => {
 .message-row.mine .bubble {
   background: var(--color-primary);
   color: #fff;
+}
+
+.new-msg-hint {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-3);
+  transform: translateX(-50%);
+  z-index: 2;
 }
 
 .composer {

@@ -2,6 +2,7 @@ package com.blog.personalblogbackend.controller;
 
 import com.blog.personalblogbackend.common.support.Result;
 import com.blog.personalblogbackend.config.security.CurrentUserService;
+import com.blog.personalblogbackend.model.dto.chat.ChatHistoryResult;
 import com.blog.personalblogbackend.model.dto.chat.ChatSendRequest;
 import com.blog.personalblogbackend.model.entity.User;
 import com.blog.personalblogbackend.model.entity.UserProfile;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -30,8 +32,11 @@ public class ChatController {
     private final UserService userService;
 
     @GetMapping("/history")
-    public Result<List<ChatMessageVo>> history() {
-        return Result.success(chatService.recentHistory());
+    public Result<ChatHistoryResult> history(
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(required = false) Long afterId,
+            @RequestParam(required = false) Integer limit) {
+        return Result.success(chatService.loadHistory(cursor, afterId, limit));
     }
 
     @GetMapping("/online-users")

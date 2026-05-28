@@ -24,6 +24,8 @@ public class ContentRevision {
     private String seoTitle;
     private String seoDescription;
     private String content;
+    private String contentStorageKey;
+    private String contentMd5;
 
     private String articleTags;
     private Long articleCategoryId;

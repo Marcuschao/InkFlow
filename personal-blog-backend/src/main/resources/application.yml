@@ -5,6 +5,8 @@ server:
 spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  jackson:
+    time-zone: Asia/Shanghai
   data:
     redis:
       lettuce:
@@ -46,7 +48,11 @@ blog:
   chat:
     guest-readonly: true
     history-limit: 50
+    history-page-size: 30
     online-ttl-seconds: 90
+    archive-hot-days: 7
+    archive-batch-size: 1000
+    archive-cron: "0 0 1 * * ?"
   websocket:
     endpoint: /ws
     heartbeat: 10000

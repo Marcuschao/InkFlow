@@ -27,8 +27,18 @@
               <n-form-item label="昵称">
                 <n-input v-model:value="nickname" maxlength="50" />
               </n-form-item>
-              <n-form-item label="头像 URL">
-                <n-input v-model:value="avatar" maxlength="255" placeholder="图片地址" />
+              <n-form-item label="头像">
+                <n-space align="center">
+                  <n-upload
+                    :show-file-list="false"
+                    accept="image/*"
+                    :disabled="avatarUploading"
+                    :custom-request="onAvatarUpload"
+                  >
+                    <n-button size="small" :loading="avatarUploading">上传头像</n-button>
+                  </n-upload>
+                  <n-input v-model:value="avatar" maxlength="512" placeholder="或粘贴图片地址" style="flex: 1" />
+                </n-space>
               </n-form-item>
               <n-form-item label="性别">
                 <n-radio-group v-model:value="gender">
@@ -97,8 +107,9 @@ import {
   NSpace,
   NTabPane,
   NTabs,
+  NUpload,
 } from 'naive-ui';
-import { fetchMe, updateProfile } from '../api/user';
+import { fetchMe, updateProfile, uploadAvatar } from '../api/user';
 import { fetchMyFavorites, fetchFollowers, fetchFollowing } from '../api/interaction';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
@@ -121,6 +132,7 @@ const tabs = [
 
 const loading = ref(true);
 const saving = ref(false);
+const avatarUploading = ref(false);
 const tab = ref('profile');
 const user = ref(null);
 const nickname = ref('');
@@ -219,6 +231,23 @@ watch(
     if (id !== tab.value) setTab(id);
   }
 );
+
+async function onAvatarUpload({ file, onFinish, onError }) {
+  avatarUploading.value = true;
+  try {
+    const res = await uploadAvatar(file.file);
+    const next = res.data;
+    user.value = next;
+    avatar.value = next?.avatar ?? '';
+    authStore.user = next;
+    toast.push('头像已更新', 'success');
+    onFinish();
+  } catch (e) {
+    onError();
+  } finally {
+    avatarUploading.value = false;
+  }
+}
 
 async function save() {
   saving.value = true;

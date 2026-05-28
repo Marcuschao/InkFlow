@@ -156,6 +156,24 @@ const routes = [
     meta: { requiresAdmin: true },
   },
   {
+    path: '/admin/reports/weekly',
+    name: 'AdminReportsWeekly',
+    component: () => import('../views/Admin/AdminReportsWeekly.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/reports/freshness',
+    name: 'AdminReportsFreshness',
+    component: () => import('../views/Admin/AdminReportsFreshness.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/backup',
+    name: 'AdminBackup',
+    component: () => import('../views/Admin/AdminBackup.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
     path: '/admin/settings',
     name: 'AdminSiteSettings',
     component: () => import('../views/Admin/AdminSiteSettings.vue'),

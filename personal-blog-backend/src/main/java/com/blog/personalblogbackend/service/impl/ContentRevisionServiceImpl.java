@@ -15,6 +15,7 @@ import com.blog.personalblogbackend.mapper.DiaryMapper;
 import com.blog.personalblogbackend.mapper.TagMapper;
 import com.blog.personalblogbackend.common.revision.RevisionTargetType;
 import com.blog.personalblogbackend.service.ContentRevisionService;
+import com.blog.personalblogbackend.service.RevisionContentStorage;
 import com.blog.personalblogbackend.service.RevisionDiffService;
 import com.blog.personalblogbackend.notification.DomainEvent;
 import com.blog.personalblogbackend.notification.NotificationProducer;
@@ -53,6 +54,9 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
     @Autowired
     private NotificationProducer notificationProducer;
 
+    @Autowired
+    private RevisionContentStorage revisionContentStorage;
+
     private static boolean isPublished(Integer status) {
         return status != null && status == 1;
     }
@@ -82,7 +86,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         rev.setSummary(article.getSummary());
         rev.setSeoTitle(article.getSeoTitle());
         rev.setSeoDescription(article.getSeoDescription());
-        rev.setContent(nullToEmpty(article.getContent()));
+        String content = nullToEmpty(article.getContent());
         rev.setArticleTags(StringUtils.hasText(articleTagsCsv) ? articleTagsCsv.trim() : "");
         rev.setArticleCategoryId(article.getCategoryId());
         rev.setArticleStatus(article.getStatus());
@@ -90,6 +94,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         rev.setRemark(remark);
         rev.setCreatedAt(LocalDateTime.now());
         contentRevisionMapper.insert(rev);
+        revisionContentStorage.persistAfterInsert(rev, RevisionTargetType.ARTICLE, content);
     }
 
     @Override
@@ -102,7 +107,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         rev.setTargetId(diary.getId());
         rev.setRevisionNo(nextRevisionNo(RevisionTargetType.DIARY, diary.getId()));
         rev.setTitle(diary.getTitle());
-        rev.setContent(nullToEmpty(diary.getContent()));
+        String content = nullToEmpty(diary.getContent());
         rev.setDiaryDate(diary.getDiaryDate());
         rev.setDiaryTags(diary.getTags());
         rev.setDiaryContentType(diary.getContentType());
@@ -110,6 +115,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         rev.setRemark(remark);
         rev.setCreatedAt(LocalDateTime.now());
         contentRevisionMapper.insert(rev);
+        revisionContentStorage.persistAfterInsert(rev, RevisionTargetType.DIARY, content);
     }
 
     @Override
@@ -193,7 +199,8 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
     public RevisionDiffResponseVo diffArticleRevisions(Long articleId, Long leftRevisionId, Long rightRevisionId) {
         ContentRevision l = requireRevision(leftRevisionId, RevisionTargetType.ARTICLE, articleId);
         ContentRevision r = requireRevision(rightRevisionId, RevisionTargetType.ARTICLE, articleId);
-        return revisionDiffService.build(leftRevisionId, rightRevisionId, nullToEmpty(l.getContent()), nullToEmpty(r.getContent()));
+        return revisionDiffService.build(leftRevisionId, rightRevisionId,
+                revisionContentStorage.loadContent(l), revisionContentStorage.loadContent(r));
     }
 
     @Override
@@ -201,7 +208,8 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         requireDiaryOwner(diaryId, userId);
         ContentRevision l = requireRevision(leftRevisionId, RevisionTargetType.DIARY, diaryId);
         ContentRevision r = requireRevision(rightRevisionId, RevisionTargetType.DIARY, diaryId);
-        return revisionDiffService.build(leftRevisionId, rightRevisionId, nullToEmpty(l.getContent()), nullToEmpty(r.getContent()));
+        return revisionDiffService.build(leftRevisionId, rightRevisionId,
+                revisionContentStorage.loadContent(l), revisionContentStorage.loadContent(r));
     }
 
     private void applyRevisionToArticle(Article cur, ContentRevision target) {
@@ -209,7 +217,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         cur.setSummary(target.getSummary());
         cur.setSeoTitle(target.getSeoTitle());
         cur.setSeoDescription(target.getSeoDescription());
-        cur.setContent(target.getContent());
+        cur.setContent(revisionContentStorage.loadContent(target));
         cur.setCategoryId(target.getArticleCategoryId());
         cur.setStatus(target.getArticleStatus());
         cur.setCover(target.getArticleCover());
@@ -217,7 +225,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
 
     private void applyRevisionToDiary(Diary cur, ContentRevision target) {
         cur.setTitle(target.getTitle());
-        cur.setContent(target.getContent());
+        cur.setContent(revisionContentStorage.loadContent(target));
         cur.setDiaryDate(target.getDiaryDate());
         cur.setTags(target.getDiaryTags());
         cur.setContentType(target.getDiaryContentType());
@@ -267,7 +275,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         vo.setSummary(r.getSummary());
         vo.setSeoTitle(r.getSeoTitle());
         vo.setSeoDescription(r.getSeoDescription());
-        vo.setContent(r.getContent());
+        vo.setContent(revisionContentStorage.loadContent(r));
         vo.setArticleTags(r.getArticleTags());
         vo.setArticleCategoryId(r.getArticleCategoryId());
         vo.setArticleStatus(r.getArticleStatus());

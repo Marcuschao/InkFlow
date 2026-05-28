@@ -18,3 +18,4 @@ personal-blog-frontend/build/
 *.swo
 *~
 .DS_Store
+docker-compose.yml

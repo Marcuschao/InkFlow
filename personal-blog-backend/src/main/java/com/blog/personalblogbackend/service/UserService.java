@@ -19,6 +19,8 @@ public interface UserService {
 
     UserProfileVo updateProfile(Long userId, UpdateProfileRequest request);
 
+    UserProfileVo uploadAvatar(Long userId, org.springframework.web.multipart.MultipartFile file);
+
     PublicUserVo getPublicProfile(Long userId);
 
     Map<Long, com.blog.personalblogbackend.model.entity.UserProfile> mapProfilesByUserIds(Collection<Long> userIds);

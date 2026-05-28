@@ -10,5 +10,9 @@ import org.springframework.stereotype.Component;
 public class ChatProperties {
     private boolean guestReadonly = true;
     private int historyLimit = 50;
+    private int historyPageSize = 30;
     private int onlineTtlSeconds = 45;
+    private int archiveHotDays = 7;
+    private int archiveBatchSize = 1000;
+    private String archiveCron = "0 0 1 * * ?";
 }

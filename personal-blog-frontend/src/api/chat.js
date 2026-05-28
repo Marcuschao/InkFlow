@@ -1,7 +1,7 @@
 import request from '../utils/request';
 
-export function fetchChatHistory() {
-  return request({ url: '/chat/history', method: 'get' });
+export function fetchChatHistory(params = {}) {
+  return request({ url: '/chat/history', method: 'get', params, skipErrorToast: true });
 }
 
 export function fetchOnlineUsers() {

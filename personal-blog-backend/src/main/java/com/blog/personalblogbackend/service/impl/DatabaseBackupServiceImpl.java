@@ -1,0 +1,179 @@
+package com.blog.personalblogbackend.service.impl;
+
+import com.blog.personalblogbackend.common.constant.BlogSiteKeys;
+import com.blog.personalblogbackend.common.exception.ServiceException;
+import com.blog.personalblogbackend.service.DatabaseBackupService;
+import com.blog.personalblogbackend.service.MinioStorageService;
+import com.blog.personalblogbackend.service.SiteKvService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.GZIPOutputStream;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class DatabaseBackupServiceImpl implements DatabaseBackupService {
+
+    private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
+    private static final Pattern JDBC_URL = Pattern.compile("jdbc:mysql://([^:/]+)(?::(\\d+))?/([^?]+)");
+    private static final int RETENTION_DAYS = 30;
+
+    private final ObjectProvider<MinioStorageService> minioStorageProvider;
+    private final SiteKvService siteKvService;
+
+    @Value("${spring.datasource.url:}")
+    private String jdbcUrl;
+
+    @Value("${spring.datasource.username:}")
+    private String dbUser;
+
+    @Value("${spring.datasource.password:}")
+    private String dbPassword;
+
+    @Override
+    public void runScheduledBackup() {
+        try {
+            triggerBackup();
+        } catch (Exception e) {
+            log.error("定时数据库备份失败", e);
+        }
+    }
+
+    @Override
+    public void triggerBackup() {
+        MinioStorageService minio = minioStorageProvider.getIfAvailable();
+        if (minio == null) {
+            throw new ServiceException(503, "MinIO 未启用，无法备份");
+        }
+        DbConn conn = parseJdbc(jdbcUrl);
+        List<String> cmd = new ArrayList<>();
+        cmd.add("mysqldump");
+        cmd.add("-h");
+        cmd.add(conn.host());
+        if (conn.port() != null) {
+            cmd.add("-P");
+            cmd.add(conn.port());
+        }
+        cmd.add("-u");
+        cmd.add(dbUser);
+        if (dbPassword != null && !dbPassword.isEmpty()) {
+            cmd.add("-p" + dbPassword);
+        }
+        cmd.add("--single-transaction");
+        cmd.add("--routines");
+        cmd.add("--events");
+        cmd.add(conn.database());
+
+        byte[] sqlBytes;
+        try {
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            sqlBytes = readAll(process.getInputStream());
+            int code = process.waitFor();
+            if (code != 0) {
+                String err = new String(sqlBytes, StandardCharsets.UTF_8);
+                throw new ServiceException(500, "mysqldump 失败: " + truncate(err, 200));
+            }
+        } catch (ServiceException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ServiceException(500, "执行 mysqldump 失败: " + e.getMessage());
+        }
+
+        byte[] gz = new byte[0];
+        try {
+            gz = gzip(sqlBytes);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        LocalDateTime now = LocalDateTime.now(ZONE);
+        String objectKey = "backups/database/"
+                + now.format(DateTimeFormatter.ofPattern("yyyy/MM"))
+                + "/blog_db_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".sql.gz";
+        minio.putObject(minio.bucketBackups(), objectKey, gz, "application/gzip");
+
+        siteKvService.put(BlogSiteKeys.BACKUP_LAST_TIME, now.toString());
+        siteKvService.put(BlogSiteKeys.BACKUP_LAST_SIZE, String.valueOf(gz.length));
+        siteKvService.put(BlogSiteKeys.BACKUP_LAST_OBJECT_KEY, objectKey);
+
+        purgeOldBackups(minio);
+        log.info("数据库备份完成 key={} size={}", objectKey, gz.length);
+    }
+
+    @Override
+    public BackupStatus getStatus() {
+        return new BackupStatus(
+                siteKvService.get(BlogSiteKeys.BACKUP_LAST_TIME).orElse(null),
+                siteKvService.get(BlogSiteKeys.BACKUP_LAST_SIZE).map(Long::parseLong).orElse(null),
+                siteKvService.get(BlogSiteKeys.BACKUP_LAST_OBJECT_KEY).orElse(null),
+                null);
+    }
+
+    private void purgeOldBackups(MinioStorageService minio) {
+        LocalDate cutoff = LocalDate.now(ZONE).minusDays(RETENTION_DAYS);
+        List<String> keys = minio.listObjectKeys(minio.bucketBackups(), "backups/database/", 5000);
+        for (String key : keys) {
+            if (!key.endsWith(".sql.gz")) {
+                continue;
+            }
+            try {
+                String part = key.substring(key.lastIndexOf("blog_db_") + "blog_db_".length(), key.length() - ".sql.gz".length());
+                LocalDateTime ts = LocalDateTime.parse(part, DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                if (ts.toLocalDate().isBefore(cutoff)) {
+                    minio.deleteObject(minio.bucketBackups(), key);
+                }
+            } catch (Exception ignored) {
+                /* skip unparsable keys */
+            }
+        }
+    }
+
+    private static DbConn parseJdbc(String url) {
+        Matcher m = JDBC_URL.matcher(url == null ? "" : url);
+        if (!m.find()) {
+            throw new ServiceException(500, "无法解析数据库连接 URL");
+        }
+        return new DbConn(m.group(1), m.group(2), m.group(3));
+    }
+
+    private static byte[] readAll(InputStream in) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        in.transferTo(baos);
+        return baos.toByteArray();
+    }
+
+    private static byte[] gzip(byte[] data) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(baos)) {
+            gzip.write(data);
+        }
+        return baos.toByteArray();
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null || s.length() <= max) {
+            return s;
+        }
+        return s.substring(0, max);
+    }
+
+    private record DbConn(String host, String port, String database) {
+    }
+}

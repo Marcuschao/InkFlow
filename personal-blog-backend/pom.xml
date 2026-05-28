@@ -175,6 +175,11 @@
             <artifactId>ip2region</artifactId>
             <version>3.3.7</version>
         </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.14</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>

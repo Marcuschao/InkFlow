@@ -11,6 +11,7 @@ import com.blog.personalblogbackend.common.exception.ServiceException;
 import com.blog.personalblogbackend.llm.AiService;
 import com.blog.personalblogbackend.mapper.ArticleMapper;
 import com.blog.personalblogbackend.service.FreshnessService;
+import com.blog.personalblogbackend.service.ReportStorageService;
 import com.blog.personalblogbackend.service.SiteKvService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,8 @@ public class FreshnessServiceImpl implements FreshnessService {
     private AiService aiService;
     @Autowired
     private BlogFreshnessProperties freshnessProperties;
+    @Autowired(required = false)
+    private ReportStorageService reportStorageService;
 
     @Override
     public FreshnessSummaryDto summary() {
@@ -75,6 +78,12 @@ public class FreshnessServiceImpl implements FreshnessService {
                 + "\n摘要：" + nullToEmpty(article.getSummary())
                 + "\n正文：\n" + body;
         String refreshed = aiService.chat(sys, user);
+        if (reportStorageService != null && StringUtils.hasText(refreshed)) {
+            try {
+                reportStorageService.saveFreshnessReport(articleId, article.getTitle(), refreshed);
+            } catch (Exception ignored) {
+            }
+        }
         FreshnessAiDraftDto dto = new FreshnessAiDraftDto();
         dto.setTitle(article.getTitle());
         dto.setSummary(article.getSummary());
