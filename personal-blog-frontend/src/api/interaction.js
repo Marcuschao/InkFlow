@@ -1,7 +1,15 @@
 import request from '../utils/request';
 
-export function toggleLike(articleId) {
-  return request({ url: `/articles/${articleId}/like`, method: 'post' });
+function newIdempotencyKey(articleId, action) {
+  return `${action}-${articleId}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function toggleLike(articleId, idempotencyKey) {
+  return request({
+    url: `/articles/${articleId}/like`,
+    method: 'post',
+    idempotencyKey: idempotencyKey || newIdempotencyKey(articleId, 'like'),
+  });
 }
 
 export function getLikeStatus(articleId) {
@@ -12,8 +20,12 @@ export function getLikeCount(articleId) {
   return request({ url: `/articles/${articleId}/likes/count`, method: 'get', skipErrorToast: true });
 }
 
-export function toggleFavorite(articleId) {
-  return request({ url: `/articles/${articleId}/favorite`, method: 'post' });
+export function toggleFavorite(articleId, idempotencyKey) {
+  return request({
+    url: `/articles/${articleId}/favorite`,
+    method: 'post',
+    idempotencyKey: idempotencyKey || newIdempotencyKey(articleId, 'fav'),
+  });
 }
 
 export function getFavoriteStatus(articleId) {

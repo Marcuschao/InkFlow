@@ -28,7 +28,9 @@ import java.util.Set;
 @Slf4j
 public class ChatOnlineServiceImpl implements ChatOnlineService {
 
-    private static final String KEY_PREFIX = "chat:online:session:";
+    private static final String ONLINE_ZSET = "chat:online:z";
+    private static final String META_PREFIX = "chat:online:meta:";
+    private static final String LEGACY_PREFIX = "chat:online:session:";
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
 
     private final StringRedisTemplate redis;
@@ -55,9 +57,9 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
                 return;
             }
         } else {
-            redis.delete(key("http:" + userId));
+            removeLegacyHttpKey(userId);
         }
-        OnlineUserVo existing = readSession(sessionId);
+        OnlineUserVo existing = readMeta(sessionId);
         OnlineUserVo vo = new OnlineUserVo();
         vo.setUserId(userId);
         vo.setUsername(username);
@@ -66,9 +68,12 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
         vo.setSessionId(sessionId);
         vo.setIp(StringUtils.hasText(ip) ? ip : existing != null ? existing.getIp() : null);
         vo.setOnlineAt(existing != null && existing.getOnlineAt() != null ? existing.getOnlineAt() : LocalDateTime.now(ZONE));
+        long score = System.currentTimeMillis();
         try {
             String json = redisMapper().writeValueAsString(vo);
-            redis.opsForValue().set(key(sessionId), json, Duration.ofSeconds(chatProperties.getOnlineTtlSeconds()));
+            redis.opsForZSet().add(ONLINE_ZSET, sessionId, score);
+            redis.opsForValue().set(metaKey(sessionId), json, Duration.ofSeconds(chatProperties.getOnlineTtlSeconds()));
+            removeLegacyKey(sessionId);
         } catch (Exception ex) {
             log.warn("markOnline failed sessionId={} userId={}", sessionId, userId, ex);
         }
@@ -79,7 +84,9 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
         if (!StringUtils.hasText(sessionId)) {
             return;
         }
-        redis.delete(key(sessionId));
+        redis.opsForZSet().remove(ONLINE_ZSET, sessionId);
+        redis.delete(metaKey(sessionId));
+        removeLegacyKey(sessionId);
     }
 
     @Override
@@ -87,49 +94,22 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
         if (userId == null) {
             return;
         }
-        redis.delete(key("http:" + userId));
-        Set<String> keys = redis.keys(KEY_PREFIX + "*");
-        if (keys == null || keys.isEmpty()) {
-            return;
-        }
-        for (String redisKey : keys) {
-            String json = redis.opsForValue().get(redisKey);
-            if (json == null) {
-                continue;
-            }
-            try {
-                OnlineUserVo vo = redisMapper().readValue(json, new TypeReference<>() {
-                });
-                if (vo != null && userId.equals(vo.getUserId())) {
-                    redis.delete(redisKey);
-                }
-            } catch (Exception ignored) {
+        markOffline("http:" + userId);
+        removeLegacyHttpKey(userId);
+        for (OnlineUserVo vo : listOnlineSessions()) {
+            if (userId.equals(vo.getUserId())) {
+                markOffline(vo.getSessionId());
             }
         }
     }
 
     @Override
     public List<OnlineUserVo> listOnlineUsers() {
-        Set<String> keys = redis.keys(KEY_PREFIX + "*");
-        if (keys == null || keys.isEmpty()) {
-            return List.of();
-        }
+        List<OnlineUserVo> sessions = listOnlineSessions();
         Map<Long, OnlineUserVo> dedup = new LinkedHashMap<>();
-        for (String redisKey : keys) {
-            String json = redis.opsForValue().get(redisKey);
-            if (json == null) {
-                continue;
-            }
-            try {
-                OnlineUserVo vo = redisMapper().readValue(json, new TypeReference<>() {
-                });
-                if (vo != null && vo.getUserId() != null) {
-                    if (!StringUtils.hasText(vo.getSessionId())) {
-                        vo.setSessionId(redisKey.substring(KEY_PREFIX.length()));
-                    }
-                    putOnlineUser(dedup, vo);
-                }
-            } catch (Exception ignored) {
+        for (OnlineUserVo vo : sessions) {
+            if (vo != null && vo.getUserId() != null) {
+                putOnlineUser(dedup, vo);
             }
         }
         List<OnlineUserVo> users = new ArrayList<>(dedup.values());
@@ -139,11 +119,33 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
 
     @Override
     public List<OnlineUserVo> listOnlineSessions() {
-        Set<String> keys = redis.keys(KEY_PREFIX + "*");
+        long minScore = System.currentTimeMillis() - chatProperties.getOnlineTtlSeconds() * 1000L;
+        Set<String> sessionIds = redis.opsForZSet().rangeByScore(ONLINE_ZSET, minScore, Double.MAX_VALUE);
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return migrateLegacySessions();
+        }
+        List<OnlineUserVo> sessions = new ArrayList<>();
+        for (String sessionId : sessionIds) {
+            OnlineUserVo vo = readMeta(sessionId);
+            if (vo != null) {
+                vo.setSessionId(sessionId);
+                sessions.add(vo);
+            } else {
+                redis.opsForZSet().remove(ONLINE_ZSET, sessionId);
+            }
+        }
+        sessions.sort(Comparator.comparing(OnlineUserVo::getOnlineAt, Comparator.nullsLast(LocalDateTime::compareTo)).reversed());
+        return filterHttpFallbackSessions(sessions);
+    }
+
+    private List<OnlineUserVo> migrateLegacySessions() {
+        Set<String> keys = redis.keys(LEGACY_PREFIX + "*");
         if (keys == null || keys.isEmpty()) {
             return List.of();
         }
         List<OnlineUserVo> sessions = new ArrayList<>();
+        long score = System.currentTimeMillis();
+        Duration ttl = Duration.ofSeconds(chatProperties.getOnlineTtlSeconds());
         for (String redisKey : keys) {
             String json = redis.opsForValue().get(redisKey);
             if (json == null) {
@@ -153,15 +155,16 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
                 OnlineUserVo vo = redisMapper().readValue(json, new TypeReference<>() {
                 });
                 if (vo != null) {
-                    if (!StringUtils.hasText(vo.getSessionId())) {
-                        vo.setSessionId(redisKey.substring(KEY_PREFIX.length()));
-                    }
+                    String sessionId = redisKey.substring(LEGACY_PREFIX.length());
+                    vo.setSessionId(sessionId);
+                    redis.opsForZSet().add(ONLINE_ZSET, sessionId, score);
+                    redis.opsForValue().set(metaKey(sessionId), json, ttl);
+                    redis.delete(redisKey);
                     sessions.add(vo);
                 }
             } catch (Exception ignored) {
             }
         }
-        sessions.sort(Comparator.comparing(OnlineUserVo::getOnlineAt, Comparator.nullsLast(LocalDateTime::compareTo)).reversed());
         return filterHttpFallbackSessions(sessions);
     }
 
@@ -189,32 +192,16 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
     }
 
     private boolean hasActiveWsSession(Long userId) {
-        Set<String> keys = redis.keys(KEY_PREFIX + "*");
-        if (keys == null || keys.isEmpty()) {
-            return false;
-        }
-        for (String redisKey : keys) {
-            if (redisKey.endsWith("http:" + userId)) {
-                continue;
-            }
-            String json = redis.opsForValue().get(redisKey);
-            if (json == null) {
-                continue;
-            }
-            try {
-                OnlineUserVo vo = redisMapper().readValue(json, new TypeReference<>() {
-                });
-                if (vo != null && userId.equals(vo.getUserId()) && isWsSession(vo.getSessionId())) {
-                    return true;
-                }
-            } catch (Exception ignored) {
+        for (OnlineUserVo vo : listOnlineSessions()) {
+            if (userId.equals(vo.getUserId()) && isWsSession(vo.getSessionId())) {
+                return true;
             }
         }
         return false;
     }
 
-    private OnlineUserVo readSession(String sessionId) {
-        String json = redis.opsForValue().get(key(sessionId));
+    private OnlineUserVo readMeta(String sessionId) {
+        String json = redis.opsForValue().get(metaKey(sessionId));
         if (!StringUtils.hasText(json)) {
             return null;
         }
@@ -257,7 +244,15 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
         return StringUtils.hasText(sessionId) && sessionId.startsWith("http:");
     }
 
-    private String key(String sessionId) {
-        return KEY_PREFIX + sessionId;
+    private void removeLegacyKey(String sessionId) {
+        redis.delete(LEGACY_PREFIX + sessionId);
+    }
+
+    private void removeLegacyHttpKey(Long userId) {
+        redis.delete(LEGACY_PREFIX + "http:" + userId);
+    }
+
+    private static String metaKey(String sessionId) {
+        return META_PREFIX + sessionId;
     }
 }

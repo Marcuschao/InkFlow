@@ -8,6 +8,7 @@ import com.blog.personalblogbackend.model.entity.ChatFailedQueue;
 import com.blog.personalblogbackend.model.entity.ChatMessage;
 import com.blog.personalblogbackend.model.vo.chat.ChatAckVo;
 import com.blog.personalblogbackend.model.vo.chat.ChatMessageVo;
+import com.blog.personalblogbackend.chat.ChatFanoutPublisher;
 import com.blog.personalblogbackend.service.ChatOnlineService;
 import com.blog.personalblogbackend.service.ChatReliabilityService;
 import com.blog.personalblogbackend.service.SensitiveWordService;
@@ -56,6 +57,7 @@ public class ChatReliabilityServiceImpl implements ChatReliabilityService {
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
     private final ChatOnlineService chatOnlineService;
+    private final ChatFanoutPublisher chatFanoutPublisher;
 
     @Override
     public ChatMessageVo send(Long userId, String username, String avatar, boolean admin, ChatSendRequest request) {
@@ -98,7 +100,7 @@ public class ChatReliabilityServiceImpl implements ChatReliabilityService {
         trackPresence(userId);
 
         try {
-            messagingTemplate.convertAndSend("/topic/chat", vo);
+            chatFanoutPublisher.publish(vo);
             sendAck(userId, clientMsgId, vo.getId(), ACK_OK);
             enqueueOffline(vo, userId);
         } catch (Exception ex) {

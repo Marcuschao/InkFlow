@@ -5,7 +5,7 @@ import com.blog.personalblogbackend.model.vo.interaction.LikeStatusVo;
 
 public interface ArticleLikeService {
 
-    LikeStatusVo toggle(Long userId, Long articleId);
+    LikeStatusVo toggle(Long userId, Long articleId, String idempotencyKey);
 
     LikeStatusVo status(Long userId, Long articleId);
 

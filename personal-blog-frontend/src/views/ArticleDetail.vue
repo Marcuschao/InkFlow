@@ -79,6 +79,16 @@
               @update:favorited="favorited = $event"
               @update:like-count="likeCount = $event"
             />
+            <n-button
+              v-if="authStore.isLoggedIn && articleIdNum"
+              class="report-btn"
+              size="small"
+              quaternary
+              type="error"
+              @click="onReportArticle"
+            >
+              举报
+            </n-button>
             <div class="prose-shell">
               <MarkdownRenderer
                 :markdown="articleStore.currentArticle.content || ''"
@@ -235,6 +245,7 @@ import { usePageViewArticle } from '../composables/usePageView';
 import { useReadingHistory } from '../composables/useReadingHistory';
 import { useToastStore } from '../stores/toast';
 import { useAuthStore } from '../stores/auth';
+import { reportArticle } from '../api/article';
 
 const route = useRoute();
 const articleStore = useArticleStore();
@@ -330,6 +341,18 @@ function syncInteractionFromArticle(a) {
       .catch(() => { authorFollowing.value = false; });
   } else {
     authorFollowing.value = false;
+  }
+}
+
+async function onReportArticle() {
+  if (!articleIdNum.value) return;
+  const reason = prompt('请填写举报原因');
+  if (!reason || !reason.trim()) return;
+  try {
+    await reportArticle(articleIdNum.value, reason.trim());
+    toastStore.push('举报已提交', 'success');
+  } catch (e) {
+    toastStore.push(e?.message || '举报失败', 'error');
   }
 }
 

@@ -2,6 +2,7 @@
 personal-blog-backend/src/main/resources/application-dev.yml
 personal-blog-backend/src/main/resources/application-local.yml
 personal-blog-backend/src/main/resources/blog_db.sql
+personal-blog-backend/scripts/
 
 # 前端
 personal-blog-frontend/.env.development

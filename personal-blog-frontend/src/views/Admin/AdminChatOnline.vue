@@ -13,6 +13,13 @@
         </n-space>
       </header>
 
+      <n-grid v-if="metrics" cols="2 m:4" :x-gap="12" :y-gap="12" responsive="screen" style="margin-bottom: 16px;">
+        <n-gi><n-card size="small"><n-statistic label="在线会话" :value="metrics.onlineSessionCount ?? '—'" /></n-card></n-gi>
+        <n-gi><n-card size="small"><n-statistic label="在线用户" :value="metrics.onlineUserCount ?? '—'" /></n-card></n-gi>
+        <n-gi><n-card size="small"><n-statistic label="离线队列" :value="metrics.offlineQueueLength ?? '—'" /></n-card></n-gi>
+        <n-gi><n-card size="small"><n-statistic label="失败待重试" :value="metrics.failedQueuePending ?? '—'" /></n-card></n-gi>
+      </n-grid>
+
       <n-card :bordered="true">
         <n-data-table :columns="columns" :data="rows" :bordered="false" :scroll-x="860" />
         <n-empty v-if="!rows.length" description="暂无在线会话" />
@@ -23,12 +30,14 @@
 
 <script setup>
 import { ref, onMounted, h } from 'vue';
-import { NButton, NCard, NDataTable, NEmpty, NSpace, NTag, useMessage } from 'naive-ui';
+import { NButton, NCard, NDataTable, NEmpty, NGi, NGrid, NSpace, NStatistic, NTag, useMessage } from 'naive-ui';
 import { fetchAdminChatOnline, muteUser } from '../../api/adminChat';
+import { fetchMonitorChat } from '../../api/monitor';
 import { formatShortDateTime } from '../../utils/format';
 
 const message = useMessage();
 const rows = ref([]);
+const metrics = ref(null);
 
 const columns = [
   { title: '用户', key: 'username', width: 100, ellipsis: { tooltip: true } },
@@ -67,10 +76,12 @@ const columns = [
 
 async function load() {
   try {
-    const data = await fetchAdminChatOnline();
+    const [data, chatMetrics] = await Promise.all([fetchAdminChatOnline(), fetchMonitorChat()]);
     rows.value = Array.isArray(data) ? data : [];
+    metrics.value = chatMetrics;
   } catch {
     rows.value = [];
+    metrics.value = null;
   }
 }
 

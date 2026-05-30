@@ -1,10 +1,10 @@
 package com.blog.personalblogbackend.controller;
 
-import com.blog.personalblogbackend.concurrency.ArticleDetailRequestCoalescer;
 import com.blog.personalblogbackend.config.audit.Audit;
 import com.blog.personalblogbackend.common.support.PageResult;
 import com.blog.personalblogbackend.common.support.Result;
 import com.blog.personalblogbackend.model.dto.ArticlePageQuery;
+import com.blog.personalblogbackend.model.vo.ArticleSubmitResultVo;
 import com.blog.personalblogbackend.model.vo.ArticleVO;
 import com.blog.personalblogbackend.model.entity.Article;
 import com.blog.personalblogbackend.service.ArticleInteractionEnricher;
@@ -41,9 +41,6 @@ public class ArticleController {
     private ArticleInteractionEnricher articleInteractionEnricher;
     @Autowired
     private CurrentUserService currentUserService;
-    @Autowired
-    private ArticleDetailRequestCoalescer articleDetailRequestCoalescer;
-
     /**
      * 分页获取文章列表
      * @param query 查询参数
@@ -63,6 +60,15 @@ public class ArticleController {
         return Result.success(PageResult.build(articleVOs, articlePage.getTotal(), articlePage.getSize(), articlePage.getCurrent()));
     }
 
+    @GetMapping("/mine")
+    public Result<PageResult<Article>> myArticles(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Integer status) {
+        IPage<Article> p = articleService.getMyArticles(currentUserService.requireUserId(), status, page, size);
+        return Result.success(PageResult.build(p.getRecords(), p.getTotal(), p.getSize(), p.getCurrent()));
+    }
+
     /**
      * 获取文章详情
      * @param id 文章ID
@@ -72,7 +78,9 @@ public class ArticleController {
     public ResponseEntity<Result<ArticleVO>> getArticleDetail(WebRequest request,
                                                                 @PathVariable Long id,
                                                                 @RequestParam(required = false) String lang) {
-        ArticleVO vo = articleDetailRequestCoalescer.coalesce(id, () -> articleService.getArticleVo(id, lang));
+        Long viewerId = currentUserService.optionalUserId();
+        boolean isAdmin = currentUserService.isAdmin();
+        ArticleVO vo = articleService.getArticleVo(id, lang, viewerId, isAdmin);
         if (vo == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "文章不存在"));
         }
@@ -97,13 +105,11 @@ public class ArticleController {
      * @return 统一响应格式
      */
     @PostMapping
-    public Result<String> createArticle(@RequestBody Article article, @RequestParam(required = false) String tagNames) {
+    public Result<ArticleSubmitResultVo> createArticle(@RequestBody Article article, @RequestParam(required = false) String tagNames) {
         List<String> tags = tagNames != null ? Arrays.asList(tagNames.split(",")) : null;
-        if (article.getAuthorId() == null) {
-            article.setAuthorId(currentUserService.requireUserId());
-        }
-        articleService.createArticle(article, tags);
-        return Result.success("文章创建成功");
+        ArticleSubmitResultVo vo = articleService.createArticleForUser(
+                article, tags, currentUserService.requireUserId(), currentUserService.isAdmin());
+        return Result.success(vo);
     }
 
     /**
@@ -114,11 +120,12 @@ public class ArticleController {
      * @return 统一响应格式
      */
     @PutMapping("/{id}")
-    public Result<String> updateArticle(@PathVariable Long id, @RequestBody Article article, @RequestParam(required = false) String tagNames) {
+    public Result<ArticleSubmitResultVo> updateArticle(@PathVariable Long id, @RequestBody Article article, @RequestParam(required = false) String tagNames) {
         article.setId(id);
         List<String> tags = tagNames != null ? Arrays.asList(tagNames.split(",")) : null;
-        articleService.updateArticle(article, tags);
-        return Result.success("文章更新成功");
+        ArticleSubmitResultVo vo = articleService.updateArticleForUser(
+                article, tags, currentUserService.requireUserId(), currentUserService.isAdmin());
+        return Result.success(vo);
     }
 
     /**
@@ -129,7 +136,7 @@ public class ArticleController {
     @Audit("DELETE_ARTICLE")
     @DeleteMapping("/{id}")
     public Result<String> deleteArticle(@PathVariable Long id) {
-        articleService.deleteArticle(id);
+        articleService.deleteArticleForUser(id, currentUserService.requireUserId(), currentUserService.isAdmin());
         return Result.success("文章删除成功");
     }
 }

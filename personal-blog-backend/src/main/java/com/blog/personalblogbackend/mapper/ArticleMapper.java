@@ -81,4 +81,7 @@ public interface ArticleMapper extends BaseMapper<Article> {
 
     @Update("UPDATE article SET like_count = GREATEST(like_count - 1, 0) WHERE id = #{articleId}")
     int decrementLikeCount(@Param("articleId") Long articleId);
+
+    @Update("UPDATE article SET like_count = #{count} WHERE id = #{articleId}")
+    int updateLikeCount(@Param("articleId") Long articleId, @Param("count") int count);
 }

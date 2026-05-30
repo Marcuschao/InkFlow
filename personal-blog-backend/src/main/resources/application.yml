@@ -22,6 +22,10 @@ spring:
       max-request-size: 6MB
   profiles:
     active: local
+  rabbitmq:
+    listener:
+      simple:
+        mismatched-queues-fatal: false
 
 management:
   endpoints:
@@ -45,7 +49,19 @@ mybatis-plus:
     map-underscore-to-camel-case: true 
 
 blog:
+  interaction:
+    idempotency-ttl-seconds: 60
+    flush-interval-seconds: 30
+    redis-count-enabled: true
+    sync-fallback: true
+    exchange: blog.interaction
+    queue: interaction.persist.queue
+    routing-key: interaction.persist
   chat:
+    fanout-enabled: true
+    fanout-stream-key: chat:stream:room
+    fanout-group: chat-fanout-group
+    fanout-max-len: 10000
     guest-readonly: true
     history-limit: 50
     history-page-size: 30
@@ -62,6 +78,14 @@ blog:
     null-ttl-seconds: 30
     list-cache-max-page: 3
     evict-delay-ms: 500
+  rate-limit:
+    enabled: true
+    article-detail-per-minute: 120
+    article-list-per-minute: 180
+    api-get-per-minute: 300
+    api-write-per-minute: 30
+    admin-per-minute: 120
+    stat-view-per-minute: 300
   content:
     exchange: blog.content
     queue: content.cache.queue
@@ -74,6 +98,7 @@ blog:
   notify-from: ""
   notification:
     enabled: true
+    # 已有队列无 DLX 时须为 false；改为 true 前需在 RabbitMQ 删除 notification.* / content.cache.queue 等旧队列
     dead-letter-enabled: true
     exchange: blog.notification
     inbox-queue: notification.queue

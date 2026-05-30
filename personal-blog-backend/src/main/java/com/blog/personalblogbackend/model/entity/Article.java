@@ -22,7 +22,12 @@ public class Article {
     private String cover;
     private Long categoryId;
     private Long authorId;
-    private Integer status; // 0-草稿 1-发布
+    private Integer status;
+    private String reviewReason;
+    private Integer reviewScore;
+    private Long reviewedBy;
+    private LocalDateTime reviewedAt;
+    private LocalDateTime submittedAt;
     private Integer freshnessStatus;
     private LocalDateTime freshnessCheckedAt;
     private Integer viewCount;

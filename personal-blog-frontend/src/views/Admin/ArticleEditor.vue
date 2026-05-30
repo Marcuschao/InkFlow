@@ -4,20 +4,20 @@
       <header class="editor-head ds-admin-header" style="margin-bottom: 24px;">
         <div>
           <h1 class="ds-page-title">{{ isEditMode ? '编辑文章' : '新建文章' }}</h1>
-          <p class="ds-page-sub">支持 Markdown，提交后将在后台列表中显示</p>
+          <p class="ds-page-sub">{{ isAuthorMode ? '支持 Markdown，提交后将进入审核' : '支持 Markdown，管理员可直接发布' }}</p>
         </div>
-        <router-link to="/admin">
-          <n-button>返回管理</n-button>
+        <router-link :to="backPath">
+          <n-button>{{ isAuthorMode ? '我的文章' : '返回管理' }}</n-button>
         </router-link>
       </header>
 
-      <n-tabs v-if="isEditMode" type="line" :value="activeLang" @update:value="setLang" style="margin-bottom: 20px;">
+      <n-tabs v-if="isEditMode && !isAuthorMode" type="line" :value="activeLang" @update:value="setLang" style="margin-bottom: 20px;">
         <n-tab v-for="t in langTabs" :key="t.key" :name="t.key" :tab="t.label" />
       </n-tabs>
 
       <div class="editor-layout">
         <n-card class="article-form-card">
-          <form class="article-form" @submit.prevent="handleSubmit">
+          <form class="article-form" @submit.prevent="() => handleSubmit(false)">
             <template v-if="activeLang === 'zh'">
               <n-form-item label="文章标题">
                 <n-input v-model:value="article.title" type="text" required placeholder="请输入文章标题" />
@@ -75,6 +75,7 @@
                   智能推荐标签
                 </n-button>
                 <n-button
+                  v-if="!isAuthorMode"
                   secondary
                   :loading="zhSeoBusy"
                   :disabled="!article.id"
@@ -119,16 +120,24 @@
               </n-space>
             </template>
 
-            <n-button
-              v-if="activeLang === 'zh'"
-              attr-type="submit"
-              type="primary"
-              block
-              :loading="isLoading"
-              style="margin-top: 12px;"
-            >
-              提交
-            </n-button>
+            <n-space v-if="activeLang === 'zh'" vertical :size="12" style="margin-top: 12px;">
+              <n-button
+                v-if="isAuthorMode"
+                block
+                :loading="isLoading"
+                @click="handleSubmit(true)"
+              >
+                保存草稿
+              </n-button>
+              <n-button
+                attr-type="submit"
+                type="primary"
+                block
+                :loading="isLoading"
+              >
+                {{ isAuthorMode ? '提交审核' : '发布' }}
+              </n-button>
+            </n-space>
             <n-alert v-if="error" type="error" class="error-message" style="margin-top: 16px;">
               {{ error }}
             </n-alert>
@@ -136,7 +145,7 @@
         </n-card>
 
         <ArticleAiSidebar
-          v-if="activeLang === 'zh'"
+          v-if="activeLang === 'zh' && !isAuthorMode"
           :title="article.title"
           :tags-hint="tagsInput"
           :get-context="getTextareaContext"
@@ -156,7 +165,8 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, reactive } from 'vue';
+import { ref, watch, nextTick, reactive, computed } from 'vue';
+import { ARTICLE_STATUS } from '../../api/article';
 import { useRoute, useRouter } from 'vue-router';
 import {
   NAlert,
@@ -202,6 +212,9 @@ function emptyTrans() {
 const route = useRoute();
 const router = useRouter();
 const toastStore = useToastStore();
+
+const isAuthorMode = computed(() => !!route.meta.authorMode);
+const backPath = computed(() => (isAuthorMode.value ? '/my-articles' : '/admin'));
 
 const contentRef = ref(null);
 
@@ -448,7 +461,7 @@ const fetchArticleForEdit = async (id) => {
   }
 };
 
-const handleSubmit = async () => {
+const handleSubmit = async (asDraft = false) => {
   if (activeLang.value !== 'zh') {
     error.value = '请先切换到「原文」标签再提交。';
     return;
@@ -457,37 +470,40 @@ const handleSubmit = async () => {
   isLoading.value = true;
   error.value = null;
 
+  let status = ARTICLE_STATUS.PUBLISHED;
+  if (isAuthorMode.value) {
+    status = asDraft ? ARTICLE_STATUS.DRAFT : ARTICLE_STATUS.PENDING;
+  }
+
   const payload = {
     title: article.value.title,
     content: article.value.content,
     summary: article.value.summary || '',
     seoTitle: article.value.seoTitle || '',
     seoDescription: article.value.seoDescription || '',
-    status: 1,
+    status,
   };
   const tags = tagNamesParam();
 
   try {
+    let result;
     if (isEditMode.value) {
-      await updateArticle(article.value.id, payload, tags);
+      result = await updateArticle(article.value.id, payload, tags);
     } else {
-      await createArticle(payload, tags);
-      article.value = {
-        id: null,
-        title: '',
-        content: '',
-        summary: '',
-        seoTitle: '',
-        seoDescription: '',
-        tags: [],
-      };
-      tagsInput.value = '';
-      resetTranslations();
+      result = await createArticle(payload, tags);
     }
-    router.push('/admin');
+    const d = result?.data;
+    toastStore.push(d?.message || '保存成功', 'success');
+    if (!isEditMode.value && d?.id) {
+      router.replace(isAuthorMode.value ? `/write/edit/${d.id}` : `/admin/edit/${d.id}`);
+      isEditMode.value = true;
+      await fetchArticleForEdit(d.id);
+    }
+    if (!asDraft) {
+      router.push(backPath.value);
+    }
   } catch (err) {
-    console.error('Submission Error:', err);
-    error.value = err.message || err.response?.data?.message || '提交失败，请稍后再试。';
+    error.value = err.message || '提交失败，请稍后再试。';
   } finally {
     isLoading.value = false;
   }
@@ -496,7 +512,7 @@ const handleSubmit = async () => {
 watch(
   () => route.params.id,
   (newId) => {
-    isEditMode.value = !!newId;
+    isEditMode.value = !!newId && String(newId).length > 0;
     if (isEditMode.value) {
       fetchArticleForEdit(newId);
     } else {

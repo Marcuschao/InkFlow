@@ -3,18 +3,21 @@ package com.blog.personalblogbackend.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.blog.personalblogbackend.common.exception.ServiceException;
 import com.blog.personalblogbackend.common.support.PageResult;
+import com.blog.personalblogbackend.idempotency.WriteIdempotencyService;
+import com.blog.personalblogbackend.interaction.InteractionRedisStore;
 import com.blog.personalblogbackend.mapper.ArticleFavoriteMapper;
 import com.blog.personalblogbackend.mapper.ArticleMapper;
+import com.blog.personalblogbackend.messaging.InteractionPersistMessage;
+import com.blog.personalblogbackend.messaging.InteractionProducer;
 import com.blog.personalblogbackend.model.entity.Article;
 import com.blog.personalblogbackend.model.entity.ArticleFavorite;
 import com.blog.personalblogbackend.model.vo.ArticleVO;
 import com.blog.personalblogbackend.model.vo.interaction.FavoriteStatusVo;
-import com.blog.personalblogbackend.notification.NotificationProducer;
 import com.blog.personalblogbackend.service.ArticleFavoriteService;
 import com.blog.personalblogbackend.service.ArticleInteractionEnricher;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,14 +26,28 @@ import java.util.stream.Collectors;
 @Service
 public class ArticleFavoriteServiceImpl implements ArticleFavoriteService {
 
-    @Autowired
-    private ArticleFavoriteMapper articleFavoriteMapper;
-    @Autowired
-    private ArticleMapper articleMapper;
-    @Autowired
-    private ArticleInteractionEnricher articleInteractionEnricher;
-    @Autowired
-    private NotificationProducer notificationProducer;
+    private static final String IDEM_SCOPE = "favorite";
+
+    private final ArticleFavoriteMapper articleFavoriteMapper;
+    private final ArticleMapper articleMapper;
+    private final ArticleInteractionEnricher articleInteractionEnricher;
+    private final WriteIdempotencyService idempotencyService;
+    private final InteractionRedisStore interactionRedisStore;
+    private final InteractionProducer interactionProducer;
+
+    public ArticleFavoriteServiceImpl(ArticleFavoriteMapper articleFavoriteMapper,
+                                      ArticleMapper articleMapper,
+                                      ArticleInteractionEnricher articleInteractionEnricher,
+                                      WriteIdempotencyService idempotencyService,
+                                      InteractionRedisStore interactionRedisStore,
+                                      InteractionProducer interactionProducer) {
+        this.articleFavoriteMapper = articleFavoriteMapper;
+        this.articleMapper = articleMapper;
+        this.articleInteractionEnricher = articleInteractionEnricher;
+        this.idempotencyService = idempotencyService;
+        this.interactionRedisStore = interactionRedisStore;
+        this.interactionProducer = interactionProducer;
+    }
 
     private Article requirePublished(Long articleId) {
         Article article = articleMapper.selectById(articleId);
@@ -41,22 +58,41 @@ public class ArticleFavoriteServiceImpl implements ArticleFavoriteService {
     }
 
     @Override
-    @Transactional
-    public FavoriteStatusVo toggle(Long userId, Long articleId) {
-        Article article = requirePublished(articleId);
-        if (isFavorited(userId, articleId)) {
-            articleFavoriteMapper.delete(new LambdaQueryWrapper<ArticleFavorite>()
-                    .eq(ArticleFavorite::getUserId, userId)
-                    .eq(ArticleFavorite::getArticleId, articleId));
-            return new FavoriteStatusVo(false);
+    public FavoriteStatusVo toggle(Long userId, Long articleId, String idempotencyKey) {
+        requirePublished(articleId);
+        if (StringUtils.hasText(idempotencyKey)) {
+            String key = WriteIdempotencyService.resolveKey(idempotencyKey, userId + ":fav:" + articleId);
+            return idempotencyService.execute(IDEM_SCOPE, key, FavoriteStatusVo.class,
+                    () -> doToggle(userId, articleId));
         }
-        ArticleFavorite fav = new ArticleFavorite();
-        fav.setUserId(userId);
-        fav.setArticleId(articleId);
-        fav.setCreateTime(LocalDateTime.now());
-        articleFavoriteMapper.insert(fav);
-        notificationProducer.notifyFavorite(userId, article);
-        return new FavoriteStatusVo(true);
+        return doToggle(userId, articleId);
+    }
+
+    private FavoriteStatusVo doToggle(Long userId, Long articleId) {
+        boolean currently = isFavorited(userId, articleId);
+        boolean favorited = !currently;
+        if (interactionRedisStore.redisEnabled()) {
+            interactionRedisStore.setFavorited(userId, articleId, favorited);
+        } else {
+            if (favorited) {
+                ArticleFavorite fav = new ArticleFavorite();
+                fav.setUserId(userId);
+                fav.setArticleId(articleId);
+                fav.setCreateTime(LocalDateTime.now());
+                articleFavoriteMapper.insert(fav);
+            } else {
+                articleFavoriteMapper.delete(new LambdaQueryWrapper<ArticleFavorite>()
+                        .eq(ArticleFavorite::getUserId, userId)
+                        .eq(ArticleFavorite::getArticleId, articleId));
+            }
+        }
+        InteractionPersistMessage msg = new InteractionPersistMessage();
+        msg.setAction(InteractionPersistMessage.FAVORITE_TOGGLE);
+        msg.setUserId(userId);
+        msg.setArticleId(articleId);
+        msg.setFavorited(favorited);
+        interactionProducer.publish(msg);
+        return new FavoriteStatusVo(favorited);
     }
 
     @Override
@@ -68,6 +104,7 @@ public class ArticleFavoriteServiceImpl implements ArticleFavoriteService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResult<ArticleVO> listMine(Long userId, int page, int size) {
         long offset = (long) (page - 1) * size;
         List<Article> list = articleFavoriteMapper.selectFavoriteArticles(userId, offset, size);
@@ -84,8 +121,14 @@ public class ArticleFavoriteServiceImpl implements ArticleFavoriteService {
         if (userId == null) {
             return false;
         }
-        return articleFavoriteMapper.selectCount(new LambdaQueryWrapper<ArticleFavorite>()
+        Boolean cached = interactionRedisStore.isFavoritedCached(userId, articleId);
+        if (cached != null) {
+            return cached;
+        }
+        boolean db = articleFavoriteMapper.selectCount(new LambdaQueryWrapper<ArticleFavorite>()
                 .eq(ArticleFavorite::getUserId, userId)
                 .eq(ArticleFavorite::getArticleId, articleId)) > 0;
+        interactionRedisStore.setFavorited(userId, articleId, db);
+        return db;
     }
 }

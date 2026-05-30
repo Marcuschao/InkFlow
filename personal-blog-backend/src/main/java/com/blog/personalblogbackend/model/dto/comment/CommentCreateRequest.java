@@ -13,4 +13,6 @@ public class CommentCreateRequest {
     @NotBlank
     @Size(max = 4000)
     private String content;
+    @Size(max = 64)
+    private String clientRequestId;
 }

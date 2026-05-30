@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.config.rabbit;
 
+import com.blog.personalblogbackend.config.interaction.InteractionProperties;
 import com.blog.personalblogbackend.config.properties.NotificationRabbitProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +68,25 @@ public class RabbitMQConfig {
     @Bean
     public Queue contentCacheQueue(@Value("${blog.content.queue:content.cache.queue}") String queue) {
         return queueWithDlq(queue);
+    }
+
+    @Bean
+    public TopicExchange interactionExchange(InteractionProperties interactionProperties) {
+        return new TopicExchange(interactionProperties.getExchange(), true, false);
+    }
+
+    @Bean
+    public Queue interactionPersistQueue(InteractionProperties interactionProperties) {
+        return QueueBuilder.durable(interactionProperties.getQueue()).build();
+    }
+
+    @Bean
+    public Binding bindInteractionPersist(Queue interactionPersistQueue,
+                                          TopicExchange interactionExchange,
+                                          InteractionProperties interactionProperties) {
+        return BindingBuilder.bind(interactionPersistQueue)
+                .to(interactionExchange)
+                .with(interactionProperties.getRoutingKey());
     }
 
     @Bean

@@ -4,7 +4,7 @@
       <header class="dash-header ds-admin-header">
         <div>
           <h1 class="ds-page-title">性能监控</h1>
-          <p class="ds-page-sub">缓存命中率、慢接口与 JVM 指标</p>
+          <p class="ds-page-sub">缓存命中率、限流拒绝、慢接口与 JVM 指标</p>
         </div>
         <n-space :size="8">
           <router-link to="/admin"><n-button>文章管理</n-button></router-link>
@@ -16,7 +16,7 @@
       <n-alert v-if="loadErr" type="error" class="state-msg">{{ loadErr }}</n-alert>
 
       <template v-else>
-        <n-grid cols="2 m:4" :x-gap="12" :y-gap="12" responsive="screen" class="summary-grid">
+        <n-grid cols="2 m:3" :x-gap="12" :y-gap="12" responsive="screen" class="summary-grid">
           <n-gi>
             <n-card size="small"><n-statistic label="堆内存已用" :value="formatBytes(jvm?.heapUsed)" /></n-card>
           </n-gi>
@@ -28,6 +28,12 @@
           </n-gi>
           <n-gi>
             <n-card size="small"><n-statistic label="GC 次数" :value="jvm?.gcCount ?? '—'" /></n-card>
+          </n-gi>
+          <n-gi>
+            <n-card size="small"><n-statistic label="限流拒绝" :value="rateLimit?.rejectedTotal ?? '—'" /></n-card>
+          </n-gi>
+          <n-gi>
+            <n-card size="small"><n-statistic label="限流放行" :value="rateLimit?.allowedTotal ?? '—'" /></n-card>
           </n-gi>
         </n-grid>
 
@@ -44,6 +50,7 @@
                 <n-descriptions-item label="系统负载">{{ formatLoad(system?.systemLoadAverage) }}</n-descriptions-item>
                 <n-descriptions-item label="Caffeine 命中率">{{ formatRate(cache?.caffeineHitRate) }}</n-descriptions-item>
                 <n-descriptions-item label="Redis 命中率">{{ formatRate(cache?.redisHitRate) }}</n-descriptions-item>
+                <n-descriptions-item label="限流拒绝累计">{{ rateLimit?.rejectedTotal ?? '—' }}</n-descriptions-item>
               </n-descriptions>
             </n-card>
           </n-gi>
@@ -81,6 +88,7 @@ import {
 import {
   fetchMonitorCache,
   fetchMonitorJvm,
+  fetchMonitorRateLimit,
   fetchMonitorSlow,
   fetchMonitorSystem,
 } from '../../api/monitor';
@@ -92,6 +100,7 @@ const loadErr = ref('');
 const cache = ref(null);
 const jvm = ref(null);
 const system = ref(null);
+const rateLimit = ref(null);
 const slowList = ref([]);
 const cacheCanvas = ref(null);
 let chartInst = null;
@@ -157,15 +166,17 @@ async function loadAll() {
   loading.value = true;
   loadErr.value = '';
   try {
-    const [c, j, s, slow] = await Promise.all([
+    const [c, j, s, rl, slow] = await Promise.all([
       fetchMonitorCache(),
       fetchMonitorJvm(),
       fetchMonitorSystem(),
+      fetchMonitorRateLimit(),
       fetchMonitorSlow(),
     ]);
     cache.value = c;
     jvm.value = j;
     system.value = s;
+    rateLimit.value = rl;
     slowList.value = slow || [];
     await nextTick();
     paintChart();

@@ -7,6 +7,7 @@ import com.blog.personalblogbackend.model.entity.ChatFailedQueue;
 import com.blog.personalblogbackend.model.entity.ChatMessage;
 import com.blog.personalblogbackend.model.vo.chat.ChatAckVo;
 import com.blog.personalblogbackend.model.vo.chat.ChatMessageVo;
+import com.blog.personalblogbackend.chat.ChatFanoutPublisher;
 import com.blog.personalblogbackend.service.impl.ChatReliabilityServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ public class ChatFailedQueueScheduler {
     private final ChatFailedQueueMapper chatFailedQueueMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatFanoutPublisher chatFanoutPublisher;
 
     @Scheduled(fixedDelay = 30000)
     public void retryFailed() {
@@ -50,7 +52,7 @@ public class ChatFailedQueueScheduler {
             }
             ChatMessageVo vo = ChatReliabilityServiceImpl.toVo(message, null);
             try {
-                messagingTemplate.convertAndSend("/topic/chat", vo);
+                chatFanoutPublisher.publish(vo);
                 ChatAckVo ack = new ChatAckVo();
                 ack.setMessageId(vo.getId());
                 ack.setStatus("OK");

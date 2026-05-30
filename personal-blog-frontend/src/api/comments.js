@@ -9,7 +9,11 @@ export function fetchArticleComments(articleId) {
 }
 
 export function submitComment(data) {
-  return request({ url: '/comments', method: 'post', data });
+  const payload = { ...data };
+  if (!payload.clientRequestId) {
+    payload.clientRequestId = `c-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  return request({ url: '/comments', method: 'post', data: payload });
 }
 
 export function deleteComment(id) {

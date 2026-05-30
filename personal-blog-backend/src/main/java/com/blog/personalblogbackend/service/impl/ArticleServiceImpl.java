@@ -2,8 +2,12 @@ package com.blog.personalblogbackend.service.impl;
 
 import com.blog.personalblogbackend.cache.ArticleBloomFilter;
 import com.blog.personalblogbackend.cache.ArticleCacheService;
+import com.blog.personalblogbackend.content.ArticleContentCheckResult;
+import com.blog.personalblogbackend.content.ArticleContentCheckService;
 import com.blog.personalblogbackend.datasource.ReadOnly;
 import com.blog.personalblogbackend.model.dto.ArticlePageQuery;
+import com.blog.personalblogbackend.model.enums.ArticleStatus;
+import com.blog.personalblogbackend.model.vo.ArticleSubmitResultVo;
 import com.blog.personalblogbackend.model.vo.ArticleVO;
 import com.blog.personalblogbackend.model.entity.Article;
 import com.blog.personalblogbackend.model.entity.ArticleTranslation;
@@ -34,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,9 +65,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private ArticleBloomFilter articleBloomFilter;
     @Autowired
     private ContentChangeProducer contentChangeProducer;
+    @Autowired
+    private ArticleContentCheckService articleContentCheckService;
 
     private static boolean isPublished(Integer status) {
-        return status != null && status == 1;
+        return ArticleStatus.isPublished(status);
     }
 
     private void publishArticleEvents(Article previous, Article fresh) {
@@ -123,14 +130,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     @Override
     @ReadOnly
-    public ArticleVO getArticleVo(Long id, String lang) {
+    public ArticleVO getArticleVo(Long id, String lang, Long viewerUserId, boolean viewerIsAdmin) {
         if (!articleBloomFilter.mightContain(id)) {
             return null;
         }
         String loc = normalizeLocale(lang);
         ArticleVO cached = articleCacheService.getDetail(id, loc);
         if (cached != null) {
-            return cached;
+            return canViewArticle(cached, viewerUserId, viewerIsAdmin) ? cached : null;
         }
         if (articleCacheService.isDetailNullCached(id, loc)) {
             return null;
@@ -140,9 +147,24 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             articleCacheService.putDetailNull(id, loc);
             return null;
         }
+        if (!canViewArticle(article, viewerUserId, viewerIsAdmin)) {
+            return null;
+        }
         ArticleVO vo = toArticleVo(article, id, loc);
-        articleCacheService.putDetail(id, loc, vo);
+        if (ArticleStatus.isPublished(vo.getStatus())) {
+            articleCacheService.putDetail(id, loc, vo);
+        }
         return vo;
+    }
+
+    private static boolean canViewArticle(Article article, Long viewerUserId, boolean viewerIsAdmin) {
+        if (article == null) {
+            return false;
+        }
+        if (ArticleStatus.isPublicVisible(article.getStatus())) {
+            return true;
+        }
+        return viewerIsAdmin || (viewerUserId != null && viewerUserId.equals(article.getAuthorId()));
     }
 
     private ArticleVO toArticleVo(Article article, Long id, String loc) {
@@ -270,6 +292,150 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     }
 
     @Override
+    @ReadOnly
+    public IPage<Article> getMyArticles(Long authorId, Integer status, int page, int size) {
+        LambdaQueryWrapper<Article> q = new LambdaQueryWrapper<Article>()
+                .eq(Article::getAuthorId, authorId)
+                .orderByDesc(Article::getUpdateTime);
+        if (status != null) {
+            q.eq(Article::getStatus, status);
+        }
+        return articleMapper.selectPage(new Page<>(Math.max(page, 1), Math.max(size, 1)), q);
+    }
+
+    @Override
+    @ReadOnly
+    public IPage<Article> adminReviewPage(int page, int size) {
+        return articleMapper.selectPage(new Page<>(Math.max(page, 1), Math.max(size, 1)),
+                new LambdaQueryWrapper<Article>()
+                        .eq(Article::getStatus, ArticleStatus.PENDING)
+                        .orderByAsc(Article::getSubmittedAt)
+                        .orderByDesc(Article::getUpdateTime));
+    }
+
+    @Override
+    @Transactional
+    public ArticleSubmitResultVo createArticleForUser(Article article, List<String> tagNames, Long userId, boolean isAdmin) {
+        article.setId(null);
+        article.setAuthorId(userId);
+        prepareSubmission(article, null, isAdmin);
+        createArticle(article, tagNames);
+        Article fresh = articleMapper.selectById(article.getId());
+        return submitResult(fresh);
+    }
+
+    @Override
+    @Transactional
+    public ArticleSubmitResultVo updateArticleForUser(Article article, List<String> tagNames, Long userId, boolean isAdmin) {
+        Article previous = articleMapper.selectById(article.getId());
+        if (previous == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        requireOwnerOrAdmin(previous, userId, isAdmin);
+        article.setAuthorId(previous.getAuthorId());
+        prepareSubmission(article, previous, isAdmin);
+        updateArticle(article, tagNames);
+        Article fresh = articleMapper.selectById(article.getId());
+        return submitResult(fresh);
+    }
+
+    @Override
+    @Transactional
+    public void approveArticle(Long articleId, Long reviewerId) {
+        Article previous = articleMapper.selectById(articleId);
+        if (previous == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        Article patch = new Article();
+        patch.setId(articleId);
+        patch.setStatus(ArticleStatus.PUBLISHED);
+        patch.setReviewedBy(reviewerId);
+        patch.setReviewedAt(LocalDateTime.now());
+        patch.setReviewReason("");
+        if (!updateById(patch)) {
+            throw new ServiceException(409, "内容已被他人修改，请刷新后重试");
+        }
+        Article fresh = articleMapper.selectById(articleId);
+        publishArticleEvents(previous, fresh);
+    }
+
+    @Override
+    @Transactional
+    public void rejectArticle(Long articleId, Long reviewerId, String reason) {
+        Article previous = articleMapper.selectById(articleId);
+        if (previous == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        Article patch = new Article();
+        patch.setId(articleId);
+        patch.setStatus(ArticleStatus.REJECTED);
+        patch.setReviewedBy(reviewerId);
+        patch.setReviewedAt(LocalDateTime.now());
+        patch.setReviewReason(StringUtils.hasText(reason) ? reason.trim() : "内容未通过审核");
+        if (!updateById(patch)) {
+            throw new ServiceException(409, "内容已被他人修改，请刷新后重试");
+        }
+        if (ArticleStatus.isPublished(previous.getStatus())) {
+            contentChangeProducer.send(articleId, ContentChangeEventType.ARTICLE_DELETED);
+        }
+    }
+
+    @Override
+    public void requireArticleOwnerOrAdmin(Long articleId, Long userId, boolean isAdmin) {
+        Article article = articleMapper.selectById(articleId);
+        if (article == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        requireOwnerOrAdmin(article, userId, isAdmin);
+    }
+
+    private void prepareSubmission(Article article, Article previous, boolean isAdmin) {
+        int requested = article.getStatus() != null ? article.getStatus() : ArticleStatus.PENDING;
+        if (requested == ArticleStatus.DRAFT) {
+            article.setStatus(ArticleStatus.DRAFT);
+            return;
+        }
+
+        ArticleContentCheckResult check = articleContentCheckService.check(article, article.getId());
+        article.setReviewScore(check.getScore());
+        article.setReviewReason(check.summary());
+
+        if (isAdmin && check.isPassed()) {
+            article.setStatus(ArticleStatus.PUBLISHED);
+            article.setReviewedAt(LocalDateTime.now());
+        } else {
+            article.setStatus(ArticleStatus.PENDING);
+            article.setSubmittedAt(LocalDateTime.now());
+        }
+
+        if (previous != null && ArticleStatus.isPublished(previous.getStatus()) && article.getStatus() == ArticleStatus.PENDING) {
+            article.setReviewReason(StringUtils.hasText(article.getReviewReason())
+                    ? article.getReviewReason()
+                    : "已发布内容修改后需重新审核");
+        }
+    }
+
+    private static ArticleSubmitResultVo submitResult(Article article) {
+        String message = switch (article.getStatus()) {
+            case ArticleStatus.PUBLISHED -> "文章已发布";
+            case ArticleStatus.DRAFT -> "草稿已保存";
+            case ArticleStatus.REJECTED -> "文章已驳回";
+            default -> "文章已提交审核";
+        };
+        return new ArticleSubmitResultVo(article.getId(), article.getStatus(), message,
+                article.getReviewReason(), article.getReviewScore());
+    }
+
+    private static void requireOwnerOrAdmin(Article article, Long userId, boolean isAdmin) {
+        if (isAdmin) {
+            return;
+        }
+        if (userId == null || !userId.equals(article.getAuthorId())) {
+            throw new ServiceException(403, "无权操作该文章");
+        }
+    }
+
+    @Override
     @Transactional
     public boolean updateArticle(Article article, List<String> tagNames) {
         Article previous = articleMapper.selectById(article.getId());
@@ -299,6 +465,17 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         articleMapper.deleteById(id);
         contentChangeProducer.send(id, ContentChangeEventType.ARTICLE_DELETED);
         return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean deleteArticleForUser(Long id, Long userId, boolean isAdmin) {
+        Article article = articleMapper.selectById(id);
+        if (article == null) {
+            throw new ServiceException(404, "文章不存在");
+        }
+        requireOwnerOrAdmin(article, userId, isAdmin);
+        return deleteArticle(id);
     }
 
     private void handleArticleTags(Long articleId, List<String> tagNames) {

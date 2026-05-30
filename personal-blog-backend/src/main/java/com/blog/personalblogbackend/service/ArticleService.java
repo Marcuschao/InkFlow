@@ -1,6 +1,7 @@
 package com.blog.personalblogbackend.service;
 
 import com.blog.personalblogbackend.model.dto.ArticlePageQuery;
+import com.blog.personalblogbackend.model.vo.ArticleSubmitResultVo;
 import com.blog.personalblogbackend.model.vo.ArticleVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.blog.personalblogbackend.model.entity.Article;
@@ -24,7 +25,21 @@ public interface ArticleService extends IService<Article> {
      */
     Article getArticleDetail(Long id);
 
-    ArticleVO getArticleVo(Long id, String lang);
+    ArticleVO getArticleVo(Long id, String lang, Long viewerUserId, boolean viewerIsAdmin);
+
+    IPage<Article> getMyArticles(Long authorId, Integer status, int page, int size);
+
+    IPage<Article> adminReviewPage(int page, int size);
+
+    ArticleSubmitResultVo createArticleForUser(Article article, List<String> tagNames, Long userId, boolean isAdmin);
+
+    ArticleSubmitResultVo updateArticleForUser(Article article, List<String> tagNames, Long userId, boolean isAdmin);
+
+    void approveArticle(Long articleId, Long reviewerId);
+
+    void rejectArticle(Long articleId, Long reviewerId, String reason);
+
+    void requireArticleOwnerOrAdmin(Long articleId, Long userId, boolean isAdmin);
 
     Long duplicateArticleAsDraft(Long sourceArticleId);
 
@@ -38,18 +53,9 @@ public interface ArticleService extends IService<Article> {
      */
     boolean createArticle(Article article, List<String> tagNames);
 
-    /**
-     * 更新文章，并处理文章-标签关联
-     * @param article 文章实体
-     * @param tagNames 标签名称列表
-     * @return 是否成功
-     */
     boolean updateArticle(Article article, List<String> tagNames);
 
-    /**
-     * 根据ID删除文章，并删除文章-标签关联
-     * @param id 文章ID
-     * @return 是否成功
-     */
     boolean deleteArticle(Long id);
+
+    boolean deleteArticleForUser(Long id, Long userId, boolean isAdmin);
 }

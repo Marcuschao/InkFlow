@@ -37,6 +37,15 @@
             @update:value="onNavMenuUpdate"
           />
 
+          <router-link
+            v-if="authStore.isLoggedIn"
+            to="/write"
+            class="nav-write-btn"
+            @click="closeMenu"
+          >
+            写文章
+          </router-link>
+
           <div v-if="authStore.isLoggedIn" class="nav-notif-wrap">
             <router-link
               to="/notifications"
@@ -162,7 +171,10 @@ const navMenuOptions = computed(() => {
 });
 
 const userDropdownOptions = computed(() => {
-  const opts = [{ label: '个人主页', key: 'profile' }];
+  const opts = [
+    { label: '个人主页', key: 'profile' },
+    { label: '我的文章', key: 'my-articles' },
+  ];
   if (authStore.isAdmin) {
     opts.push({ label: '管理后台', key: 'admin' });
   }
@@ -201,6 +213,7 @@ const onDocClick = (e) => {
 
 function onUserDropdownSelect(key) {
   if (key === 'profile') router.push('/user/me');
+  else if (key === 'my-articles') router.push('/my-articles');
   else if (key === 'admin') router.push('/admin');
   else if (key === 'logout') handleLogoutFromMenu();
 }
@@ -430,6 +443,27 @@ onUnmounted(() => {
 
 .menu-toggle.open .bar:nth-child(3) {
   transform: translateY(-7px) rotate(-45deg);
+}
+
+.nav-write-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  background: var(--color-primary);
+  color: #fff;
+  border: 1px solid var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.nav-write-btn:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
 }
 
 .nav-links {

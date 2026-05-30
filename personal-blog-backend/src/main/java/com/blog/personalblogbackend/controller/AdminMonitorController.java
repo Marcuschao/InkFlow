@@ -3,6 +3,8 @@ package com.blog.personalblogbackend.controller;
 import com.blog.personalblogbackend.cache.CacheMetricsRecorder;
 import com.blog.personalblogbackend.common.support.Result;
 import com.blog.personalblogbackend.monitor.SlowApiMonitorAspect;
+import com.blog.personalblogbackend.chat.ChatMonitorService;
+import com.blog.personalblogbackend.ratelimit.RateLimitMetricsRecorder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,17 +23,37 @@ import java.util.Map;
 public class AdminMonitorController {
     private final SlowApiMonitorAspect slowApiMonitorAspect;
     private final CacheMetricsRecorder cacheMetricsRecorder;
+    private final RateLimitMetricsRecorder rateLimitMetricsRecorder;
+    private final ChatMonitorService chatMonitorService;
 
     public AdminMonitorController(SlowApiMonitorAspect slowApiMonitorAspect,
-                                  CacheMetricsRecorder cacheMetricsRecorder) {
+                                  CacheMetricsRecorder cacheMetricsRecorder,
+                                  RateLimitMetricsRecorder rateLimitMetricsRecorder,
+                                  ChatMonitorService chatMonitorService) {
         this.slowApiMonitorAspect = slowApiMonitorAspect;
         this.cacheMetricsRecorder = cacheMetricsRecorder;
+        this.rateLimitMetricsRecorder = rateLimitMetricsRecorder;
+        this.chatMonitorService = chatMonitorService;
     }
 
     @GetMapping("/slow")
     public Result<List<SlowApiMonitorAspect.SlowApiRecord>> slow() {
         long since = System.currentTimeMillis() - 3600_000L;
         return Result.success(slowApiMonitorAspect.topSlow(since, 10));
+    }
+
+    @GetMapping("/rate-limit")
+    public Result<Map<String, Object>> rateLimit() {
+        RateLimitMetricsRecorder.RateLimitMetricsSnapshot s = rateLimitMetricsRecorder.snapshot();
+        Map<String, Object> data = new HashMap<>();
+        data.put("rejectedTotal", s.rejectedTotal());
+        data.put("allowedTotal", s.allowedTotal());
+        return Result.success(data);
+    }
+
+    @GetMapping("/chat")
+    public Result<Map<String, Object>> chat() {
+        return Result.success(chatMonitorService.snapshot());
     }
 
     @GetMapping("/cache")

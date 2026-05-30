@@ -6,7 +6,7 @@ import com.blog.personalblogbackend.model.vo.interaction.FavoriteStatusVo;
 
 public interface ArticleFavoriteService {
 
-    FavoriteStatusVo toggle(Long userId, Long articleId);
+    FavoriteStatusVo toggle(Long userId, Long articleId, String idempotencyKey);
 
     FavoriteStatusVo status(Long userId, Long articleId);
 

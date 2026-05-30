@@ -87,6 +87,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         rev.setSeoTitle(article.getSeoTitle());
         rev.setSeoDescription(article.getSeoDescription());
         String content = nullToEmpty(article.getContent());
+        rev.setContent(content);
         rev.setArticleTags(StringUtils.hasText(articleTagsCsv) ? articleTagsCsv.trim() : "");
         rev.setArticleCategoryId(article.getCategoryId());
         rev.setArticleStatus(article.getStatus());
@@ -108,6 +109,7 @@ public class ContentRevisionServiceImpl implements ContentRevisionService {
         rev.setRevisionNo(nextRevisionNo(RevisionTargetType.DIARY, diary.getId()));
         rev.setTitle(diary.getTitle());
         String content = nullToEmpty(diary.getContent());
+        rev.setContent(content);
         rev.setDiaryDate(diary.getDiaryDate());
         rev.setDiaryTags(diary.getTags());
         rev.setDiaryContentType(diary.getContentType());

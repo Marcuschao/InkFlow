@@ -15,3 +15,11 @@ export function fetchMonitorJvm() {
 export function fetchMonitorSystem() {
   return request({ url: '/admin/monitor/system', method: 'get' }).then((res) => res.data);
 }
+
+export function fetchMonitorRateLimit() {
+  return request({ url: '/admin/monitor/rate-limit', method: 'get' }).then((res) => res.data);
+}
+
+export function fetchMonitorChat() {
+  return request({ url: '/admin/monitor/chat', method: 'get' }).then((res) => res.data);
+}

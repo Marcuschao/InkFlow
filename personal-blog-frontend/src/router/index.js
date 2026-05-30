@@ -82,6 +82,25 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/write',
+    name: 'WriteArticle',
+    component: () => import('../views/Admin/ArticleEditor.vue'),
+    meta: { requiresAuth: true, authorMode: true },
+  },
+  {
+    path: '/write/edit/:id',
+    name: 'WriteArticleEdit',
+    component: () => import('../views/Admin/ArticleEditor.vue'),
+    props: true,
+    meta: { requiresAuth: true, authorMode: true },
+  },
+  {
+    path: '/my-articles',
+    name: 'MyArticles',
+    component: () => import('../views/MyArticles.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/user/:id(\\d+)',
     name: 'UserPublic',
     component: () => import('../views/UserPublic.vue'),
@@ -207,6 +226,18 @@ const routes = [
     path: '/admin/chat/online',
     name: 'AdminChatOnline',
     component: () => import('../views/Admin/AdminChatOnline.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/articles/review',
+    name: 'AdminArticleReview',
+    component: () => import('../views/Admin/AdminArticleReview.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/content-reports',
+    name: 'AdminContentReports',
+    component: () => import('../views/Admin/AdminContentReports.vue'),
     meta: { requiresAdmin: true },
   },
   {

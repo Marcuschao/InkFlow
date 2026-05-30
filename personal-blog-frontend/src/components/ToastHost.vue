@@ -40,6 +40,7 @@ const toast = useToastStore();
   pointer-events: auto;
   padding: 0.55rem 1rem;
   border-radius: var(--radius-md);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
   font-size: 0.88rem;
   font-weight: 600;
   border: 1px solid var(--color-border);

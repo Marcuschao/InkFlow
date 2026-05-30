@@ -1,6 +1,11 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
+import {
+  resolveApiErrorCode,
+  resolveApiErrorMessage,
+  resolveApiErrorPayload,
+} from './apiError';
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_API_BASE_URL || '/api',
@@ -13,6 +18,9 @@ service.interceptors.request.use(
     if (authStore.token) {
       config.headers.Authorization = `Bearer ${authStore.token}`;
     }
+    if (config.idempotencyKey) {
+      config.headers['Idempotency-Key'] = config.idempotencyKey;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -23,7 +31,12 @@ service.interceptors.response.use(
     const { data } = response;
     if (data != null && typeof data.code === 'number') {
       if (data.code !== 200) {
-        const err = new Error(data.message || 'Error');
+        const err = new Error(
+          resolveApiErrorMessage(
+            { message: data.message, code: data.code, responseStatus: response.status },
+            '请求失败'
+          )
+        );
         err.code = data.code;
         err.payload = data.data;
         err.responseStatus = response.status;
@@ -43,37 +56,22 @@ service.interceptors.response.use(
   (error) => {
     const res = error.response;
     const cfg = error.config || {};
-    let err = error;
-    if (res?.data && typeof res.data.code === 'number') {
-      const d = res.data;
-      err = new Error(d.message || error.message || 'Error');
-      err.code = d.code;
-      err.payload = d.data;
-      if (res.status === 401) {
-        const url = error.config?.url || '';
-        if (!url.includes('/auth/login')) {
-          useAuthStore().clearAuth();
-        }
-      }
-    } else if (res?.status === 401) {
-      const url = error.config?.url || '';
-      if (!url.includes('/auth/login')) {
-        useAuthStore().clearAuth();
-      }
-      err = new Error(error.message || '未授权');
-    } else if (res?.status === 429) {
-      err = new Error('请求过于频繁，请稍后再试');
-    } else if (error.code === 'ECONNABORTED') {
-      err = new Error('请求超时，请检查网络');
-    } else {
-      err = new Error(error.message || '网络异常');
-    }
+    const msg = resolveApiErrorMessage(error, '网络异常');
+    const err = new Error(msg);
+    err.code = resolveApiErrorCode(error);
+    err.payload = resolveApiErrorPayload(error);
     if (res?.status != null) {
       err.responseStatus = res.status;
     }
+    if (res?.status === 401 || err.code === 401) {
+      const url = cfg.url || '';
+      if (!url.includes('/auth/login')) {
+        useAuthStore().clearAuth();
+      }
+    }
     if (!cfg.skipErrorToast) {
       try {
-        useToastStore().push(err.message || '网络异常', 'error');
+        useToastStore().push(msg, 'error');
       } catch (_) {
         /* pinia not ready */
       }

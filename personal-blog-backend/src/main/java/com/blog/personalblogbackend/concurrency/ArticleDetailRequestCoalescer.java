@@ -2,6 +2,7 @@ package com.blog.personalblogbackend.concurrency;
 
 import com.blog.personalblogbackend.model.vo.ArticleVO;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,11 +10,12 @@ import java.util.function.Supplier;
 
 @Component
 public class ArticleDetailRequestCoalescer {
-    private final ConcurrentHashMap<Long, CompletableFuture<ArticleVO>> inflight = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CompletableFuture<ArticleVO>> inflight = new ConcurrentHashMap<>();
 
-    public ArticleVO coalesce(Long articleId, Supplier<ArticleVO> loader) {
+    public ArticleVO coalesce(Long articleId, String lang, Supplier<ArticleVO> loader) {
+        String key = coalesceKey(articleId, lang);
         CompletableFuture<ArticleVO> created = new CompletableFuture<>();
-        CompletableFuture<ArticleVO> existing = inflight.putIfAbsent(articleId, created);
+        CompletableFuture<ArticleVO> existing = inflight.putIfAbsent(key, created);
         if (existing != null) {
             return existing.join();
         }
@@ -25,7 +27,15 @@ public class ArticleDetailRequestCoalescer {
             created.completeExceptionally(ex);
             throw ex;
         } finally {
-            inflight.remove(articleId, created);
+            inflight.remove(key, created);
         }
+    }
+
+    static String coalesceKey(Long articleId, String lang) {
+        String loc = "zh";
+        if (StringUtils.hasText(lang)) {
+            loc = lang.trim().toLowerCase();
+        }
+        return articleId + ":" + loc;
     }
 }

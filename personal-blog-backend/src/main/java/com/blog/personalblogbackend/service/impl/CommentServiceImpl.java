@@ -17,6 +17,7 @@ import com.blog.personalblogbackend.notification.DomainEvent;
 import com.blog.personalblogbackend.notification.NotificationProducer;
 import com.blog.personalblogbackend.messaging.ContentChangeEventType;
 import com.blog.personalblogbackend.messaging.ContentChangeProducer;
+import com.blog.personalblogbackend.idempotency.WriteIdempotencyService;
 import com.blog.personalblogbackend.service.CommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     private ContentChangeProducer contentChangeProducer;
     @Autowired
     private com.blog.personalblogbackend.service.SensitiveWordService sensitiveWordService;
+    @Autowired
+    private WriteIdempotencyService writeIdempotencyService;
 
     @Override
     public List<CommentPublicVo> listApprovedForArticle(Long articleId) {
@@ -85,6 +88,13 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     @Transactional
     public void submit(CommentCreateRequest req) {
         User user = currentUserService.requireUser();
+        if (StringUtils.hasText(req.getClientRequestId())) {
+            String key = user.getId() + ":comment:" + req.getClientRequestId().trim();
+            String cached = writeIdempotencyService.readRawResult("comment", key);
+            if (StringUtils.hasText(cached)) {
+                return;
+            }
+        }
         Article a = articleMapper.selectById(req.getArticleId());
         if (a == null || a.getStatus() == null || a.getStatus() != 1) {
             throw new ServiceException(404, "文章不存在或未发布");
@@ -118,6 +128,10 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         c.setStatus(STATUS_PENDING);
         c.setCreateTime(LocalDateTime.now());
         save(c);
+        if (StringUtils.hasText(req.getClientRequestId())) {
+            String key = user.getId() + ":comment:" + req.getClientRequestId().trim();
+            writeIdempotencyService.storeResult("comment", key, "OK");
+        }
     }
 
     @Override

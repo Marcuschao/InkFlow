@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,8 +27,9 @@ public class ArticleInteractionController {
     private CurrentUserService currentUserService;
 
     @PostMapping("/{id}/like")
-    public Result<LikeStatusVo> toggleLike(@PathVariable Long id) {
-        return Result.success(articleLikeService.toggle(currentUserService.requireUserId(), id));
+    public Result<LikeStatusVo> toggleLike(@PathVariable Long id,
+                                           @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        return Result.success(articleLikeService.toggle(currentUserService.requireUserId(), id, idempotencyKey));
     }
 
     @GetMapping("/{id}/like/status")
@@ -41,8 +43,9 @@ public class ArticleInteractionController {
     }
 
     @PostMapping("/{id}/favorite")
-    public Result<FavoriteStatusVo> toggleFavorite(@PathVariable Long id) {
-        return Result.success(articleFavoriteService.toggle(currentUserService.requireUserId(), id));
+    public Result<FavoriteStatusVo> toggleFavorite(@PathVariable Long id,
+                                                 @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        return Result.success(articleFavoriteService.toggle(currentUserService.requireUserId(), id, idempotencyKey));
     }
 
     @GetMapping("/{id}/favorite/status")
