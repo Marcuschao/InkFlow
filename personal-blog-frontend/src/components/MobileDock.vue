@@ -2,6 +2,7 @@
   <nav class="mobile-dock" aria-label="快捷导航">
     <router-link to="/" class="dock-link">首页</router-link>
     <router-link to="/archive" class="dock-link">归档</router-link>
+    <router-link to="/chat" class="dock-link">聊天</router-link>
     <router-link to="/search" class="dock-link">搜索</router-link>
     <router-link to="/about" class="dock-link">关于</router-link>
   </nav>
@@ -31,7 +32,7 @@
   .dock-link {
     flex: 1;
     text-align: center;
-    font-size: 0.78rem;
+    font-size: var(--text-xs);
     font-weight: 650;
     color: var(--color-text-muted);
     text-decoration: none;

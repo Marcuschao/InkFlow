@@ -144,7 +144,7 @@ async function load() {
     diaryDate.value = d.diaryDate ? d.diaryDate.slice(0, 10) : '';
     tags.value = d.tags || '';
     content.value = d.content || '';
-    useMarkdown.value = Number(d.useMarkdown) === 1;
+    useMarkdown.value = Number(d.contentType) === 1;
     isPublic.value = Number(d.isPublic) === 1;
   } catch {
     /* toast */
@@ -224,8 +224,8 @@ async function save() {
       diaryDate: diaryDate.value,
       title: content.value.split('\n')[0]?.substring(0, 50) || '日记',
       content: content.value,
-      useMarkdown: useMarkdown.value ? 1 : 0,
-      isPublic: isPublic.value ? 1 : 0,
+      contentType: useMarkdown.value ? 1 : 0,
+      isPublic: isPublic.value,
       tags: tags.value.trim(),
     };
     if (isEdit.value) {

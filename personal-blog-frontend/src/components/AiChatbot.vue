@@ -350,7 +350,7 @@ async function send() {
   padding: 0.45rem 0.55rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  font-size: 0.86rem;
+  font-size: var(--text-md);
   font-family: inherit;
 }
 

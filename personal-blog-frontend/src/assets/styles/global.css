@@ -856,6 +856,24 @@ body {
   }
 }
 
+html.nav-menu-scroll-lock,
+body.nav-menu-scroll-lock {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not(
+      [type='button']
+    ):not([type='submit']):not([type='reset']),
+  textarea,
+  select,
+  .n-input__input-el,
+  .n-input__textarea-el {
+    font-size: var(--text-md);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ds-page-hero,
   .ds-admin-header {

@@ -234,6 +234,7 @@ const closeMenu = () => {
 
 const toggleMenu = () => {
   userMenuOpen.value = false;
+  hideNav.value = false;
   isMenuOpen.value = !isMenuOpen.value;
 };
 
@@ -289,29 +290,36 @@ watch(
 );
 
 let lockedScrollY = 0;
+let preventTouchScroll = null;
 
 function lockBodyScroll() {
   lockedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${lockedScrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
-  document.body.style.overflow = 'hidden';
+  document.documentElement.classList.add('nav-menu-scroll-lock');
+  document.body.classList.add('nav-menu-scroll-lock');
+
+  if (window.matchMedia('(max-width: 1023px)').matches) {
+    preventTouchScroll = (e) => {
+      const menu = document.getElementById('primary-nav');
+      if (menu?.classList.contains('open') && menu.contains(e.target)) return;
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', preventTouchScroll, { passive: false });
+  }
 }
 
 function unlockBodyScroll() {
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
-  document.body.style.overflow = '';
+  document.documentElement.classList.remove('nav-menu-scroll-lock');
+  document.body.classList.remove('nav-menu-scroll-lock');
+  if (preventTouchScroll) {
+    document.removeEventListener('touchmove', preventTouchScroll);
+    preventTouchScroll = null;
+  }
   window.scrollTo(0, lockedScrollY);
 }
 
 watch(isMenuOpen, (open) => {
   if (open) {
+    hideNav.value = false;
     lockBodyScroll();
   } else {
     unlockBodyScroll();
@@ -669,7 +677,7 @@ onUnmounted(() => {
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
     box-shadow: var(--shadow-md);
-    max-height: min(70vh, 440px);
+    max-height: min(85vh, 560px);
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;

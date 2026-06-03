@@ -921,6 +921,10 @@ onUnmounted(() => {
     min-width: 0;
   }
 
+  .chat-page .composer :deep(.n-input__textarea-el) {
+    font-size: var(--text-md);
+  }
+
   .chat-page .composer :deep(.n-button) {
     flex-shrink: 0;
     min-width: 4rem;
