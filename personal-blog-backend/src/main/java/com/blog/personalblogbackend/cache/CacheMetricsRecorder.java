@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.cache;
 
+import com.blog.personalblogbackend.monitor.BlogMetricsConfiguration;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -10,21 +11,30 @@ public class CacheMetricsRecorder {
     private final AtomicLong caffeineMiss = new AtomicLong();
     private final AtomicLong redisHit = new AtomicLong();
     private final AtomicLong redisMiss = new AtomicLong();
+    private final BlogMetricsConfiguration.BlogMeters meters;
+
+    public CacheMetricsRecorder(BlogMetricsConfiguration.BlogMeters meters) {
+        this.meters = meters;
+    }
 
     public void recordCaffeineHit() {
         caffeineHit.incrementAndGet();
+        meters.caffeineHit().increment();
     }
 
     public void recordCaffeineMiss() {
         caffeineMiss.incrementAndGet();
+        meters.caffeineMiss().increment();
     }
 
     public void recordRedisHit() {
         redisHit.incrementAndGet();
+        meters.redisHit().increment();
     }
 
     public void recordRedisMiss() {
         redisMiss.incrementAndGet();
+        meters.redisMiss().increment();
     }
 
     public CacheMetricsSnapshot snapshot() {

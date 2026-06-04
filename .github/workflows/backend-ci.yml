@@ -1,0 +1,28 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'personal-blog-backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'personal-blog-backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Test
+        run: mvn -B -f personal-blog-backend/pom.xml test
+      - name: Package
+        run: mvn -B -f personal-blog-backend/pom.xml package -DskipTests

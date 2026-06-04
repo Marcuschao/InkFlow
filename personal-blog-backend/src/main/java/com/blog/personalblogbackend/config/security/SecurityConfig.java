@@ -2,6 +2,7 @@ package com.blog.personalblogbackend.config.security;
 
 import com.blog.personalblogbackend.config.security.JwtAuthenticationFilter;
 import com.blog.personalblogbackend.concurrency.ApiRateLimitFilter;
+import com.blog.personalblogbackend.monitor.TraceIdFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -29,6 +30,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApiRateLimitFilter apiRateLimitFilter;
+    private final TraceIdFilter traceIdFilter;
 
 //    @Bean
 //    public PasswordEncoder passwordEncoder() {
@@ -93,7 +95,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class);
+            .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)
+            .addFilterBefore(traceIdFilter, ApiRateLimitFilter.class);
 
         return http.build();
     }

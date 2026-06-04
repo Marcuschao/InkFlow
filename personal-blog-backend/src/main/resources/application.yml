@@ -27,14 +27,29 @@ spring:
       simple:
         mismatched-queues-fatal: false
 
+logging:
+  level:
+    root: WARN
+    com.blog.personalblogbackend: INFO
+
 management:
+  server:
+    port: 8081
   endpoints:
     web:
       exposure:
-        include: health,metrics,env
+        include: health,metrics,prometheus
   endpoint:
     health:
       show-details: when_authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: personal-blog-backend
+    distribution:
+      percentiles-histogram:
+        blog.http.server.requests: true
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml # Mapper XML 
