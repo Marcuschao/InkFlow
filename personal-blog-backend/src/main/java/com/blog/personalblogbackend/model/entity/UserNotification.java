@@ -18,6 +18,7 @@ public class UserNotification {
     private Long targetId;
     private String targetType;
     private String content;
+    private String eventId;
     private Integer isRead;
     private LocalDateTime createTime;
 }

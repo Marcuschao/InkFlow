@@ -57,6 +57,7 @@ npm run dev
 - [文章缓存与限流](docs/article-cache-and-rate-limit.md)
 - [聊天可靠性](docs/chat-reliability.md)
 - [可观测性（Prometheus/Grafana）](docs/observability.md)
+- [压测指南（k6）](docs/benchmark.md)
 
 ## 监控说明
 

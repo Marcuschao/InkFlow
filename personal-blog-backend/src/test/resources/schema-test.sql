@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS article (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255),
+    deleted TINYINT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sensitive_word (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    word VARCHAR(128),
+    create_time TIMESTAMP
+);

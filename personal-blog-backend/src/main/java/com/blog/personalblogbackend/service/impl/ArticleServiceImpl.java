@@ -2,6 +2,7 @@ package com.blog.personalblogbackend.service.impl;
 
 import com.blog.personalblogbackend.cache.ArticleBloomFilter;
 import com.blog.personalblogbackend.cache.ArticleCacheService;
+import com.blog.personalblogbackend.concurrency.ArticleDetailRequestCoalescer;
 import com.blog.personalblogbackend.content.ArticleContentCheckResult;
 import com.blog.personalblogbackend.content.ArticleContentCheckService;
 import com.blog.personalblogbackend.datasource.ReadOnly;
@@ -67,6 +68,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private ContentChangeProducer contentChangeProducer;
     @Autowired
     private ArticleContentCheckService articleContentCheckService;
+    @Autowired
+    private ArticleDetailRequestCoalescer articleDetailRequestCoalescer;
 
     private static boolean isPublished(Integer status) {
         return ArticleStatus.isPublished(status);
@@ -142,6 +145,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (articleCacheService.isDetailNullCached(id, loc)) {
             return null;
         }
+        return articleDetailRequestCoalescer.coalesce(id, loc,
+                () -> loadDetailUncached(id, loc, viewerUserId, viewerIsAdmin));
+    }
+
+    private ArticleVO loadDetailUncached(Long id, String loc, Long viewerUserId, boolean viewerIsAdmin) {
         Article article = articleMapper.selectArticleVOById(id);
         if (article == null) {
             articleCacheService.putDetailNull(id, loc);

@@ -10,4 +10,5 @@ public class NotificationMqStatusDto {
     private boolean connected;
     private String exchange;
     private List<String> queues;
+    private List<NotificationQueueStatDto> queueStats;
 }

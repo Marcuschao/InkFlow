@@ -2,7 +2,7 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <property name="CONSOLE_LOG_PATTERN"
-              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%replace(%X{traceId}){'^(.+)$','[traceId=$1] '}){'^$',''}{yellow} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%t]){faint} %clr(%logger{40}){cyan} %clr(:){faint}%replace( [traceId=%X{traceId}]){' \\[traceId=\\]',''} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
     <springProperty scope="context" name="ROOT_LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
     <root level="${ROOT_LOG_LEVEL}">

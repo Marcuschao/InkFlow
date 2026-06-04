@@ -13,7 +13,10 @@ import com.blog.personalblogbackend.notification.NotificationMessage;
 import com.blog.personalblogbackend.notification.RealtimeNotificationService;
 import com.blog.personalblogbackend.service.UserNotificationService;
 import com.blog.personalblogbackend.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -26,6 +29,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserNotificationServiceImpl implements UserNotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserNotificationServiceImpl.class);
 
     @Autowired
     private UserNotificationMapper userNotificationMapper;
@@ -103,9 +108,16 @@ public class UserNotificationServiceImpl implements UserNotificationService {
         n.setTargetId(message.getTargetId());
         n.setTargetType(message.getTargetType());
         n.setContent(message.getContent().trim());
+        n.setEventId(message.getEventId());
         n.setIsRead(0);
         n.setCreateTime(LocalDateTime.now());
-        userNotificationMapper.insert(n);
+        try {
+            userNotificationMapper.insert(n);
+        } catch (DuplicateKeyException ex) {
+            log.debug("[notification] duplicate inbox eventId={} recipient={}",
+                    message.getEventId(), message.getRecipientUserId());
+            return;
+        }
         UserProfile actorProfile = null;
         if (message.getActorUserId() != null) {
             actorProfile = userService.mapProfilesByUserIds(Set.of(message.getActorUserId()))

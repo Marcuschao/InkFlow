@@ -30,7 +30,28 @@
             <div style="color: var(--color-text-muted);">
               交换机：{{ status.exchange }}
             </div>
-            <div v-if="status.queues?.length">
+            <div v-if="status.queueStats?.length">
+              <div style="font-weight: 600; margin-bottom: 8px;">队列积压：</div>
+              <n-table :bordered="true" :single-line="false" size="small">
+                <thead>
+                  <tr>
+                    <th>队列</th>
+                    <th>积压</th>
+                    <th>消费者</th>
+                    <th>DLQ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="q in status.queueStats" :key="q.name">
+                    <td>{{ q.name }}</td>
+                    <td>{{ q.messageCount }}</td>
+                    <td>{{ q.consumerCount }}</td>
+                    <td>{{ q.dlqMessageCount }}</td>
+                  </tr>
+                </tbody>
+              </n-table>
+            </div>
+            <div v-else-if="status.queues?.length">
               <div style="font-weight: 600; margin-bottom: 8px;">监控队列：</div>
               <n-list bordered>
                 <n-list-item v-for="q in status.queues" :key="q">
@@ -47,7 +68,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { NButton, NCard, NList, NListItem, NSpace, NTag } from 'naive-ui';
+import { NButton, NCard, NList, NListItem, NSpace, NTable, NTag } from 'naive-ui';
 import { fetchNotificationMqStatus } from '../../api/notificationMq';
 
 const status = ref(null);

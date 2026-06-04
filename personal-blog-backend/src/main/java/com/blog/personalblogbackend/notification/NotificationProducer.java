@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class NotificationProducer {
@@ -111,6 +112,9 @@ public class NotificationProducer {
         payload.put("eventId", event.getEventId());
         payload.put("occurredAt", event.getOccurredAt() != null ? event.getOccurredAt().toString() : null);
         msg.setPayload(payload);
+        if (StringUtils.hasText(event.getEventId())) {
+            msg.setEventId(event.getEventId());
+        }
         sendAfterCommit(NotificationRabbitProperties.RK_EVENT_PREFIX + event.getType().name(), msg);
     }
 
@@ -139,11 +143,16 @@ public class NotificationProducer {
         if (!props.isEnabled() || message == null) {
             return;
         }
+        if (!StringUtils.hasText(message.getEventId())) {
+            message.setEventId(UUID.randomUUID().toString());
+        }
         Runnable task = () -> {
             try {
                 rabbitTemplate.convertAndSend(props.getExchange(), routingKey, message);
+                log.debug("[notification] published routingKey={} eventId={}", routingKey, message.getEventId());
             } catch (Exception ex) {
-                log.warn("[notification] publish failed routingKey={}: {}", routingKey, ex.toString());
+                log.warn("[notification] publish failed routingKey={} eventId={}: {}",
+                        routingKey, message.getEventId(), ex.toString());
             }
         };
         if (TransactionSynchronizationManager.isSynchronizationActive()) {

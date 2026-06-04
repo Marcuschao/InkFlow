@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.notification.consumer;
 
+import com.blog.personalblogbackend.notification.NotificationConsumeHelper;
 import com.blog.personalblogbackend.notification.NotificationMessage;
 import com.blog.personalblogbackend.service.WebPushService;
 import com.rabbitmq.client.Channel;
@@ -21,14 +22,22 @@ public class PushNotificationConsumer {
     private static final Logger log = LoggerFactory.getLogger(PushNotificationConsumer.class);
 
     private final WebPushService webPushService;
+    private final NotificationConsumeHelper consumeHelper;
 
-    public PushNotificationConsumer(WebPushService webPushService) {
+    public PushNotificationConsumer(WebPushService webPushService, NotificationConsumeHelper consumeHelper) {
         this.webPushService = webPushService;
+        this.consumeHelper = consumeHelper;
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.pushQueue}")
     public void onMessage(NotificationMessage message, Channel channel,
                           @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+        NotificationConsumeHelper.ConsumeDecision decision =
+                consumeHelper.prepare(NotificationConsumeHelper.QUEUE_PUSH, message);
+        if (decision != NotificationConsumeHelper.ConsumeDecision.PROCEED) {
+            channel.basicAck(tag, false);
+            return;
+        }
         try {
             Map<String, Object> p = message.getPayload();
             if (p != null) {
@@ -40,7 +49,8 @@ public class PushNotificationConsumer {
             }
             channel.basicAck(tag, false);
         } catch (Exception ex) {
-            log.warn("[notification] push consume failed: {}", ex.toString());
+            log.warn("[notification] push consume failed eventId={}: {}",
+                    message.getEventId(), ex.toString());
             channel.basicNack(tag, false, false);
         }
     }

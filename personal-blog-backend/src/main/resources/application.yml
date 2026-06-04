@@ -113,6 +113,7 @@ blog:
   notify-from: ""
   notification:
     enabled: true
+    idempotency-ttl-days: 7
     # 已有队列无 DLX 时须为 false；改为 true 前需在 RabbitMQ 删除 notification.* / content.cache.queue 等旧队列
     dead-letter-enabled: true
     exchange: blog.notification

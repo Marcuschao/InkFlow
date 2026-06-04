@@ -14,6 +14,7 @@ public class NotificationRabbitProperties {
     private String pushQueue = "notification.push.queue";
     private String mailQueue = "notification.mail.queue";
     private String auditQueue = "notification.audit.queue";
+    private int idempotencyTtlDays = 7;
 
     public static final String RK_LIKE = "notification.like";
     public static final String RK_FAVORITE = "notification.favorite";

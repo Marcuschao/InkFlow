@@ -17,7 +17,7 @@
 
 ## 请求合并
 
-`ArticleDetailRequestCoalescer`：相同 `articleId + lang` 的并发详情查询共用一个 `CompletableFuture`，降低击穿压力。
+`ArticleDetailRequestCoalescer` 已接入 `ArticleServiceImpl.getArticleVo`：缓存未命中时，相同 `articleId + lang` 的并发查询共用一个 `CompletableFuture`，降低击穿压力。
 
 ## 分布式限流
 

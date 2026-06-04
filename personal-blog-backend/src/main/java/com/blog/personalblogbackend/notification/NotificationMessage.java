@@ -6,6 +6,7 @@ import java.util.Map;
 
 @Data
 public class NotificationMessage {
+    private String eventId;
     private String type;
     private Long recipientUserId;
     private Long actorUserId;

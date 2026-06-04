@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.notification.consumer;
 
+import com.blog.personalblogbackend.notification.NotificationConsumeHelper;
 import com.blog.personalblogbackend.notification.NotificationMessage;
 import com.blog.personalblogbackend.service.BlogMailService;
 import com.blog.personalblogbackend.service.BlogSiteService;
@@ -26,18 +27,27 @@ public class MailNotificationConsumer {
     private final SubscriberService subscriberService;
     private final BlogMailService blogMailService;
     private final BlogSiteService blogSiteService;
+    private final NotificationConsumeHelper consumeHelper;
 
     public MailNotificationConsumer(SubscriberService subscriberService,
                                     BlogMailService blogMailService,
-                                    BlogSiteService blogSiteService) {
+                                    BlogSiteService blogSiteService,
+                                    NotificationConsumeHelper consumeHelper) {
         this.subscriberService = subscriberService;
         this.blogMailService = blogMailService;
         this.blogSiteService = blogSiteService;
+        this.consumeHelper = consumeHelper;
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.mailQueue}")
     public void onMessage(NotificationMessage message, Channel channel,
                           @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+        NotificationConsumeHelper.ConsumeDecision decision =
+                consumeHelper.prepare(NotificationConsumeHelper.QUEUE_MAIL, message);
+        if (decision != NotificationConsumeHelper.ConsumeDecision.PROCEED) {
+            channel.basicAck(tag, false);
+            return;
+        }
         try {
             List<String> emails = subscriberService.listActiveEmails();
             Map<String, Object> p = message.getPayload();
@@ -56,7 +66,8 @@ public class MailNotificationConsumer {
             }
             channel.basicAck(tag, false);
         } catch (Exception ex) {
-            log.warn("[notification] mail consume failed: {}", ex.toString());
+            log.warn("[notification] mail consume failed eventId={}: {}",
+                    message.getEventId(), ex.toString());
             channel.basicNack(tag, false, false);
         }
     }

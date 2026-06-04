@@ -1,0 +1,7 @@
+management:
+  server:
+    port: 8083
+
+blog:
+  rate-limit:
+    enabled: false
