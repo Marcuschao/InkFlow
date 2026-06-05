@@ -1,10 +1,7 @@
 package com.blog.personalblogbackend.config.security;
 
-import com.blog.personalblogbackend.config.security.JwtAuthenticationFilter;
 import com.blog.personalblogbackend.concurrency.ApiRateLimitFilter;
 import com.blog.personalblogbackend.monitor.TraceIdFilter;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -16,32 +13,27 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@Order(1)
-@RequiredArgsConstructor
+@Order(2)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApiRateLimitFilter apiRateLimitFilter;
     private final TraceIdFilter traceIdFilter;
 
-//    @Bean
-//    public PasswordEncoder passwordEncoder() {
-//        return new BCryptPasswordEncoder();
-//    }
-
-    @Bean
-    public BCryptPasswordEncoder bCryptPasswordEncoder() {
-        return new BCryptPasswordEncoder();
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          ApiRateLimitFilter apiRateLimitFilter,
+                          TraceIdFilter traceIdFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.apiRateLimitFilter = apiRateLimitFilter;
+        this.traceIdFilter = traceIdFilter;
     }
-    
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
@@ -50,8 +42,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable) // 禁用CSRF
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 无状态会话
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/*/versions").authenticated()
@@ -88,12 +80,15 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/user/{id:\\d+}/follow/status").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/user/{id:\\d+}").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/user/{id:\\d+}/follow").authenticated()
+                .requestMatchers("/api/user/me/oauth/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
                 .requestMatchers("/actuator/**").authenticated()
                 .anyRequest().authenticated()
-            )
+            );
+
+        http
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(traceIdFilter, ApiRateLimitFilter.class);

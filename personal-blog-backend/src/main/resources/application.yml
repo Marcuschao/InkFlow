@@ -105,6 +105,27 @@ blog:
     exchange: blog.content
     queue: content.cache.queue
     routing-key: content.change
+  search:
+    enabled: false
+    host: http://127.0.0.1:7700
+    api-key: ${MEILI_MASTER_KEY:}
+    index: articles
+    exchange: blog.search
+    queue: search.sync.queue
+    routing-key: search.sync
+    outbox:
+      poll-interval-ms: 5000
+      batch-size: 100
+      max-retries: 10
+    reconcile:
+      cron: "0 30 4 * * ?"
+      batch-size: 500
+  oauth:
+    enabled: false
+    client-id: ${GITHUB_CLIENT_ID:}
+    client-secret: ${GITHUB_CLIENT_SECRET:}
+    redirect-uri: ${GITHUB_REDIRECT_URI:}
+    frontend-callback-url: http://localhost:5173/oauth/callback
   datasource:
     read-url: ${spring.datasource.url}
     write-url: ${spring.datasource.url}

@@ -14,23 +14,15 @@
             <n-input v-model:value="username" autocomplete="username" />
           </n-form-item>
           <n-form-item label="密码" label-placement="top">
-            <n-input
-              v-model:value="password"
-              type="password"
-              show-password-on="click"
-              autocomplete="current-password"
-            />
+            <n-input v-model:value="password" type="password" show-password-on="click"
+              autocomplete="current-password" />
           </n-form-item>
           <n-form-item label="验证码" label-placement="top">
             <div class="captcha-line">
-              <n-input
-                v-model:value="captchaCode"
-                autocomplete="off"
-                maxlength="8"
-                placeholder="右侧图形中的字符"
-              />
+              <n-input v-model:value="captchaCode" autocomplete="off" maxlength="8" placeholder="右侧图形中的字符" />
               <n-button tertiary type="default" @click.prevent="loadCaptcha">
-                <n-image v-if="captchaSrc" :src="captchaSrc" alt="验证码" width="120" height="40" preview-disabled object-fit="cover" />
+                <n-image v-if="captchaSrc" :src="captchaSrc" alt="验证码" width="120" height="40" preview-disabled
+                  object-fit="cover" />
                 <span v-else class="captcha-placeholder">加载中…</span>
                 <template #icon>
                   <n-icon><reload-outline /></n-icon>
@@ -42,7 +34,11 @@
             <n-checkbox v-model:checked="rememberMe">记住我（延长登录有效期）</n-checkbox>
           </div>
           <n-form-item :show-label="false" :show-feedback="false">
-            <n-button attr-type="submit" type="primary" block :loading="isLoading">{{ isLoading ? '登录中…' : '登录' }}</n-button>
+            <n-button attr-type="submit" type="primary" block :loading="isLoading">{{ isLoading ? '登录中…' : '登录'
+            }}</n-button>
+          </n-form-item>
+          <n-form-item :show-label="false" :show-feedback="false">
+            <n-button type="default" block @click.prevent="loginWithGithub">使用 GitHub 登录</n-button>
           </n-form-item>
           <p class="switch-link">没有账号？<router-link to="/register">去注册</router-link></p>
           <n-alert v-if="success" type="success" class="form-alert-tight">{{ success }}</n-alert>
@@ -70,6 +66,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { login, fetchCaptcha } from '../api/auth';
+import { githubLoginUrl } from '../api/oauth';
 
 const route = useRoute();
 const username = ref('');
@@ -125,6 +122,10 @@ function resolveRedirect() {
     return redirect;
   }
   return authStore.isAdmin ? '/admin' : '/';
+}
+
+function loginWithGithub() {
+  window.location.href = githubLoginUrl();
 }
 
 const handleLogin = async () => {

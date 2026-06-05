@@ -23,6 +23,7 @@
           <n-menu
             class="nav-naive-menu nav-naive-menu--desktop"
             mode="horizontal"
+            responsive
             :options="navMenuOptions"
             :value="navMenuActiveKey"
             accordion
@@ -36,6 +37,10 @@
             accordion
             @update:value="onNavMenuUpdate"
           />
+
+          <div class="nav-search-wrap">
+            <SearchSuggest />
+          </div>
 
           <router-link
             v-if="authStore.isLoggedIn"
@@ -117,6 +122,7 @@ import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { useSiteStore } from '../stores/site';
 import UserAvatar from './UserAvatar.vue';
+import SearchSuggest from './SearchSuggest.vue';
 
 const dark = defineModel('dark', { type: Boolean, default: false });
 
@@ -493,14 +499,29 @@ onUnmounted(() => {
   font-weight: var(--weight-semibold);
 }
 
-.nav-naive-menu--desktop {
-  flex: 1;
+.nav-search-wrap {
+  flex: 0 1 200px;
+  min-width: 140px;
+  margin: 0 var(--space-2);
 }
 
-.nav-naive-menu--desktop :deep(.n-menu-bar) {
-  width: fit-content;
-  align-items: flex-end;
-  margin-left: auto;
+.nav-naive-menu--desktop {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nav-naive-menu--desktop :deep(.n-menu--horizontal) {
+  width: 100%;
+}
+
+.nav-naive-menu--desktop :deep(.n-menu-item-content) {
+  padding: 0 var(--space-3);
+}
+
+.nav-naive-menu--desktop :deep(.n-menu-item-content-header) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .nav-naive-menu--mobile {

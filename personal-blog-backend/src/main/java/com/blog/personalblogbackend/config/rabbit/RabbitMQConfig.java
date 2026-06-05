@@ -2,6 +2,7 @@ package com.blog.personalblogbackend.config.rabbit;
 
 import com.blog.personalblogbackend.config.interaction.InteractionProperties;
 import com.blog.personalblogbackend.config.properties.NotificationRabbitProperties;
+import com.blog.personalblogbackend.config.properties.SearchProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
@@ -43,6 +44,36 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange contentExchange(@Value("${blog.content.exchange:blog.content}") String exchange) {
         return new TopicExchange(exchange, true, false);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+    public TopicExchange searchExchange(SearchProperties searchProperties) {
+        return new TopicExchange(searchProperties.getExchange(), true, false);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+    public Queue searchSyncQueue(SearchProperties searchProperties) {
+        return queueWithDlq(searchProperties.getQueue());
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+    public Queue searchSyncDlq(SearchProperties searchProperties) {
+        return QueueBuilder.durable(searchProperties.getQueue() + ".dlq").build();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+    public Binding bindSearchSync(Queue searchSyncQueue, TopicExchange searchExchange, SearchProperties searchProperties) {
+        return BindingBuilder.bind(searchSyncQueue).to(searchExchange).with(searchProperties.getRoutingKey());
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+    public Binding bindSearchSyncDlq(Queue searchSyncDlq, DirectExchange deadLetterExchange, SearchProperties searchProperties) {
+        return BindingBuilder.bind(searchSyncDlq).to(deadLetterExchange).with(searchProperties.getQueue() + ".dlq");
     }
 
     @Bean

@@ -70,6 +70,11 @@ const routes = [
     component: () => import('../views/Register.vue'),
   },
   {
+    path: '/oauth/callback',
+    name: 'OAuthCallback',
+    component: () => import('../views/OAuthCallback.vue'),
+  },
+  {
     path: '/user/me',
     name: 'UserProfile',
     component: () => import('../views/UserProfile.vue'),

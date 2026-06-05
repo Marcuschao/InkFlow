@@ -54,6 +54,17 @@
               </n-form-item>
               <n-button type="primary" attr-type="submit" :loading="saving">{{ saving ? '保存中…' : '保存' }}</n-button>
             </n-form>
+            <div class="oauth-section">
+              <h2 class="oauth-heading">第三方账号</h2>
+              <p v-if="githubBinding" class="muted">
+                已绑定 GitHub：{{ githubBinding.providerUsername || '—' }}
+              </p>
+              <p v-else class="muted">未绑定 GitHub</p>
+              <n-space>
+                <n-button v-if="!githubBinding" :loading="oauthLoading" @click="startBindGithub">绑定 GitHub</n-button>
+                <n-button v-else :loading="oauthLoading" @click="doUnbindGithub">解绑 GitHub</n-button>
+              </n-space>
+            </div>
           </div>
 
           <div v-else-if="t.id === 'favorites'" class="tab-panel">
@@ -89,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   NButton,
@@ -117,6 +128,7 @@ import ArticleCard from '../components/ArticleCard.vue';
 import UserAvatar from '../components/UserAvatar.vue';
 import UserListItem from '../components/UserListItem.vue';
 import Pagination from '../components/Pagination.vue';
+import { fetchOAuthBindings, bindGithub, unbindGithub } from '../api/oauth';
 
 const route = useRoute();
 const router = useRouter();
@@ -149,6 +161,12 @@ const favTotal = ref(0);
 const listLoading = ref(false);
 const followingList = ref([]);
 const followersList = ref([]);
+const oauthBindings = ref([]);
+const oauthLoading = ref(false);
+
+const githubBinding = computed(() =>
+  oauthBindings.value.find((b) => b.provider === 'github')
+);
 
 function setTab(id) {
   tab.value = id;
@@ -219,6 +237,8 @@ onMounted(async () => {
     loading.value = false;
   }
 
+  await loadOAuthBindings();
+
   if (tab.value === 'favorites') loadFavorites(1);
   if (tab.value === 'following') loadFollowing();
   if (tab.value === 'followers') loadFollowers();
@@ -246,6 +266,41 @@ async function onAvatarUpload({ file, onFinish, onError }) {
     onError();
   } finally {
     avatarUploading.value = false;
+  }
+}
+
+async function loadOAuthBindings() {
+  try {
+    const res = await fetchOAuthBindings();
+    oauthBindings.value = res.data || [];
+  } catch {
+    oauthBindings.value = [];
+  }
+}
+
+async function startBindGithub() {
+  oauthLoading.value = true;
+  try {
+    const res = await bindGithub();
+    const url = res.data?.authorizeUrl || '/oauth2/authorization/github';
+    window.location.href = url;
+  } catch {
+    /* request toast */
+  } finally {
+    oauthLoading.value = false;
+  }
+}
+
+async function doUnbindGithub() {
+  oauthLoading.value = true;
+  try {
+    await unbindGithub();
+    oauthBindings.value = [];
+    toast.push('已解绑 GitHub', 'success');
+  } catch {
+    /* request toast */
+  } finally {
+    oauthLoading.value = false;
   }
 }
 
@@ -427,5 +482,17 @@ async function save() {
   .profile-form :deep(.n-form-item) {
     margin-bottom: var(--space-4);
   }
+}
+
+.oauth-section {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.oauth-heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
 }
 </style>

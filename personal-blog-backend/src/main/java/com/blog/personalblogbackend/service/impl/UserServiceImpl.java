@@ -136,6 +136,8 @@ public class UserServiceImpl implements UserService {
 
         user.setRole(UserRole.USER);
 
+        user.setPasswordLoginEnabled(true);
+
         user.setRegisterIp(ip);
 
         user.setRegisterRegion(region);

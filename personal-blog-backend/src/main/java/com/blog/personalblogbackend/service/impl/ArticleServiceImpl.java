@@ -21,6 +21,8 @@ import com.blog.personalblogbackend.mapper.TagMapper;
 import com.blog.personalblogbackend.common.revision.RevisionTargetType;
 import com.blog.personalblogbackend.messaging.ContentChangeEventType;
 import com.blog.personalblogbackend.messaging.ContentChangeProducer;
+import com.blog.personalblogbackend.messaging.SearchSyncEventType;
+import com.blog.personalblogbackend.search.SearchOutboxService;
 import com.blog.personalblogbackend.service.ArticleService;
 import com.blog.personalblogbackend.service.ContentRevisionService;
 import com.blog.personalblogbackend.notification.DomainEvent;
@@ -66,6 +68,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private ArticleBloomFilter articleBloomFilter;
     @Autowired
     private ContentChangeProducer contentChangeProducer;
+    @Autowired(required = false)
+    private SearchOutboxService searchOutboxService;
     @Autowired
     private ArticleContentCheckService articleContentCheckService;
     @Autowired
@@ -77,6 +81,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     private void publishArticleEvents(Article previous, Article fresh) {
         if (fresh == null || !isPublished(fresh.getStatus())) {
+            notifySearchIndex(previous, fresh);
             return;
         }
         if (previous == null || !isPublished(previous.getStatus())) {
@@ -86,6 +91,19 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         } else {
             notificationProducer.sendDomainEvent(DomainEvent.articleUpdated(fresh));
             contentChangeProducer.send(fresh.getId(), ContentChangeEventType.ARTICLE_UPDATED);
+        }
+        notifySearchIndex(previous, fresh);
+    }
+
+    private void notifySearchIndex(Article previous, Article fresh) {
+        if (searchOutboxService == null) {
+            return;
+        }
+        if (fresh != null && isPublished(fresh.getStatus())) {
+            searchOutboxService.enqueue(fresh.getId(), SearchSyncEventType.UPSERT, fresh.getUpdateTime());
+        } else if (previous != null && isPublished(previous.getStatus())) {
+            LocalDateTime at = previous.getUpdateTime() != null ? previous.getUpdateTime() : LocalDateTime.now();
+            searchOutboxService.enqueue(previous.getId(), SearchSyncEventType.DELETE, at);
         }
     }
 
@@ -385,6 +403,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         if (ArticleStatus.isPublished(previous.getStatus())) {
             contentChangeProducer.send(articleId, ContentChangeEventType.ARTICLE_DELETED);
+            if (searchOutboxService != null) {
+                LocalDateTime at = previous.getUpdateTime() != null ? previous.getUpdateTime() : LocalDateTime.now();
+                searchOutboxService.enqueue(articleId, SearchSyncEventType.DELETE, at);
+            }
         }
     }
 
@@ -472,6 +494,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         articleMapper.deleteArticleTagsByArticleId(id);
         articleMapper.deleteById(id);
         contentChangeProducer.send(id, ContentChangeEventType.ARTICLE_DELETED);
+        if (searchOutboxService != null) {
+            searchOutboxService.enqueue(id, SearchSyncEventType.DELETE, LocalDateTime.now());
+        }
         return true;
     }
 

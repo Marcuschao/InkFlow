@@ -31,6 +31,14 @@ function buildProxy(env) {
       target: BACKEND,
       changeOrigin: true,
     },
+    '/oauth2': {
+      target: BACKEND,
+      changeOrigin: true,
+    },
+    '/login/oauth2': {
+      target: BACKEND,
+      changeOrigin: true,
+    },
   };
 
   const apiBase = env.VITE_APP_API_BASE_URL || '';
@@ -46,6 +54,16 @@ function buildProxy(env) {
       ws: true,
       changeOrigin: true,
       rewrite: (path) => path.replace(new RegExp(`^${prefix.replace(/\//g, '\\/')}/ws`), '/ws'),
+    };
+    proxy[`${prefix}/oauth2`] = {
+      target: BACKEND,
+      changeOrigin: true,
+      rewrite: (path) => path.replace(new RegExp(`^${prefix.replace(/\//g, '\\/')}/oauth2`), '/oauth2'),
+    };
+    proxy[`${prefix}/login/oauth2`] = {
+      target: BACKEND,
+      changeOrigin: true,
+      rewrite: (path) => path.replace(new RegExp(`^${prefix.replace(/\//g, '\\/')}/login/oauth2`), '/login/oauth2'),
     };
   }
 
