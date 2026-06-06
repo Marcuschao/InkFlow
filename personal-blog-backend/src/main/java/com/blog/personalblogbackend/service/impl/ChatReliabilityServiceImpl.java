@@ -11,6 +11,7 @@ import com.blog.personalblogbackend.model.vo.chat.ChatMessageVo;
 import com.blog.personalblogbackend.chat.ChatFanoutPublisher;
 import com.blog.personalblogbackend.service.ChatOnlineService;
 import com.blog.personalblogbackend.service.ChatReliabilityService;
+import com.blog.personalblogbackend.service.ChatUserDisplayService;
 import com.blog.personalblogbackend.service.SensitiveWordService;
 import com.blog.personalblogbackend.service.UserMuteService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,6 +59,7 @@ public class ChatReliabilityServiceImpl implements ChatReliabilityService {
     private final ObjectMapper objectMapper;
     private final ChatOnlineService chatOnlineService;
     private final ChatFanoutPublisher chatFanoutPublisher;
+    private final ChatUserDisplayService chatUserDisplayService;
 
     @Override
     public ChatMessageVo send(Long userId, String username, String avatar, boolean admin, ChatSendRequest request) {
@@ -81,6 +83,7 @@ public class ChatReliabilityServiceImpl implements ChatReliabilityService {
         String dedupKey = buildDedupKey(userId, clientMsgId, content);
         ChatMessageVo cached = readCachedMessage(dedupKey);
         if (cached != null) {
+            chatUserDisplayService.enrichMessages(List.of(cached));
             sendAck(userId, clientMsgId, cached.getId(), ACK_OK);
             return cached;
         }
@@ -96,6 +99,7 @@ public class ChatReliabilityServiceImpl implements ChatReliabilityService {
         chatMessageMapper.insert(message);
 
         ChatMessageVo vo = toVo(message, clientMsgId);
+        chatUserDisplayService.enrichMessages(List.of(vo));
         cacheDedup(dedupKey, vo);
         trackPresence(userId);
 

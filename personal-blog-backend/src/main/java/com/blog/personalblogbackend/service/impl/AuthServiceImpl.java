@@ -9,22 +9,20 @@ import com.blog.personalblogbackend.common.exception.ServiceException;
 import com.blog.personalblogbackend.service.AuthService;
 import com.blog.personalblogbackend.service.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
+@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    @Autowired
-    private UserMapper userMapper;
-    @Autowired
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
-    @Autowired
-    private JwtUtils jwtUtils;
-    @Autowired
-    private UserService userService;
+    private final UserMapper userMapper;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final JwtUtils jwtUtils;
+    private final UserService userService;
 
     @Override
     public LoginResult login(String username, String password, boolean rememberMe, String clientIp) {

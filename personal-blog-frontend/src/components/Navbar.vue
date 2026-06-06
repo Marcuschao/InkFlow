@@ -726,15 +726,24 @@ onUnmounted(() => {
   }
 }
 
+.nav-admin-li-desktop {
+  flex-shrink: 0;
+}
+
 .nav-links a.nav-admin {
-  display: block;
-  padding: 0.5rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
   background: var(--color-text);
   color: #fff;
   text-decoration: none;
-  font-size: 0.92rem;
-  font-weight: 500;
-  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
   transition: background var(--transition-fast);
 }
 

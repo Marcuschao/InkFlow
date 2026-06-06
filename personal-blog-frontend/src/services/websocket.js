@@ -17,6 +17,7 @@ const chatHandlers = new Set();
 const ackHandlers = new Set();
 const offlineHandlers = new Set();
 const recallHandlers = new Set();
+const profileHandlers = new Set();
 const notificationHandlers = new Set();
 const statusHandlers = new Set();
 
@@ -99,6 +100,16 @@ function subscribeTopics() {
       try {
         const payload = JSON.parse(frame.body);
         recallHandlers.forEach((fn) => fn(payload));
+      } catch {
+        /* ignore */
+      }
+    })
+  );
+  subscriptions.push(
+    client.subscribe('/topic/chat/profile', (frame) => {
+      try {
+        const payload = JSON.parse(frame.body);
+        profileHandlers.forEach((fn) => fn(payload));
       } catch {
         /* ignore */
       }
@@ -239,6 +250,11 @@ export function onChatOffline(handler) {
 export function onChatRecall(handler) {
   recallHandlers.add(handler);
   return () => recallHandlers.delete(handler);
+}
+
+export function onChatProfileUpdate(handler) {
+  profileHandlers.add(handler);
+  return () => profileHandlers.delete(handler);
 }
 
 export function onNotification(handler) {

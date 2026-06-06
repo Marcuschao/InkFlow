@@ -16,4 +16,6 @@ public interface ChatOnlineService {
     List<OnlineUserVo> listOnlineUsers();
 
     List<OnlineUserVo> listOnlineSessions();
+
+    void refreshUserDisplay(Long userId, String username, String avatar);
 }

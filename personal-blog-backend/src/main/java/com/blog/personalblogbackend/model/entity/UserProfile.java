@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Data
 @TableName("user_profile")
 public class UserProfile {
-
     @TableId
     private Long userId;
     private String nickname;

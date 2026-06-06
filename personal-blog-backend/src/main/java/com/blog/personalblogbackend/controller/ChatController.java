@@ -5,15 +5,15 @@ import com.blog.personalblogbackend.config.security.CurrentUserService;
 import com.blog.personalblogbackend.model.dto.chat.ChatHistoryResult;
 import com.blog.personalblogbackend.model.dto.chat.ChatSendRequest;
 import com.blog.personalblogbackend.model.entity.User;
-import com.blog.personalblogbackend.model.entity.UserProfile;
 import com.blog.personalblogbackend.model.vo.chat.ChatMessageVo;
+import com.blog.personalblogbackend.model.vo.chat.ChatUserDisplayVo;
 import com.blog.personalblogbackend.model.vo.chat.OnlineUserVo;
 import com.blog.personalblogbackend.service.ChatOnlineService;
 import com.blog.personalblogbackend.service.ChatRecallService;
 import com.blog.personalblogbackend.service.ChatReliabilityService;
 import com.blog.personalblogbackend.service.ChatService;
+import com.blog.personalblogbackend.service.ChatUserDisplayService;
 import com.blog.personalblogbackend.service.UserMuteService;
-import com.blog.personalblogbackend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,7 +38,7 @@ public class ChatController {
     private final ChatReliabilityService chatReliabilityService;
     private final UserMuteService userMuteService;
     private final CurrentUserService currentUserService;
-    private final UserService userService;
+    private final ChatUserDisplayService chatUserDisplayService;
 
     @GetMapping("/history")
     public Result<ChatHistoryResult> history(
@@ -56,19 +56,22 @@ public class ChatController {
     @PostMapping("/send")
     public Result<ChatMessageVo> send(@RequestBody ChatSendRequest request) {
         User user = currentUserService.requireUser();
-        UserProfile profile = userService.mapProfilesByUserIds(List.of(user.getId())).get(user.getId());
-        String avatar = profile != null ? profile.getAvatar() : null;
+        ChatUserDisplayVo display = resolveDisplay(user.getId());
+        String username = display != null ? display.getUsername() : user.getUsername();
+        String avatar = display != null ? display.getAvatar() : null;
         boolean admin = currentUserService.isAdmin();
-        ChatMessageVo vo = chatService.send(user.getId(), user.getUsername(), avatar, admin, request);
-        touchOnline(user, profile, admin);
+        ChatMessageVo vo = chatService.send(user.getId(), username, avatar, admin, request);
+        touchOnline(user, username, avatar, admin);
         return Result.success(vo);
     }
 
     @PostMapping("/presence")
     public Result<Void> presence() {
         User user = currentUserService.requireUser();
-        UserProfile profile = userService.mapProfilesByUserIds(List.of(user.getId())).get(user.getId());
-        touchOnline(user, profile, currentUserService.isAdmin());
+        ChatUserDisplayVo display = resolveDisplay(user.getId());
+        String username = display != null ? display.getUsername() : user.getUsername();
+        String avatar = display != null ? display.getAvatar() : null;
+        touchOnline(user, username, avatar, currentUserService.isAdmin());
         return Result.success(null);
     }
 
@@ -93,9 +96,12 @@ public class ChatController {
         return Result.success(data);
     }
 
-    private void touchOnline(User user, UserProfile profile, boolean admin) {
-        String avatar = profile != null ? profile.getAvatar() : null;
-        chatOnlineService.markOnline("http:" + user.getId(), user.getId(), user.getUsername(), avatar, admin);
+    private void touchOnline(User user, String username, String avatar, boolean admin) {
+        chatOnlineService.markOnline("http:" + user.getId(), user.getId(), username, avatar, admin);
         chatReliabilityService.trackPresence(user.getId());
+    }
+
+    private ChatUserDisplayVo resolveDisplay(Long userId) {
+        return chatUserDisplayService.mapDisplayByUserIds(List.of(userId)).get(userId);
     }
 }

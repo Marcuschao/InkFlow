@@ -255,4 +255,27 @@ public class ChatOnlineServiceImpl implements ChatOnlineService {
     private static String metaKey(String sessionId) {
         return META_PREFIX + sessionId;
     }
+
+    @Override
+    public void refreshUserDisplay(Long userId, String username, String avatar) {
+        if (userId == null) {
+            return;
+        }
+        for (OnlineUserVo session : listOnlineSessions()) {
+            if (!userId.equals(session.getUserId()) || !StringUtils.hasText(session.getSessionId())) {
+                continue;
+            }
+            session.setUsername(username);
+            session.setAvatar(avatar);
+            try {
+                String json = redisMapper().writeValueAsString(session);
+                redis.opsForValue().set(
+                        metaKey(session.getSessionId()),
+                        json,
+                        Duration.ofSeconds(chatProperties.getOnlineTtlSeconds()));
+            } catch (Exception ex) {
+                log.warn("refreshUserDisplay failed userId={} sessionId={}", userId, session.getSessionId(), ex);
+            }
+        }
+    }
 }

@@ -17,12 +17,14 @@ import {
 import UserAvatar from '../components/UserAvatar.vue';
 import { fetchChatHistory, fetchMuteStatus, fetchOnlineUsers, pingPresence, recallChatMessage, sendChatMessage } from '../api/chat';
 import { useAuthStore } from '../stores/auth';
+import { useChatUserProfiles } from '../composables/useChatUserProfiles';
 import {
   connect,
   ensureSubscribed,
   onChatAck,
   onChatMessage,
   onChatOffline,
+  onChatProfileUpdate,
   onChatRecall,
   onStatusChange,
   sendRecall,
@@ -38,6 +40,7 @@ const ACK_TIMEOUT = 3000;
 const LONG_PRESS_MS = 500;
 
 const authStore = useAuthStore();
+const { mergeFromMessages, setProfile, profileOf } = useChatUserProfiles();
 const message = useMessage();
 const messages = ref([]);
 const onlineUsers = ref([]);
@@ -64,6 +67,7 @@ let stopChatListener = () => {};
 let stopAckListener = () => {};
 let stopOfflineListener = () => {};
 let stopRecallListener = () => {};
+let stopProfileListener = () => {};
 let stopStatusListener = () => {};
 
 const menuOptions = [{ label: '撤回', key: 'recall' }];
@@ -121,6 +125,7 @@ function prependMessages(list) {
   }
   if (incoming.length) {
     messages.value = [...incoming, ...messages.value];
+    mergeFromMessages(incoming);
   }
 }
 
@@ -128,6 +133,7 @@ function appendMessage(msg, forceScroll = false) {
   if (msg?.id && renderedIds.has(msg.id)) return;
   if (msg?.id) renderedIds.add(msg.id);
   messages.value.push({ ...msg, _key: makeKey(msg) });
+  mergeFromMessages([msg]);
   trimMessages();
   if (forceScroll || isNearBottom.value) {
     scrollToBottom();
@@ -221,6 +227,7 @@ async function loadHistory() {
       if (msg?.id) renderedIds.add(msg.id);
     });
     messages.value = rows.map((msg) => ({ ...msg, _key: makeKey(msg) }));
+    mergeFromMessages(rows);
     await scrollToBottom();
   } catch {
     messages.value = [];
@@ -305,9 +312,24 @@ async function loadOnlineUsers() {
   try {
     const rows = await fetchOnlineUsers();
     onlineUsers.value = Array.isArray(rows) ? rows : [];
+    for (const user of onlineUsers.value) {
+      if (user?.userId) {
+        setProfile(user.userId, { username: user.username, avatar: user.avatar });
+      }
+    }
   } catch {
     onlineUsers.value = [];
   }
+}
+
+function applyProfileUpdate(evt) {
+  if (!evt?.userId) return;
+  setProfile(evt.userId, { username: evt.username, avatar: evt.avatar });
+  onlineUsers.value = onlineUsers.value.map((user) =>
+    user.userId === evt.userId
+      ? { ...user, username: evt.username, avatar: evt.avatar }
+      : user
+  );
 }
 
 async function ensureConnected() {
@@ -324,7 +346,7 @@ async function onSend() {
     clientMsgId,
     id: `pending-${clientMsgId}`,
     userId: authStore.user.id,
-    username: authStore.user.username,
+    username: authStore.displayName,
     avatar: authStore.user.avatar,
     admin: authStore.isAdmin,
     content,
@@ -425,6 +447,7 @@ function setupListeners() {
   stopRecallListener = onChatRecall((evt) => {
     if (evt?.messageId) applyRecall(evt.messageId);
   });
+  stopProfileListener = onChatProfileUpdate((evt) => applyProfileUpdate(evt));
   stopStatusListener = onStatusChange((connected) => {
     if (connected) {
       ensureSubscribed().catch(() => {});
@@ -476,6 +499,7 @@ onUnmounted(() => {
   stopAckListener();
   stopOfflineListener();
   stopRecallListener();
+  stopProfileListener();
   stopStatusListener();
 });
 </script>
@@ -531,13 +555,13 @@ onUnmounted(() => {
                 <UserAvatar
                   v-if="!isMine(item)"
                   class="msg-avatar"
-                  :src="item.avatar"
-                  :name="item.username"
+                  :src="profileOf(item.userId).avatar"
+                  :name="profileOf(item.userId).username"
                   :size="36"
                 />
                 <div class="bubble-wrap">
                   <div class="bubble-meta">
-                    <span class="name">{{ item.username }}</span>
+                    <span class="name">{{ profileOf(item.userId).username }}</span>
                     <n-tag v-if="item.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
                     <time class="time">{{ formatChatMessageTime(item.createTime) }}</time>
                   </div>
@@ -555,8 +579,8 @@ onUnmounted(() => {
                 <UserAvatar
                   v-if="isMine(item)"
                   class="msg-avatar"
-                  :src="item.avatar"
-                  :name="item.username"
+                  :src="profileOf(item.userId).avatar"
+                  :name="profileOf(item.userId).username"
                   :size="36"
                 />
               </div>
@@ -598,10 +622,10 @@ onUnmounted(() => {
           <n-list v-if="onlineUsers.length" hoverable>
             <n-list-item v-for="user in onlineUsers" :key="user.userId">
               <template #prefix>
-                <UserAvatar :src="user.avatar" :name="user.username" :size="32" />
+                <UserAvatar :src="profileOf(user.userId).avatar" :name="profileOf(user.userId).username" :size="32" />
               </template>
               <div class="online-name">
-                {{ user.username }}
+                {{ profileOf(user.userId).username }}
                 <n-tag v-if="user.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
               </div>
             </n-list-item>
@@ -622,10 +646,10 @@ onUnmounted(() => {
         <n-list v-if="onlineUsers.length" hoverable>
           <n-list-item v-for="user in onlineUsers" :key="user.userId">
             <template #prefix>
-              <UserAvatar :src="user.avatar" :name="user.username" :size="32" />
+              <UserAvatar :src="profileOf(user.userId).avatar" :name="profileOf(user.userId).username" :size="32" />
             </template>
             <div class="online-name">
-              {{ user.username }}
+              {{ profileOf(user.userId).username }}
               <n-tag v-if="user.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
             </div>
           </n-list-item>

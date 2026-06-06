@@ -14,6 +14,8 @@ import com.blog.personalblogbackend.service.AuthService;
 import com.blog.personalblogbackend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,18 +26,16 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private CaptchaService captchaService;
-    @Autowired
-    private LoginThrottleService loginThrottleService;
+    private final AuthService authService;
+    private final UserService userService;
+    private final CaptchaService captchaService;
+    private final LoginThrottleService loginThrottleService;
 
     @GetMapping("/captcha")
     public Result<CaptchaResponseDto> captcha() {

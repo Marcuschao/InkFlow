@@ -10,6 +10,7 @@ import com.blog.personalblogbackend.model.vo.chat.ChatMessageVo;
 import com.blog.personalblogbackend.service.ChatArchiveStorageService;
 import com.blog.personalblogbackend.service.ChatReliabilityService;
 import com.blog.personalblogbackend.service.ChatService;
+import com.blog.personalblogbackend.service.ChatUserDisplayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatMessageMapper chatMessageMapper;
     private final ChatProperties chatProperties;
+    private final ChatUserDisplayService userDisplayService;
     private final ChatReliabilityService chatReliabilityService;
     private final ObjectProvider<ChatArchiveStorageService> archiveStorageProvider;
 
@@ -59,7 +61,9 @@ public class ChatServiceImpl implements ChatService {
             rows = new ArrayList<>(rows.subList(0, pageSize));
         }
         Collections.reverse(rows);
-        return new ChatHistoryResult(rows.stream().map(this::toVo).collect(Collectors.toList()), hasMore);
+        List<ChatMessageVo> messages = rows.stream().map(this::toVo).collect(Collectors.toList());
+        userDisplayService.enrichMessages(messages);
+        return new ChatHistoryResult(messages, hasMore);
     }
 
     private ChatHistoryResult loadAfterId(Long afterId, int pageSize) {
@@ -71,7 +75,9 @@ public class ChatServiceImpl implements ChatService {
         if (hasMore) {
             rows = new ArrayList<>(rows.subList(0, pageSize));
         }
-        return new ChatHistoryResult(rows.stream().map(this::toVo).collect(Collectors.toList()), hasMore);
+        List<ChatMessageVo> messages = rows.stream().map(this::toVo).collect(Collectors.toList());
+        userDisplayService.enrichMessages(messages);
+        return new ChatHistoryResult(messages, hasMore);
     }
 
     private ChatHistoryResult loadBeforeCursor(Long cursor, int pageSize) {
@@ -97,6 +103,7 @@ public class ChatServiceImpl implements ChatService {
             result = new ArrayList<>(result.subList(result.size() - pageSize, result.size()));
             hasMore = true;
         }
+        userDisplayService.enrichMessages(result);
         return new ChatHistoryResult(result, hasMore);
     }
 

@@ -123,6 +123,7 @@ import {
 import { fetchMe, updateProfile, uploadAvatar } from '../api/user';
 import { fetchMyFavorites, fetchFollowers, fetchFollowing } from '../api/interaction';
 import { useAuthStore } from '../stores/auth';
+import { useChatUserProfiles } from '../composables/useChatUserProfiles';
 import { useToastStore } from '../stores/toast';
 import ArticleCard from '../components/ArticleCard.vue';
 import UserAvatar from '../components/UserAvatar.vue';
@@ -133,6 +134,7 @@ import { fetchOAuthBindings, bindGithub, unbindGithub } from '../api/oauth';
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { setProfile } = useChatUserProfiles();
 const toast = useToastStore();
 
 const tabs = [
@@ -260,6 +262,7 @@ async function onAvatarUpload({ file, onFinish, onError }) {
     user.value = next;
     avatar.value = next?.avatar ?? '';
     authStore.user = next;
+    setProfile(next.id, { username: next.nickname || next.username, avatar: next.avatar });
     toast.push('头像已更新', 'success');
     onFinish();
   } catch (e) {
@@ -320,6 +323,7 @@ async function save() {
     gender.value = next?.gender ?? 0;
     bio.value = next?.bio ?? '';
     authStore.user = next;
+    setProfile(next.id, { username: next.nickname || next.username, avatar: next.avatar });
     toast.push('已保存', 'success');
   } catch {
     /* request toast */
