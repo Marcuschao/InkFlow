@@ -14,6 +14,7 @@ import org.springframework.data.redis.connection.stream.StreamReadOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@ConditionalOnProperty(name = "blog.chat.fanout-enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class ChatFanoutListener {

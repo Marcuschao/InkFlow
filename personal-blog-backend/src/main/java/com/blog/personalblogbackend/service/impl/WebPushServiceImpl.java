@@ -8,7 +8,6 @@ import com.blog.personalblogbackend.mapper.ArticleMapper;
 import com.blog.personalblogbackend.service.BlogSiteService;
 import com.blog.personalblogbackend.service.WebPushService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
@@ -57,12 +56,15 @@ public class WebPushServiceImpl implements WebPushService {
 
     @Override
     public boolean isOperational() {
+        ensurePushService();
         BlogSiteProperties.PushSettings p = blogSiteProperties.getPush();
         return p.isEnabled() && pushService != null;
     }
 
-    @PostConstruct
-    void initPushClient() {
+    private synchronized void ensurePushService() {
+        if (pushService != null) {
+            return;
+        }
         BlogSiteProperties.PushSettings p = blogSiteProperties.getPush();
         if (!p.isEnabled()) {
             return;
@@ -81,6 +83,7 @@ public class WebPushServiceImpl implements WebPushService {
 
     @Override
     public void notifyNewArticle(Long articleId, String articleTitle) {
+        ensurePushService();
         BlogSiteProperties.PushSettings p = blogSiteProperties.getPush();
         if (!p.isEnabled() || pushService == null) {
             return;
@@ -94,6 +97,7 @@ public class WebPushServiceImpl implements WebPushService {
 
     @Override
     public void sendCustom(String title, String body, String url) {
+        ensurePushService();
         if (!blogSiteProperties.getPush().isEnabled() || pushService == null) {
             return;
         }

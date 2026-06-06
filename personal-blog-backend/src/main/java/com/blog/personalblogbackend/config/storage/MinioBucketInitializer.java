@@ -5,6 +5,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 
 import java.net.ConnectException;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 public class MinioBucketInitializer implements ApplicationRunner {
@@ -20,6 +21,10 @@ public class MinioBucketInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        CompletableFuture.runAsync(this::initializeBuckets);
+    }
+
+    private void initializeBuckets() {
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 minioBucketSupport.ensureConfiguredBuckets();

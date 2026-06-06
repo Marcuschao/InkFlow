@@ -1,7 +1,11 @@
 package com.blog.personalblogbackend.config.security;
 
+import com.blog.personalblogbackend.config.security.oauth.CustomOAuth2UserService;
+import com.blog.personalblogbackend.config.security.oauth.OAuth2LoginFailureHandler;
+import com.blog.personalblogbackend.config.security.oauth.OAuth2LoginSuccessHandler;
 import com.blog.personalblogbackend.concurrency.ApiRateLimitFilter;
 import com.blog.personalblogbackend.monitor.TraceIdFilter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -19,19 +23,27 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@Order(2)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApiRateLimitFilter apiRateLimitFilter;
     private final TraceIdFilter traceIdFilter;
+    private final ObjectProvider<CustomOAuth2UserService> customOAuth2UserService;
+    private final ObjectProvider<OAuth2LoginSuccessHandler> oAuth2LoginSuccessHandler;
+    private final ObjectProvider<OAuth2LoginFailureHandler> oAuth2LoginFailureHandler;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           ApiRateLimitFilter apiRateLimitFilter,
-                          TraceIdFilter traceIdFilter) {
+                          TraceIdFilter traceIdFilter,
+                          ObjectProvider<CustomOAuth2UserService> customOAuth2UserService,
+                          ObjectProvider<OAuth2LoginSuccessHandler> oAuth2LoginSuccessHandler,
+                          ObjectProvider<OAuth2LoginFailureHandler> oAuth2LoginFailureHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.apiRateLimitFilter = apiRateLimitFilter;
         this.traceIdFilter = traceIdFilter;
+        this.customOAuth2UserService = customOAuth2UserService;
+        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+        this.oAuth2LoginFailureHandler = oAuth2LoginFailureHandler;
     }
 
     @Bean
@@ -40,11 +52,22 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(1)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(authorize -> authorize
+        CustomOAuth2UserService oauthUserService = customOAuth2UserService.getIfAvailable();
+
+        http.csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable);
+        if (oauthUserService != null) {
+            http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+        } else {
+            http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        }
+
+        http.authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/health", "/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/*/versions").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/articles/*/versions/**").authenticated()
@@ -82,16 +105,26 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/user/{id:\\d+}/follow").authenticated()
                 .requestMatchers("/api/user/me/oauth/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
-                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
                 .requestMatchers("/actuator/**").authenticated()
                 .anyRequest().authenticated()
-            );
+        );
+
+        if (oauthUserService != null) {
+            OAuth2LoginSuccessHandler successHandler = oAuth2LoginSuccessHandler.getIfAvailable();
+            OAuth2LoginFailureHandler failureHandler = oAuth2LoginFailureHandler.getIfAvailable();
+            if (successHandler != null && failureHandler != null) {
+                http.oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo.userService(oauthUserService))
+                        .successHandler(successHandler)
+                        .failureHandler(failureHandler));
+            }
+        }
 
         http
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)
-            .addFilterBefore(traceIdFilter, ApiRateLimitFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)
+                .addFilterBefore(traceIdFilter, ApiRateLimitFilter.class);
 
         return http.build();
     }

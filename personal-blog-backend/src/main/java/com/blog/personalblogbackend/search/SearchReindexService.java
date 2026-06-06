@@ -8,12 +8,14 @@ import com.blog.personalblogbackend.mapper.ArticleMapper;
 import com.blog.personalblogbackend.model.entity.Article;
 import com.blog.personalblogbackend.model.enums.ArticleStatus;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Service
+@Lazy
 @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
 public class SearchReindexService {
 

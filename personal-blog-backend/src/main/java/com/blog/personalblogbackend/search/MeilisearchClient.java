@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@Lazy
 @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
 public class MeilisearchClient {
 
@@ -143,11 +145,9 @@ public class MeilisearchClient {
     }
 
     public void swapIndexes(String uidA, String uidB) {
-        ObjectNode body = objectMapper.createObjectNode();
-        ArrayNode indexes = objectMapper.createArrayNode();
-        indexes.add(uidA);
-        indexes.add(uidB);
-        body.set("indexes", indexes);
+        ArrayNode body = objectMapper.createArrayNode();
+        body.add(uidA);
+        body.add(uidB);
         restTemplate.exchange(baseUrl() + "/swap-indexes", HttpMethod.POST, jsonEntity(body), String.class);
     }
 

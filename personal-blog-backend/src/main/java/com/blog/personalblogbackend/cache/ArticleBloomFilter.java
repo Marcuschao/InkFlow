@@ -4,7 +4,6 @@ import com.blog.personalblogbackend.mapper.ArticleMapper;
 import com.blog.personalblogbackend.model.entity.Article;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
-import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -17,14 +16,22 @@ public class ArticleBloomFilter {
 
     private final ArticleMapper articleMapper;
     private volatile BloomFilter<String> filter;
+    private volatile boolean loaded;
 
     public ArticleBloomFilter(ArticleMapper articleMapper) {
         this.articleMapper = articleMapper;
     }
 
-    @PostConstruct
-    public void init() {
-        reload();
+    private void ensureLoaded() {
+        if (loaded) {
+            return;
+        }
+        synchronized (this) {
+            if (loaded) {
+                return;
+            }
+            reload();
+        }
     }
 
     public void reload() {
@@ -37,16 +44,22 @@ public class ArticleBloomFilter {
             }
         }
         filter = next;
+        loaded = true;
     }
 
     public void add(Long articleId) {
+        ensureLoaded();
         if (articleId != null && filter != null) {
             filter.put(String.valueOf(articleId));
         }
     }
 
     public boolean mightContain(Long articleId) {
-        if (articleId == null || filter == null) {
+        if (articleId == null) {
+            return true;
+        }
+        ensureLoaded();
+        if (filter == null) {
             return true;
         }
         return filter.mightContain(String.valueOf(articleId));

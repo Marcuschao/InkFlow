@@ -1,6 +1,5 @@
 package com.blog.personalblogbackend.common.util;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.lionsoul.ip2region.service.Config;
 import org.lionsoul.ip2region.service.ConfigBuilder;
@@ -21,21 +20,30 @@ public class IpRegionService {
     private static final String V4_XDB = "ip2region/ip2region_v4.xdb";
     private static final String V6_XDB = "ip2region/ip2region_v6.xdb";
 
-    private Ip2Region ip2Region;
+    private volatile Ip2Region ip2Region;
+    private volatile boolean initialized;
 
-    @PostConstruct
-    void init() {
-        try {
-            Config v4 = loadConfig(V4_XDB, true);
-            Config v6 = loadConfig(V6_XDB, false);
-            if (v4 == null && v6 == null) {
-                log.warn("ip2region xdb not found, put {} and/or {} under classpath", V4_XDB, V6_XDB);
+    private void ensureInitialized() {
+        if (initialized) {
+            return;
+        }
+        synchronized (this) {
+            if (initialized) {
                 return;
             }
-            ip2Region = Ip2Region.create(v4, v6);
-            log.info("ip2region loaded: v4={}, v6={}", v4 != null, v6 != null);
-        } catch (Exception e) {
-            log.warn("Failed to load ip2region: {}", e.getMessage());
+            try {
+                Config v4 = loadConfig(V4_XDB, true);
+                Config v6 = loadConfig(V6_XDB, false);
+                if (v4 == null && v6 == null) {
+                    log.warn("ip2region xdb not found, put {} and/or {} under classpath", V4_XDB, V6_XDB);
+                } else {
+                    ip2Region = Ip2Region.create(v4, v6);
+                    log.info("ip2region loaded: v4={}, v6={}", v4 != null, v6 != null);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to load ip2region: {}", e.getMessage());
+            }
+            initialized = true;
         }
     }
 
@@ -69,6 +77,7 @@ public class IpRegionService {
         if (!StringUtils.hasText(ip) || isInternal(ip.trim())) {
             return "未知";
         }
+        ensureInitialized();
         if (ip2Region == null) {
             return "未知";
         }

@@ -17,4 +17,5 @@ public class SearchProperties {
     private String routingKey = "search.sync";
     private SearchOutboxProperties outbox = new SearchOutboxProperties();
     private SearchReconcileProperties reconcile = new SearchReconcileProperties();
+    private boolean initReindexOnStartup = false;
 }

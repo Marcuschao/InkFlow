@@ -5,6 +5,7 @@ import com.blog.personalblogbackend.model.entity.SensitiveWord;
 import com.github.houbb.sensitive.word.bs.SensitiveWordBs;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class SensitiveWordConfig {
     }
 
     @Bean
+    @Lazy
     public SensitiveWordBs sensitiveWordBs(SensitiveWordMapper sensitiveWordMapper) {
         return build(sensitiveWordMapper);
     }

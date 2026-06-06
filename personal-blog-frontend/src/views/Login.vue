@@ -37,9 +37,29 @@
             <n-button attr-type="submit" type="primary" block :loading="isLoading">{{ isLoading ? '登录中…' : '登录'
             }}</n-button>
           </n-form-item>
-          <n-form-item :show-label="false" :show-feedback="false">
-            <n-button type="default" block @click.prevent="loginWithGithub">使用 GitHub 登录</n-button>
-          </n-form-item>
+
+          <div class="oauth-section">
+            <div class="oauth-divider" aria-hidden="true">
+              <span class="oauth-divider-line" />
+              <span class="oauth-divider-text">或使用以下方式登录</span>
+              <span class="oauth-divider-line" />
+            </div>
+            <div class="oauth-providers">
+              <button
+                v-for="provider in oauthProviders"
+                :key="provider.id"
+                type="button"
+                class="oauth-provider-btn"
+                :aria-label="`使用 ${provider.label} 登录`"
+                @click.prevent="provider.action()"
+              >
+                <svg class="oauth-provider-icon" aria-hidden="true">
+                  <use :href="`${iconsSprite}#${provider.icon}`" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
           <p class="switch-link">没有账号？<router-link to="/register">去注册</router-link></p>
           <n-alert v-if="success" type="success" class="form-alert-tight">{{ success }}</n-alert>
           <n-alert v-if="error" :key="errorTick" type="error" class="form-alert-tight">{{ error }}</n-alert>
@@ -82,6 +102,15 @@ const error = ref(null);
 const errorTick = ref(0);
 const router = useRouter();
 const authStore = useAuthStore();
+const iconsSprite = `${import.meta.env.BASE_URL}icons.svg`;
+
+function loginWithGithub() {
+  window.location.href = githubLoginUrl();
+}
+
+const oauthProviders = [
+  { id: 'github', label: 'GitHub', icon: 'github-icon', action: loginWithGithub },
+];
 
 async function loadCaptcha() {
   captchaCode.value = '';
@@ -122,10 +151,6 @@ function resolveRedirect() {
     return redirect;
   }
   return authStore.isAdmin ? '/admin' : '/';
-}
-
-function loginWithGithub() {
-  window.location.href = githubLoginUrl();
 }
 
 const handleLogin = async () => {
@@ -259,5 +284,66 @@ const handleLogin = async () => {
 .switch-link a {
   color: var(--color-primary);
   font-weight: var(--weight-semibold);
+}
+
+.oauth-section {
+  margin-top: var(--space-5);
+}
+
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.oauth-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.oauth-divider-text {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.oauth-providers {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.oauth-provider-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.oauth-provider-btn:hover {
+  border-color: var(--color-text-muted);
+  background: var(--surface-muted);
+}
+
+.oauth-provider-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.oauth-provider-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  color: var(--color-text);
 }
 </style>

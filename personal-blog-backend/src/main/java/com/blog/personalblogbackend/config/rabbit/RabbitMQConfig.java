@@ -12,7 +12,9 @@ import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
@@ -55,11 +57,12 @@ public class RabbitMQConfig {
     @Bean
     @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
     public Queue searchSyncQueue(SearchProperties searchProperties) {
-        return queueWithDlq(searchProperties.getQueue());
+        return durableQueue(searchProperties.getQueue());
     }
 
     @Bean
     @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+    @ConditionalOnProperty(name = "blog.notification.dead-letter-enabled", havingValue = "true")
     public Queue searchSyncDlq(SearchProperties searchProperties) {
         return QueueBuilder.durable(searchProperties.getQueue() + ".dlq").build();
     }
@@ -72,6 +75,7 @@ public class RabbitMQConfig {
 
     @Bean
     @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+    @ConditionalOnProperty(name = "blog.notification.dead-letter-enabled", havingValue = "true")
     public Binding bindSearchSyncDlq(Queue searchSyncDlq, DirectExchange deadLetterExchange, SearchProperties searchProperties) {
         return BindingBuilder.bind(searchSyncDlq).to(deadLetterExchange).with(searchProperties.getQueue() + ".dlq");
     }
@@ -98,7 +102,7 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue contentCacheQueue(@Value("${blog.content.queue:content.cache.queue}") String queue) {
-        return queueWithDlq(queue);
+        return durableQueue(queue);
     }
 
     @Bean
@@ -145,6 +149,7 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    @ConditionalOnProperty(name = "blog.notification.dead-letter-enabled", havingValue = "true")
     public Queue contentCacheDlq(@Value("${blog.content.queue:content.cache.queue}") String queue) {
         return QueueBuilder.durable(queue + ".dlq").build();
     }
@@ -215,9 +220,17 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    @ConditionalOnProperty(name = "blog.notification.dead-letter-enabled", havingValue = "true")
     public Binding bindContentCacheDlq(Queue contentCacheDlq, DirectExchange deadLetterExchange,
                                        @Value("${blog.content.queue:content.cache.queue}") String queue) {
         return BindingBuilder.bind(contentCacheDlq).to(deadLetterExchange).with(queue + ".dlq");
+    }
+
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+        admin.setIgnoreDeclarationExceptions(true);
+        return admin;
     }
 
     @Bean
@@ -254,11 +267,15 @@ public class RabbitMQConfig {
         return template;
     }
 
-    private Queue notificationQueue(String queueName) {
+    private Queue durableQueue(String queueName) {
         if (notificationDeadLetterEnabled) {
             return queueWithDlq(queueName);
         }
         return QueueBuilder.durable(queueName).build();
+    }
+
+    private Queue notificationQueue(String queueName) {
+        return durableQueue(queueName);
     }
 
     private static Queue queueWithDlq(String queueName) {

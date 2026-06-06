@@ -20,7 +20,13 @@
           <span class="bar"></span>
         </button>
         <div id="primary-nav" class="nav-links" :class="{ open: isMenuOpen }">
+          <div v-if="!authStore.isLoggedIn && isMobileNav && isMenuOpen" class="nav-auth-actions">
+            <router-link to="/login" class="nav-auth-btn nav-auth-btn--primary" @click="closeMenu">登录</router-link>
+            <router-link to="/register" class="nav-auth-btn nav-auth-btn--outline" @click="closeMenu">注册</router-link>
+          </div>
+
           <n-menu
+            v-if="!isMobileNav"
             class="nav-naive-menu nav-naive-menu--desktop"
             mode="horizontal"
             responsive
@@ -30,9 +36,10 @@
             @update:value="onNavMenuUpdate"
           />
           <n-menu
+            v-else
             class="nav-naive-menu nav-naive-menu--mobile"
             mode="vertical"
-            :options="navMenuOptions"
+            :options="mobileNavMenuOptions"
             :value="navMenuActiveKey"
             accordion
             @update:value="onNavMenuUpdate"
@@ -132,6 +139,7 @@ const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const siteStore = useSiteStore();
 const isMenuOpen = ref(false);
+const isMobileNav = ref(false);
 const isScrolled = ref(false);
 const hideNav = ref(false);
 const userMenuOpen = ref(false);
@@ -158,23 +166,31 @@ const navMenuActiveKey = computed(() => {
   return null;
 });
 
+const MAIN_NAV_OPTIONS = [
+  { label: '首页', key: '/' },
+  { label: '归档', key: '/archive' },
+  { label: '标签', key: '/tags' },
+  { label: '搜索', key: '/search' },
+  { label: '友链', key: '/links' },
+  { label: '日记', key: '/diary' },
+  { label: '聊天室', key: '/chat' },
+  { label: '阅读记录', key: '/reading-history' },
+];
+
 const navMenuOptions = computed(() => {
-  const base = [
-    { label: '首页', key: '/' },
-    { label: '归档', key: '/archive' },
-    { label: '标签', key: '/tags' },
-    { label: '搜索', key: '/search' },
-    { label: '友链', key: '/links' },
-    { label: '日记', key: '/diary' },
-    { label: '聊天室', key: '/chat' },
-    { label: '阅读记录', key: '/reading-history' },
-  ];
+  const base = [...MAIN_NAV_OPTIONS];
   if (!authStore.isLoggedIn) {
     base.push({ label: '登录', key: '/login' });
     base.push({ label: '注册', key: '/register' });
   }
   return base;
 });
+
+const mobileNavMenuOptions = computed(() => [...MAIN_NAV_OPTIONS]);
+
+function syncMobileNav() {
+  isMobileNav.value = window.matchMedia('(max-width: 1023px)').matches;
+}
 
 const userDropdownOptions = computed(() => {
   const opts = [
@@ -259,6 +275,8 @@ const onScroll = () => {
 };
 
 onMounted(() => {
+  syncMobileNav();
+  window.addEventListener('resize', syncMobileNav, { passive: true });
   lastY = window.scrollY || 0;
   window.addEventListener('scroll', onScroll, { passive: true });
   document.addEventListener('click', onDocClick);
@@ -336,6 +354,7 @@ onUnmounted(() => {
   if (isMenuOpen.value) {
     unlockBodyScroll();
   }
+  window.removeEventListener('resize', syncMobileNav);
   window.removeEventListener('scroll', onScroll);
   document.removeEventListener('click', onDocClick);
 });
@@ -533,11 +552,53 @@ onUnmounted(() => {
 }
 
 .nav-naive-menu--mobile :deep(.n-menu-item-content) {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  min-height: 44px;
 }
 
 .nav-naive-menu--mobile :deep(.n-menu-item:last-child) {
   border-bottom: none;
+}
+
+.nav-auth-actions {
+  display: none;
+}
+
+.nav-auth-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.nav-auth-btn--primary {
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  color: #fff;
+}
+
+.nav-auth-btn--primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
+}
+
+.nav-auth-btn--outline {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.nav-auth-btn--outline:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 @media (min-width: 1024px) {
@@ -549,6 +610,36 @@ onUnmounted(() => {
 @media (max-width: 1023px) {
   .nav-naive-menu--desktop {
     display: none;
+  }
+
+  .nav-auth-actions {
+    display: flex;
+    gap: var(--space-3);
+    padding: 0 var(--space-4) var(--space-3);
+    flex-shrink: 0;
+  }
+
+  .nav-naive-menu--mobile {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .nav-search-wrap {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .nav-write-btn,
+  .nav-notif-wrap,
+  .nav-user-wrap {
+    flex-shrink: 0;
+    padding: 0 var(--space-4) var(--space-2);
   }
 }
 
@@ -687,33 +778,35 @@ onUnmounted(() => {
   }
 
   .nav-links {
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    top: var(--layout-navbar-bottom);
     left: 0;
     right: 0;
+    bottom: 0;
     flex-direction: column;
     align-items: stretch;
     gap: 0;
-    padding: var(--space-3) var(--space-4) var(--space-4);
+    padding: var(--space-3) 0 var(--space-4);
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
     box-shadow: var(--shadow-md);
-    max-height: min(85vh, 560px);
-    overflow-y: auto;
+    max-height: none;
+    overflow: hidden;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
     transform-origin: top;
-    transform: translateY(-12px) scale(0.98);
+    transform: translateY(-8px);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     transition: transform 0.32s var(--ease-out-soft), opacity 0.28s var(--ease-out-soft),
       visibility 0.32s;
+    z-index: var(--z-nav-menu);
   }
 
   .nav-links.open {
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
@@ -722,6 +815,12 @@ onUnmounted(() => {
   .nav-user-trigger {
     width: 100%;
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .nav-links {
+    bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px));
   }
 }
 
