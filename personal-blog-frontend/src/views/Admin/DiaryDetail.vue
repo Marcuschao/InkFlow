@@ -1,10 +1,10 @@
 <template>
-  <div class="diary-detail-page admin-page">
+  <div class="diary-detail-page">
     <div class="container narrow" style="max-width: 720px;">
       <p v-if="loading" style="color: var(--color-text-muted);">加载中…</p>
       <n-alert v-else-if="err" type="error">{{ err }}</n-alert>
       <n-card v-else-if="diary" class="detail-card">
-        <header class="dh ds-admin-header ds-admin-header--stack" style="margin-bottom: 24px;">
+        <header class="dh" style="margin-bottom: 24px;">
           <div class="dh-inner">
             <h1 class="ds-page-title" style="margin-bottom: 8px;">{{ diary.title || '未命名' }}</h1>
             <n-space class="meta" :size="12" align="center">
@@ -20,10 +20,10 @@
         <pre v-else class="body plain" style="white-space: pre-wrap; font-family: monospace; line-height: 1.65; margin: 0 0 24px; background: var(--surface-muted); padding: 16px; border-radius: 6px;">{{ diary.content }}</pre>
         <footer class="foot-act">
           <n-space :size="12">
-            <router-link :to="'/admin/diary/edit/' + diary.id">
+            <router-link :to="'/share-write/edit/' + diary.id">
               <n-button type="primary">编辑</n-button>
             </router-link>
-            <router-link to="/admin/diary/list">
+            <router-link to="/my-shares">
               <n-button secondary>返回列表</n-button>
             </router-link>
           </n-space>

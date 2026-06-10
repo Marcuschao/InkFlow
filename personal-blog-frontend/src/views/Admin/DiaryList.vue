@@ -1,19 +1,14 @@
 <template>
-  <div class="diary-list-page admin-page">
+  <div class="diary-list-page">
     <div class="container">
-      <header class="list-head ds-admin-header" style="margin-bottom: 24px;">
+      <header class="list-head" style="margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
         <div>
-          <h1 class="ds-page-title">日记列表</h1>
+          <h1 class="ds-page-title">我的分享</h1>
           <p class="ds-page-sub">按月份归档，支持筛选</p>
         </div>
-        <n-space class="head-actions" :size="12">
-          <router-link to="/admin/diary">
-            <n-button type="primary">写日记</n-button>
-          </router-link>
-          <router-link to="/admin">
-            <n-button>返回管理</n-button>
-          </router-link>
-        </n-space>
+        <router-link to="/share-write">
+          <n-button type="primary">写分享</n-button>
+        </router-link>
       </header>
 
       <n-card :bordered="true" class="filter-card">
@@ -51,10 +46,10 @@
       
       <n-skeleton v-if="loading" height="120px" :sharp="false" style="margin-bottom: 16px;" />
       
-      <n-empty v-else-if="!records.length" description="暂无日记，去写一篇吧">
+      <n-empty v-else-if="!records.length" description="暂无分享，去写一篇吧">
         <template #extra>
-          <router-link to="/admin/diary">
-            <n-button type="primary">去写日记</n-button>
+          <router-link to="/share-write">
+            <n-button type="primary">去写分享</n-button>
           </router-link>
         </template>
       </n-empty>
@@ -68,7 +63,7 @@
                   <time class="d" style="font-family: monospace; color: var(--color-text-muted);">{{ row.diaryDate }}</time>
                 </template>
                 <div class="entry-main" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                  <router-link :to="'/admin/diary/' + row.id" class="t" style="text-decoration: none; color: var(--color-text); font-weight: 600;">
+                  <router-link :to="'/my-shares/' + row.id" class="t" style="text-decoration: none; color: var(--color-text); font-weight: 600;">
                     {{ row.title || '未命名' }}
                   </router-link>
                   <n-space :size="8">
@@ -78,7 +73,7 @@
                 </div>
                 <template #suffix>
                   <n-space :size="8">
-                    <router-link :to="'/admin/diary/edit/' + row.id">
+                    <router-link :to="'/share-write/edit/' + row.id">
                       <n-button size="small" secondary>编辑</n-button>
                     </router-link>
                     <n-button size="small" type="error" secondary @click="remove(row.id)">删除</n-button>
@@ -197,7 +192,7 @@ function onPage(p) {
 }
 
 async function remove(id) {
-  if (!confirm('确定删除这篇日记？')) return;
+  if (!confirm('确定删除这篇分享？')) return;
   try {
     await deleteDiary(id);
     await load();

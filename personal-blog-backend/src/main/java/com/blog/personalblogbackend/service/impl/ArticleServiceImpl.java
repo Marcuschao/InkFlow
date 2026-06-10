@@ -22,11 +22,10 @@ import com.blog.personalblogbackend.common.revision.RevisionTargetType;
 import com.blog.personalblogbackend.messaging.ContentChangeEventType;
 import com.blog.personalblogbackend.messaging.ContentChangeProducer;
 import com.blog.personalblogbackend.messaging.SearchSyncEventType;
+import com.blog.personalblogbackend.event.ArticleLifecycleEventPublisher;
 import com.blog.personalblogbackend.search.SearchOutboxService;
 import com.blog.personalblogbackend.service.ArticleService;
 import com.blog.personalblogbackend.service.ContentRevisionService;
-import com.blog.personalblogbackend.notification.DomainEvent;
-import com.blog.personalblogbackend.notification.NotificationProducer;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -59,9 +58,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private NotificationProducer notificationProducer;
-    @Autowired
     private ContentRevisionService contentRevisionService;
+    @Autowired
+    private ArticleLifecycleEventPublisher articleLifecycleEventPublisher;
     @Autowired
     private ArticleCacheService articleCacheService;
     @Autowired
@@ -74,38 +73,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private ArticleContentCheckService articleContentCheckService;
     @Autowired
     private ArticleDetailRequestCoalescer articleDetailRequestCoalescer;
-
-    private static boolean isPublished(Integer status) {
-        return ArticleStatus.isPublished(status);
-    }
-
-    private void publishArticleEvents(Article previous, Article fresh) {
-        if (fresh == null || !isPublished(fresh.getStatus())) {
-            notifySearchIndex(previous, fresh);
-            return;
-        }
-        if (previous == null || !isPublished(previous.getStatus())) {
-            notificationProducer.sendArticlePublished(fresh);
-            notificationProducer.sendDomainEvent(DomainEvent.articlePublished(fresh));
-            contentChangeProducer.send(fresh.getId(), ContentChangeEventType.ARTICLE_UPDATED);
-        } else {
-            notificationProducer.sendDomainEvent(DomainEvent.articleUpdated(fresh));
-            contentChangeProducer.send(fresh.getId(), ContentChangeEventType.ARTICLE_UPDATED);
-        }
-        notifySearchIndex(previous, fresh);
-    }
-
-    private void notifySearchIndex(Article previous, Article fresh) {
-        if (searchOutboxService == null) {
-            return;
-        }
-        if (fresh != null && isPublished(fresh.getStatus())) {
-            searchOutboxService.enqueue(fresh.getId(), SearchSyncEventType.UPSERT, fresh.getUpdateTime());
-        } else if (previous != null && isPublished(previous.getStatus())) {
-            LocalDateTime at = previous.getUpdateTime() != null ? previous.getUpdateTime() : LocalDateTime.now();
-            searchOutboxService.enqueue(previous.getId(), SearchSyncEventType.DELETE, at);
-        }
-    }
 
     @Override
     @ReadOnly
@@ -311,7 +278,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         articleBloomFilter.add(article.getId());
         handleArticleTags(article.getId(), tagNames);
         Article fresh = articleMapper.selectById(article.getId());
-        publishArticleEvents(null, fresh);
+        articleLifecycleEventPublisher.publish(null, fresh);
         List<String> tagNamesAfter = articleMapper.selectTagNamesByArticleId(fresh.getId());
         contentRevisionService.snapshotArticle(fresh, String.join(",", tagNamesAfter), "创建");
         return true;
@@ -382,7 +349,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             throw new ServiceException(409, "内容已被他人修改，请刷新后重试");
         }
         Article fresh = articleMapper.selectById(articleId);
-        publishArticleEvents(previous, fresh);
+        articleLifecycleEventPublisher.publish(previous, fresh);
     }
 
     @Override
@@ -483,7 +450,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         articleMapper.deleteArticleTagsByArticleId(article.getId());
         handleArticleTags(article.getId(), tagNames);
         Article fresh = articleMapper.selectById(article.getId());
-        publishArticleEvents(previous, fresh);
+        articleLifecycleEventPublisher.publish(previous, fresh);
         return true;
     }
 

@@ -17,42 +17,44 @@ import java.util.Map;
 
 @Component
 @ConditionalOnProperty(name = "blog.notification.enabled", havingValue = "true", matchIfMissing = true)
-public class PushNotificationConsumer {
+public class PushNotificationConsumer extends AbstractNotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(PushNotificationConsumer.class);
 
     private final WebPushService webPushService;
-    private final NotificationConsumeHelper consumeHelper;
 
     public PushNotificationConsumer(WebPushService webPushService, NotificationConsumeHelper consumeHelper) {
+        super(consumeHelper);
         this.webPushService = webPushService;
-        this.consumeHelper = consumeHelper;
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.pushQueue}")
     public void onMessage(NotificationMessage message, Channel channel,
                           @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
-        NotificationConsumeHelper.ConsumeDecision decision =
-                consumeHelper.prepare(NotificationConsumeHelper.QUEUE_PUSH, message);
-        if (decision != NotificationConsumeHelper.ConsumeDecision.PROCEED) {
-            channel.basicAck(tag, false);
-            return;
-        }
-        try {
-            Map<String, Object> p = message.getPayload();
-            if (p != null) {
-                Long articleId = toLong(p.get("articleId"));
-                String title = p.get("title") != null ? String.valueOf(p.get("title")) : null;
-                if (articleId != null) {
-                    webPushService.notifyNewArticle(articleId, title);
-                }
+        consume(message, channel, tag);
+    }
+
+    @Override
+    protected String queueKey() {
+        return NotificationConsumeHelper.QUEUE_PUSH;
+    }
+
+    @Override
+    protected void doProcess(NotificationMessage message) {
+        Map<String, Object> p = message.getPayload();
+        if (p != null) {
+            Long articleId = toLong(p.get("articleId"));
+            String title = p.get("title") != null ? String.valueOf(p.get("title")) : null;
+            if (articleId != null) {
+                webPushService.notifyNewArticle(articleId, title);
             }
-            channel.basicAck(tag, false);
-        } catch (Exception ex) {
-            log.warn("[notification] push consume failed eventId={}: {}",
-                    message.getEventId(), ex.toString());
-            channel.basicNack(tag, false, false);
         }
+    }
+
+    @Override
+    protected void logFailure(Exception ex, NotificationMessage message) {
+        log.warn("[notification] push consume failed eventId={}: {}",
+                message.getEventId(), ex.toString());
     }
 
     private static Long toLong(Object v) {

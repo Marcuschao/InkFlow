@@ -1,40 +1,28 @@
 package com.blog.personalblogbackend.ratelimit;
 
-import com.blog.personalblogbackend.config.ratelimit.RateLimitProperties;
+import com.blog.personalblogbackend.ratelimit.rule.RateLimitRule;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
-import java.util.regex.Pattern;
+import java.util.List;
 
 @Component
 public class RateLimitRuleResolver {
-    private static final Pattern ARTICLE_DETAIL = Pattern.compile("^/api/articles/\\d+$");
 
-    private final RateLimitProperties properties;
+    private final List<RateLimitRule> rules;
 
-    public RateLimitRuleResolver(RateLimitProperties properties) {
-        this.properties = properties;
+    // 设计模式：责任链 - 按顺序遍历限流规则，首个匹配即返回
+    public RateLimitRuleResolver(List<RateLimitRule> rules) {
+        this.rules = rules;
     }
 
     public ResolvedRule resolve(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        String method = request.getMethod();
-        if (uri.startsWith("/api/admin")) {
-            return new ResolvedRule("admin", properties.getAdminPerMinute());
+        for (RateLimitRule rule : rules) {
+            if (rule.matches(request)) {
+                return rule.resolve();
+            }
         }
-        if ("/api/stat/view".equals(uri)) {
-            return new ResolvedRule("stat:view", properties.getStatViewPerMinute());
-        }
-        if ("GET".equalsIgnoreCase(method) && ARTICLE_DETAIL.matcher(uri).matches()) {
-            return new ResolvedRule("article:detail", properties.getArticleDetailPerMinute());
-        }
-        if ("GET".equalsIgnoreCase(method) && "/api/articles".equals(uri)) {
-            return new ResolvedRule("article:list", properties.getArticleListPerMinute());
-        }
-        if ("GET".equalsIgnoreCase(method)) {
-            return new ResolvedRule("api:get", properties.getApiGetPerMinute());
-        }
-        return new ResolvedRule("api:write", properties.getApiWritePerMinute());
+        throw new IllegalStateException("No rate limit rule matched");
     }
 
     public static String clientIp(HttpServletRequest request) {

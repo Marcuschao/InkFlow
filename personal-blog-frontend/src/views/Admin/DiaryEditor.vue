@@ -1,14 +1,14 @@
 <template>
-  <div class="diary-editor-page admin-page">
+  <div class="diary-editor-page">
     <div class="container editor-wrap">
-      <header class="editor-head ds-admin-header" style="margin-bottom: 24px;">
+      <header class="editor-head" style="margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
         <div>
-          <h1 class="ds-page-title">{{ isEdit ? '编辑日记' : '写日记' }}</h1>
+          <h1 class="ds-page-title">{{ isEdit ? '编辑分享' : '写分享' }}</h1>
           <p class="ds-page-sub">纯文本或 Markdown，支持插图粘贴上传</p>
         </div>
         <n-space class="head-actions" :size="12">
-          <router-link to="/admin/diary/list">
-            <n-button size="small">日记列表</n-button>
+          <router-link to="/my-shares">
+            <n-button size="small">我的分享</n-button>
           </router-link>
           <n-button
             v-if="isEdit"
@@ -222,7 +222,7 @@ async function save() {
   try {
     const payload = {
       diaryDate: diaryDate.value,
-      title: content.value.split('\n')[0]?.substring(0, 50) || '日记',
+      title: content.value.split('\n')[0]?.substring(0, 50) || '分享',
       content: content.value,
       contentType: useMarkdown.value ? 1 : 0,
       isPublic: isPublic.value,
@@ -230,12 +230,12 @@ async function save() {
     };
     if (isEdit.value) {
       await updateDiary(props.id, payload);
-      toastStore.push('日记已更新', 'success');
+      toastStore.push('分享已更新', 'success');
     } else {
       await createDiary(payload);
-      toastStore.push('日记已创建', 'success');
+      toastStore.push('分享已创建', 'success');
     }
-    router.push('/admin/diary/list');
+    router.push('/my-shares');
   } catch {
     /* toast */
   } finally {

@@ -1,13 +1,11 @@
 package com.blog.personalblogbackend.notification;
 
 import com.blog.personalblogbackend.config.properties.NotificationRabbitProperties;
-import com.blog.personalblogbackend.mapper.UserMapper;
-import com.blog.personalblogbackend.mapper.UserProfileMapper;
 import com.blog.personalblogbackend.model.entity.Article;
-import com.blog.personalblogbackend.model.entity.User;
-import com.blog.personalblogbackend.model.entity.UserProfile;
-import com.blog.personalblogbackend.model.enums.NotificationTargetType;
 import com.blog.personalblogbackend.model.enums.NotificationType;
+import com.blog.personalblogbackend.notification.inbox.InboxNotificationAssembler;
+import com.blog.personalblogbackend.notification.inbox.InboxNotificationDraft;
+import com.blog.personalblogbackend.notification.inbox.InboxNotificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -27,64 +25,42 @@ public class NotificationProducer {
 
     private final NotificationRabbitProperties props;
     private final RabbitTemplate rabbitTemplate;
-    private final UserProfileMapper userProfileMapper;
-    private final UserMapper userMapper;
+    private final InboxNotificationAssembler inboxAssembler;
 
     public NotificationProducer(NotificationRabbitProperties props,
                                 RabbitTemplate rabbitTemplate,
-                                UserProfileMapper userProfileMapper,
-                                UserMapper userMapper) {
+                                InboxNotificationAssembler inboxAssembler) {
         this.props = props;
         this.rabbitTemplate = rabbitTemplate;
-        this.userProfileMapper = userProfileMapper;
-        this.userMapper = userMapper;
+        this.inboxAssembler = inboxAssembler;
     }
 
     public void notifyLike(Long actorUserId, Article article) {
-        if (article == null || article.getAuthorId() == null) {
-            return;
-        }
-        Long recipient = article.getAuthorId();
-        if (skipSelf(actorUserId, recipient)) {
-            return;
-        }
-        String title = truncate(article.getTitle(), 40);
-        String content = resolveActorName(actorUserId) + " 赞了你的文章《" + title + "》";
-        sendInbox(NotificationType.LIKE, recipient, actorUserId, article.getId(),
-                NotificationTargetType.ARTICLE, content);
+        inboxAssembler.assemble(NotificationType.LIKE, InboxNotificationRequest.builder()
+                .actorUserId(actorUserId).article(article).build())
+                .ifPresent(this::sendInbox);
     }
 
     public void notifyFavorite(Long actorUserId, Article article) {
-        if (article == null || article.getAuthorId() == null) {
-            return;
-        }
-        Long recipient = article.getAuthorId();
-        if (skipSelf(actorUserId, recipient)) {
-            return;
-        }
-        String title = truncate(article.getTitle(), 40);
-        String content = resolveActorName(actorUserId) + " 收藏了你的文章《" + title + "》";
-        sendInbox(NotificationType.FAVORITE, recipient, actorUserId, article.getId(),
-                NotificationTargetType.ARTICLE, content);
+        inboxAssembler.assemble(NotificationType.FAVORITE, InboxNotificationRequest.builder()
+                .actorUserId(actorUserId).article(article).build())
+                .ifPresent(this::sendInbox);
     }
 
     public void notifyFollow(Long actorUserId, Long followeeId) {
-        if (skipSelf(actorUserId, followeeId)) {
-            return;
-        }
-        String content = resolveActorName(actorUserId) + " 关注了你";
-        sendInbox(NotificationType.FOLLOW, followeeId, actorUserId, followeeId,
-                NotificationTargetType.USER, content);
+        inboxAssembler.assemble(NotificationType.FOLLOW, InboxNotificationRequest.builder()
+                .actorUserId(actorUserId).followeeId(followeeId).build())
+                .ifPresent(this::sendInbox);
     }
 
     public void notifyComment(Long actorUserId, Long recipientUserId, Long articleId, String articleTitle) {
-        if (recipientUserId == null || skipSelf(actorUserId, recipientUserId)) {
-            return;
-        }
-        String title = truncate(articleTitle, 40);
-        String content = resolveActorName(actorUserId) + " 评论了你的文章《" + title + "》";
-        sendInbox(NotificationType.COMMENT, recipientUserId, actorUserId, articleId,
-                NotificationTargetType.ARTICLE, content);
+        inboxAssembler.assemble(NotificationType.COMMENT, InboxNotificationRequest.builder()
+                .actorUserId(actorUserId)
+                .recipientUserId(recipientUserId)
+                .articleId(articleId)
+                .articleTitle(articleTitle)
+                .build())
+                .ifPresent(this::sendInbox);
     }
 
     public void sendArticlePublished(Article article) {
@@ -118,16 +94,15 @@ public class NotificationProducer {
         sendAfterCommit(NotificationRabbitProperties.RK_EVENT_PREFIX + event.getType().name(), msg);
     }
 
-    private void sendInbox(NotificationType type, Long recipientUserId, Long actorUserId,
-                           Long targetId, NotificationTargetType targetType, String content) {
+    private void sendInbox(InboxNotificationDraft draft) {
         NotificationMessage msg = new NotificationMessage();
-        msg.setType(type.name());
-        msg.setRecipientUserId(recipientUserId);
-        msg.setActorUserId(actorUserId);
-        msg.setTargetId(targetId);
-        msg.setTargetType(targetType.name());
-        msg.setContent(content);
-        sendAfterCommit(routingKeyFor(type), msg);
+        msg.setType(draft.getType().name());
+        msg.setRecipientUserId(draft.getRecipientUserId());
+        msg.setActorUserId(draft.getActorUserId());
+        msg.setTargetId(draft.getTargetId());
+        msg.setTargetType(draft.getTargetType().name());
+        msg.setContent(draft.getContent());
+        sendAfterCommit(routingKeyFor(draft.getType()), msg);
     }
 
     private String routingKeyFor(NotificationType type) {
@@ -165,35 +140,5 @@ public class NotificationProducer {
         } else {
             task.run();
         }
-    }
-
-    private static boolean skipSelf(Long actorUserId, Long recipientUserId) {
-        return actorUserId == null || recipientUserId == null || actorUserId.equals(recipientUserId);
-    }
-
-    private String resolveActorName(Long userId) {
-        if (userId == null) {
-            return "某用户";
-        }
-        UserProfile profile = userProfileMapper.selectById(userId);
-        if (profile != null && StringUtils.hasText(profile.getNickname())) {
-            return profile.getNickname();
-        }
-        User user = userMapper.selectById(userId);
-        if (user != null) {
-            if (StringUtils.hasText(user.getNickname())) {
-                return user.getNickname();
-            }
-            return user.getUsername();
-        }
-        return "某用户";
-    }
-
-    private static String truncate(String s, int max) {
-        if (!StringUtils.hasText(s)) {
-            return "无标题";
-        }
-        String t = s.trim();
-        return t.length() <= max ? t : t.substring(0, max) + "…";
     }
 }

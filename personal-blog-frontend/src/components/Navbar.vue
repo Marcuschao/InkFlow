@@ -154,7 +154,7 @@ const STATIC_NAV_KEYS = [
   '/tags',
   '/search',
   '/links',
-  '/diary',
+  '/share',
   '/reading-history',
   '/chat',
 ];
@@ -172,7 +172,7 @@ const MAIN_NAV_OPTIONS = [
   { label: '标签', key: '/tags' },
   { label: '搜索', key: '/search' },
   { label: '友链', key: '/links' },
-  { label: '日记', key: '/diary' },
+  { label: '分享', key: '/share' },
   { label: '聊天室', key: '/chat' },
   { label: '阅读记录', key: '/reading-history' },
 ];
@@ -196,6 +196,7 @@ const userDropdownOptions = computed(() => {
   const opts = [
     { label: '个人主页', key: 'profile' },
     { label: '我的文章', key: 'my-articles' },
+    { label: '我的分享', key: 'my-shares' },
   ];
   if (authStore.isAdmin) {
     opts.push({ label: '管理后台', key: 'admin' });
@@ -236,6 +237,7 @@ const onDocClick = (e) => {
 function onUserDropdownSelect(key) {
   if (key === 'profile') router.push('/user/me');
   else if (key === 'my-articles') router.push('/my-articles');
+  else if (key === 'my-shares') router.push('/my-shares');
   else if (key === 'admin') router.push('/admin');
   else if (key === 'logout') handleLogoutFromMenu();
 }

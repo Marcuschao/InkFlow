@@ -1,5 +1,6 @@
 package com.blog.personalblogbackend.messaging;
 
+import com.blog.personalblogbackend.messaging.support.AbstractIdempotentRabbitConsumer;
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,16 +18,15 @@ import java.io.IOException;
 
 @Component
 @ConditionalOnProperty(name = "blog.notification.enabled", havingValue = "true", matchIfMissing = true)
-public class InteractionPersistConsumer {
+public class InteractionPersistConsumer extends AbstractIdempotentRabbitConsumer<InteractionPersistMessage> {
     private static final Logger log = LoggerFactory.getLogger(InteractionPersistConsumer.class);
 
     private final InteractionPersistHandler persistHandler;
-    private final MqIdempotencyService idempotencyService;
 
     public InteractionPersistConsumer(InteractionPersistHandler persistHandler,
                                       MqIdempotencyService idempotencyService) {
+        super(idempotencyService);
         this.persistHandler = persistHandler;
-        this.idempotencyService = idempotencyService;
     }
 
     @RabbitListener(bindings = @QueueBinding(
@@ -36,20 +36,31 @@ public class InteractionPersistConsumer {
     ))
     public void onMessage(InteractionPersistMessage message, Channel channel,
                           @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
-        if (message == null || message.getMessageId() == null) {
-            channel.basicAck(tag, false);
-            return;
-        }
-        if (!idempotencyService.markIfAbsent("interaction", message.getMessageId())) {
-            channel.basicAck(tag, false);
-            return;
-        }
-        try {
-            persistHandler.handle(message);
-            channel.basicAck(tag, false);
-        } catch (Exception ex) {
-            log.error("interaction persist failed messageId={}", message.getMessageId(), ex);
-            channel.basicNack(tag, false, true);
-        }
+        consume(message, channel, tag);
+    }
+
+    @Override
+    protected String idempotencyQueue() {
+        return "interaction";
+    }
+
+    @Override
+    protected String extractMessageId(InteractionPersistMessage message) {
+        return message != null ? message.getMessageId() : null;
+    }
+
+    @Override
+    protected void doProcess(InteractionPersistMessage message) {
+        persistHandler.handle(message);
+    }
+
+    @Override
+    protected void logFailure(Exception ex, InteractionPersistMessage message) {
+        log.error("interaction persist failed messageId={}", message.getMessageId(), ex);
+    }
+
+    @Override
+    protected boolean requeueOnFailure() {
+        return true;
     }
 }

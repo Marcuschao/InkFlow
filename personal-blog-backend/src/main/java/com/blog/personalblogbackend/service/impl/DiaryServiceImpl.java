@@ -67,7 +67,7 @@ public class DiaryServiceImpl implements DiaryService {
     public DiaryVo getMine(Long userId, Long id) {
         Diary d = diaryMapper.selectById(id);
         if (d == null || !userId.equals(d.getUserId())) {
-            throw new ServiceException(404, "日记不存在");
+            throw new ServiceException(404, "分享不存在");
         }
         return toVo(d);
     }
@@ -93,7 +93,7 @@ public class DiaryServiceImpl implements DiaryService {
     public void update(Long userId, Long id, DiarySaveRequest req) {
         Diary existing = diaryMapper.selectById(id);
         if (existing == null || !userId.equals(existing.getUserId())) {
-            throw new ServiceException(404, "日记不存在");
+            throw new ServiceException(404, "分享不存在");
         }
         contentRevisionService.snapshotDiary(existing, "保存");
         existing.setDiaryDate(req.getDiaryDate() != null ? req.getDiaryDate() : existing.getDiaryDate());
@@ -110,7 +110,7 @@ public class DiaryServiceImpl implements DiaryService {
     public void delete(Long userId, Long id) {
         Diary existing = diaryMapper.selectById(id);
         if (existing == null || !userId.equals(existing.getUserId())) {
-            throw new ServiceException(404, "日记不存在");
+            throw new ServiceException(404, "分享不存在");
         }
         contentRevisionService.deleteByTarget(RevisionTargetType.DIARY, id);
         diaryMapper.deleteById(id);
@@ -130,7 +130,7 @@ public class DiaryServiceImpl implements DiaryService {
     public DiaryPublicDetailVo getPublic(Long id) {
         Diary d = diaryMapper.selectById(id);
         if (d == null || d.getIsPublic() == null || d.getIsPublic() != 1) {
-            throw new ServiceException(404, "日记不存在或未公开");
+            throw new ServiceException(404, "分享不存在或未公开");
         }
         DiaryPublicDetailVo vo = new DiaryPublicDetailVo();
         vo.setId(d.getId());

@@ -16,7 +16,7 @@
         </div>
         <pre v-else class="body plain" style="white-space: pre-wrap; font-family: monospace; line-height: 1.65; margin: 0 0 24px; background: var(--surface-muted); padding: 16px; border-radius: 6px;">{{ diary.content }}</pre>
         <footer class="foot">
-          <router-link to="/diary">
+          <router-link to="/share">
             <n-button secondary>← 返回列表</n-button>
           </router-link>
         </footer>

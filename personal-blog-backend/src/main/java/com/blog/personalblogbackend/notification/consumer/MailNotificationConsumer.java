@@ -20,56 +20,58 @@ import java.util.Map;
 
 @Component
 @ConditionalOnProperty(name = "blog.notification.enabled", havingValue = "true", matchIfMissing = true)
-public class MailNotificationConsumer {
+public class MailNotificationConsumer extends AbstractNotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(MailNotificationConsumer.class);
 
     private final SubscriberService subscriberService;
     private final BlogMailService blogMailService;
     private final BlogSiteService blogSiteService;
-    private final NotificationConsumeHelper consumeHelper;
 
     public MailNotificationConsumer(SubscriberService subscriberService,
                                     BlogMailService blogMailService,
                                     BlogSiteService blogSiteService,
                                     NotificationConsumeHelper consumeHelper) {
+        super(consumeHelper);
         this.subscriberService = subscriberService;
         this.blogMailService = blogMailService;
         this.blogSiteService = blogSiteService;
-        this.consumeHelper = consumeHelper;
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.mailQueue}")
     public void onMessage(NotificationMessage message, Channel channel,
                           @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
-        NotificationConsumeHelper.ConsumeDecision decision =
-                consumeHelper.prepare(NotificationConsumeHelper.QUEUE_MAIL, message);
-        if (decision != NotificationConsumeHelper.ConsumeDecision.PROCEED) {
-            channel.basicAck(tag, false);
-            return;
-        }
-        try {
-            List<String> emails = subscriberService.listActiveEmails();
-            Map<String, Object> p = message.getPayload();
-            if (!emails.isEmpty() && p != null) {
-                Long articleId = toLong(p.get("articleId"));
-                String title = p.get("title") != null ? String.valueOf(p.get("title")) : "";
-                String summary = p.get("summary") != null ? String.valueOf(p.get("summary")) : "";
-                if (articleId != null) {
-                    String url = blogSiteService.resolvePublicUrl("/article/" + articleId);
-                    String subject = "[" + blogSiteService.getSiteTitle() + "] 新文章：" + title;
-                    String body = title + "\n\n" + summary + "\n\n阅读：" + url + "\n";
-                    for (String email : emails) {
-                        blogMailService.sendIfConfigured(email, subject, body);
-                    }
+        consume(message, channel, tag);
+    }
+
+    @Override
+    protected String queueKey() {
+        return NotificationConsumeHelper.QUEUE_MAIL;
+    }
+
+    @Override
+    protected void doProcess(NotificationMessage message) {
+        List<String> emails = subscriberService.listActiveEmails();
+        Map<String, Object> p = message.getPayload();
+        if (!emails.isEmpty() && p != null) {
+            Long articleId = toLong(p.get("articleId"));
+            String title = p.get("title") != null ? String.valueOf(p.get("title")) : "";
+            String summary = p.get("summary") != null ? String.valueOf(p.get("summary")) : "";
+            if (articleId != null) {
+                String url = blogSiteService.resolvePublicUrl("/article/" + articleId);
+                String subject = "[" + blogSiteService.getSiteTitle() + "] 新文章：" + title;
+                String body = title + "\n\n" + summary + "\n\n阅读：" + url + "\n";
+                for (String email : emails) {
+                    blogMailService.sendIfConfigured(email, subject, body);
                 }
             }
-            channel.basicAck(tag, false);
-        } catch (Exception ex) {
-            log.warn("[notification] mail consume failed eventId={}: {}",
-                    message.getEventId(), ex.toString());
-            channel.basicNack(tag, false, false);
         }
+    }
+
+    @Override
+    protected void logFailure(Exception ex, NotificationMessage message) {
+        log.warn("[notification] mail consume failed eventId={}: {}",
+                message.getEventId(), ex.toString());
     }
 
     private static Long toLong(Object v) {

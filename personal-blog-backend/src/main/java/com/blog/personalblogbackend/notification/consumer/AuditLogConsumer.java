@@ -17,40 +17,42 @@ import java.io.IOException;
 
 @Component
 @ConditionalOnProperty(name = "blog.notification.enabled", havingValue = "true", matchIfMissing = true)
-public class AuditLogConsumer {
+public class AuditLogConsumer extends AbstractNotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(AuditLogConsumer.class);
 
     private final AuditLogQueryService auditLogQueryService;
     private final ObjectMapper objectMapper;
-    private final NotificationConsumeHelper consumeHelper;
 
     public AuditLogConsumer(AuditLogQueryService auditLogQueryService,
                             ObjectMapper objectMapper,
                             NotificationConsumeHelper consumeHelper) {
+        super(consumeHelper);
         this.auditLogQueryService = auditLogQueryService;
         this.objectMapper = objectMapper;
-        this.consumeHelper = consumeHelper;
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.auditQueue}")
     public void onMessage(NotificationMessage message, Channel channel,
                           @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
-        NotificationConsumeHelper.ConsumeDecision decision =
-                consumeHelper.prepare(NotificationConsumeHelper.QUEUE_AUDIT, message);
-        if (decision != NotificationConsumeHelper.ConsumeDecision.PROCEED) {
-            channel.basicAck(tag, false);
-            return;
-        }
-        try {
-            String action = "EVENT_" + (message.getType() != null ? message.getType() : "UNKNOWN");
-            String detail = objectMapper.writeValueAsString(message.getPayload());
-            auditLogQueryService.record("system", action, detail, null);
-            channel.basicAck(tag, false);
-        } catch (Exception ex) {
-            log.warn("[notification] audit consume failed eventId={}: {}",
-                    message.getEventId(), ex.toString());
-            channel.basicNack(tag, false, false);
-        }
+        consume(message, channel, tag);
+    }
+
+    @Override
+    protected String queueKey() {
+        return NotificationConsumeHelper.QUEUE_AUDIT;
+    }
+
+    @Override
+    protected void doProcess(NotificationMessage message) throws Exception {
+        String action = "EVENT_" + (message.getType() != null ? message.getType() : "UNKNOWN");
+        String detail = objectMapper.writeValueAsString(message.getPayload());
+        auditLogQueryService.record("system", action, detail, null);
+    }
+
+    @Override
+    protected void logFailure(Exception ex, NotificationMessage message) {
+        log.warn("[notification] audit consume failed eventId={}: {}",
+                message.getEventId(), ex.toString());
     }
 }

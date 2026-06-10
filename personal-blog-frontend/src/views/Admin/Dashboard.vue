@@ -17,8 +17,6 @@
           <router-link to="/admin/chat/online"><n-button size="small">在线监控</n-button></router-link>
           <router-link to="/admin/translations"><n-button size="small">翻译</n-button></router-link>
           <router-link to="/admin/freshness"><n-button size="small">内容保鲜</n-button></router-link>
-          <router-link to="/admin/diary"><n-button size="small">写日记</n-button></router-link>
-          <router-link to="/admin/diary/list"><n-button size="small">日记列表</n-button></router-link>
           <router-link to="/admin/logs"><n-button size="small">操作日志</n-button></router-link>
           <router-link to="/admin/reports/weekly"><n-button size="small">周报归档</n-button></router-link>
           <router-link to="/admin/reports/freshness"><n-button size="small">保鲜报告</n-button></router-link>

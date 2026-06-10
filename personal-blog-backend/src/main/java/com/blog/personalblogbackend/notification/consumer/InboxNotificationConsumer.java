@@ -16,35 +16,37 @@ import java.io.IOException;
 
 @Component
 @ConditionalOnProperty(name = "blog.notification.enabled", havingValue = "true", matchIfMissing = true)
-public class InboxNotificationConsumer {
+public class InboxNotificationConsumer extends AbstractNotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(InboxNotificationConsumer.class);
 
     private final UserNotificationService userNotificationService;
-    private final NotificationConsumeHelper consumeHelper;
 
     public InboxNotificationConsumer(UserNotificationService userNotificationService,
                                      NotificationConsumeHelper consumeHelper) {
+        super(consumeHelper);
         this.userNotificationService = userNotificationService;
-        this.consumeHelper = consumeHelper;
     }
 
     @RabbitListener(queues = "#{notificationRabbitProperties.inboxQueue}")
     public void onMessage(NotificationMessage message, Channel channel,
                           @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
-        NotificationConsumeHelper.ConsumeDecision decision =
-                consumeHelper.prepare(NotificationConsumeHelper.QUEUE_INBOX, message);
-        if (decision != NotificationConsumeHelper.ConsumeDecision.PROCEED) {
-            channel.basicAck(tag, false);
-            return;
-        }
-        try {
-            userNotificationService.saveFromMessage(message);
-            channel.basicAck(tag, false);
-        } catch (Exception ex) {
-            log.warn("[notification] inbox consume failed eventId={}: {}",
-                    message.getEventId(), ex.toString());
-            channel.basicNack(tag, false, false);
-        }
+        consume(message, channel, tag);
+    }
+
+    @Override
+    protected String queueKey() {
+        return NotificationConsumeHelper.QUEUE_INBOX;
+    }
+
+    @Override
+    protected void doProcess(NotificationMessage message) {
+        userNotificationService.saveFromMessage(message);
+    }
+
+    @Override
+    protected void logFailure(Exception ex, NotificationMessage message) {
+        log.warn("[notification] inbox consume failed eventId={}: {}",
+                message.getEventId(), ex.toString());
     }
 }

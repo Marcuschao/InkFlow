@@ -2,8 +2,8 @@
   <div class="pub-diary-page ds-page">
     <div class="container">
       <header class="ds-page-hero" style="margin-bottom: 24px;">
-        <h1 class="ds-page-title ds-page-title-md">公开日记</h1>
-        <p class="ds-page-sub">作者选择公开的笔记摘录</p>
+        <h1 class="ds-page-title ds-page-title-md">分享</h1>
+        <p class="ds-page-sub">大家公开的笔记与心得</p>
       </header>
       <n-alert v-if="err" type="error" style="margin-bottom: 16px;">{{ err }}</n-alert>
 
@@ -14,13 +14,13 @@
       </div>
 
       <div v-else-if="!records.length">
-        <n-empty description="暂无公开日记" />
+        <n-empty description="暂无公开分享" />
       </div>
 
       <div v-else>
         <n-space vertical :size="16">
           <n-card v-for="row in records" :key="row.id" class="hit-card" hoverable>
-            <router-link :to="'/diary/' + row.id" class="hit-link" style="text-decoration: none; color: inherit;">
+            <router-link :to="'/share/' + row.id" class="hit-link" style="text-decoration: none; color: inherit;">
               <h2 class="hit-title" style="margin: 0 0 8px; font-size: 1.25em;">{{ row.title }}</h2>
               <p class="hit-sum" style="color: var(--color-text-muted); margin: 0 0 12px; line-height: 1.55;">
                 {{ row.excerpt || '—' }}

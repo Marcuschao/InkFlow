@@ -25,7 +25,7 @@ const API_READ_SEGMENTS = [
   '/search',
   '/links',
   '/site',
-  '/diary/public',
+  '/share',
 ];
 
 function isApiReadRequest(url) {
