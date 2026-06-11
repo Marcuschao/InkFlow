@@ -1,0 +1,20 @@
+package com.blog.personalblogbackend.config.hotsearch;
+
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.Duration;
+
+@Configuration
+public class HotSearchConfig {
+
+    @Bean
+    public RestTemplate hotSearchRestTemplate(RestTemplateBuilder builder, HotSearchProperties properties) {
+        return builder
+                .setConnectTimeout(Duration.ofSeconds(properties.getConnectTimeoutSeconds()))
+                .setReadTimeout(Duration.ofSeconds(properties.getReadTimeoutSeconds()))
+                .build();
+    }
+}

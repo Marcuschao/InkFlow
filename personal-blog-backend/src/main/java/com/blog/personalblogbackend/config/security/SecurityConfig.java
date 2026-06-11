@@ -80,6 +80,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/about", "/about").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/site/**", "/site/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/search/**", "/search/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/hot-search/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/links", "/api/links/**", "/links/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/captcha/**", "/captcha/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/subscribe", "/subscribe").permitAll()

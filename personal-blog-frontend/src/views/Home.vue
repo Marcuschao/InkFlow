@@ -81,6 +81,28 @@
             @changePage="handleFeedPageChange"
           />
         </template>
+
+        <section v-if="homeTab === 'latest'" class="home-hot-section" aria-label="全网热搜">
+          <div class="home-hot-head">
+            <h2 class="home-hot-title">全网热搜</h2>
+            <router-link to="/hot-search" class="home-hot-more">查看全部</router-link>
+          </div>
+          <div class="home-hot-scroll">
+            <HotSearchCard
+              v-for="list in hotLists"
+              :key="list.source"
+              class="home-hot-card"
+              :list="list"
+              :loading="hotLoading"
+              :limit="5"
+            />
+            <template v-if="hotLoading && !hotLists.length">
+              <n-card v-for="n in 2" :key="'hsk-' + n" class="home-hot-card">
+                <n-skeleton text :repeat="5" />
+              </n-card>
+            </template>
+          </div>
+        </section>
       </div>
 
       <aside class="home-aside" aria-label="猜你喜欢">
@@ -114,8 +136,10 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { NAlert, NCard, NEmpty, NGi, NGrid, NSkeleton, NSpace, NTab, NTabs, NTag } from 'naive-ui';
 import { useArticleStore } from '../stores/article';
 import ArticleCard from '../components/ArticleCard.vue';
+import HotSearchCard from '../components/HotSearchCard.vue';
 import ListSkeleton from '../components/ListSkeleton.vue';
 import Pagination from '../components/Pagination.vue';
+import { fetchAllHotSearch } from '../api/hotSearch';
 import { useRoute, useRouter } from 'vue-router';
 import { usePageViewHome } from '../composables/usePageView';
 import { useAuthStore } from '../stores/auth';
@@ -140,6 +164,8 @@ const feedSize = ref(10);
 const feedTotal = ref(0);
 const recItems = ref([]);
 const recLoading = ref(false);
+const hotLists = ref([]);
+const hotLoading = ref(false);
 
 function normalizeRecArticle(item) {
   return {
@@ -260,8 +286,21 @@ watch(
   { immediate: true }
 );
 
+async function loadHotSearch() {
+  hotLoading.value = true;
+  try {
+    const res = await fetchAllHotSearch({ limit: 5 });
+    hotLists.value = res.data || [];
+  } catch {
+    hotLists.value = [];
+  } finally {
+    hotLoading.value = false;
+  }
+}
+
 onMounted(() => {
   articleStore.fetchTags();
+  loadHotSearch();
 });
 
 watch(
@@ -412,6 +451,49 @@ watch(
 .card-enter {
   animation: fade-in-soft 0.5s var(--ease-out-soft) both;
   animation-delay: var(--stagger, 0ms);
+}
+
+.home-hot-section {
+  margin-top: var(--space-12);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border);
+}
+
+.home-hot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.home-hot-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.home-hot-more {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.home-hot-more:hover {
+  color: var(--color-primary);
+}
+
+.home-hot-scroll {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scroll-snap-type: x mandatory;
+}
+
+.home-hot-card {
+  flex: 0 0 min(320px, 85vw);
+  scroll-snap-align: start;
 }
 
 .home-list-err {

@@ -39,6 +39,11 @@ const routes = [
     component: () => import('../views/Search.vue'),
   },
   {
+    path: '/hot-search',
+    name: 'HotSearch',
+    component: () => import('../views/HotSearchPage.vue'),
+  },
+  {
     path: '/links',
     name: 'Links',
     component: () => import('../views/Links.vue'),

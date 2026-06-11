@@ -27,9 +27,9 @@ public class AsyncConfig {
         ex.setMaxPoolSize(max);
         ex.setQueueCapacity(queue);
         ex.setThreadNamePrefix(prefix);
-        ex.setWaitForTasksToCompleteOnShutdown(true);
-        ex.setAwaitTerminationSeconds(30);
-        ex.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        ex.setWaitForTasksToCompleteOnShutdown(true);  //关闭服务时，允许线程池继续执行任务
+        ex.setAwaitTerminationSeconds(30);  //关闭服务时等待30秒让线程池中的任务尽可能执行
+        ex.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());  //拒绝策略，如果线程池满了，调用者线程自己执行
         ex.initialize();
         return ex;
     }

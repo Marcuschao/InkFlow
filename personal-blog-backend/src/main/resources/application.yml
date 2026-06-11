@@ -93,6 +93,11 @@ blog:
     null-ttl-seconds: 30
     list-cache-max-page: 3
     evict-delay-ms: 500
+  hot-search:
+    cache-ttl-minutes: 5
+    connect-timeout-seconds: 5
+    read-timeout-seconds: 10
+    home-preview-size: 5
   rate-limit:
     enabled: true
     article-detail-per-minute: 120

@@ -3,7 +3,7 @@
     <router-link to="/" class="dock-link">首页</router-link>
     <router-link to="/archive" class="dock-link">归档</router-link>
     <router-link to="/chat" class="dock-link">聊天</router-link>
-    <router-link to="/search" class="dock-link">搜索</router-link>
+    <router-link to="/hot-search" class="dock-link">热搜</router-link>
     <router-link to="/about" class="dock-link">关于</router-link>
   </nav>
 </template>
