@@ -1,0 +1,7 @@
+**/target
+**/.idea
+**/.git
+**/*.iml
+logs
+deploy/env/node-a.env
+deploy/env/node-b.env

@@ -1,0 +1,14 @@
+spring:
+  cloud:
+    nacos:
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: 127.0.0.1:8848
+        port: 8081
+        fail-fast: false
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG

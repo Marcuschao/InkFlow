@@ -1,0 +1,25 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: blog-auth
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        fail-fast: false
+
+management:
+  server:
+    port: 9082
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true

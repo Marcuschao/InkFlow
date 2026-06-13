@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { VitePWA } from 'vite-plugin-pwa';
 
-const BACKEND = 'http://localhost:8080';
+const BACKEND = 'http://localhost:8081';
 
 function buildProxy(env) {
   const proxy = {

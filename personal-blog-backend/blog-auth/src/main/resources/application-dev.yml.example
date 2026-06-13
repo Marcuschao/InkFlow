@@ -1,0 +1,115 @@
+management:
+  server:
+    port: 9082
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  cloud:
+    inetutils:
+      preferred-networks:
+        - 172.18
+    nacos:
+      username: nacos
+      password: CHANGE_ME_NACOS_PASSWORD
+      discovery:
+        server-addr: YOUR_NACOS_HOST:8848
+        port: 8082
+        fail-fast: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://YOUR_MYSQL_HOST:3306/blog_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    username: YOUR_MYSQL_USER
+    password: CHANGE_ME_MYSQL_PASSWORD
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      leak-detection-threshold: 60000
+
+  rabbitmq:
+    host: YOUR_RABBITMQ_HOST
+    port: 5672
+    username: YOUR_RABBITMQ_USER
+    password: CHANGE_ME_RABBITMQ_PASSWORD
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        default-requeue-rejected: false
+
+  data:
+    redis:
+      host: YOUR_REDIS_HOST
+      port: 6379
+      password: CHANGE_ME_REDIS_PASSWORD
+      database: 1
+      timeout: 3000
+
+  mail:
+    host: smtp.example.com
+    port: 465
+    protocol: smtps
+    username: your-mail@example.com
+    password: CHANGE_ME_MAIL_PASSWORD
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+
+  security:
+    jwt:
+      secret: CHANGE_ME_JWT_SECRET
+      expiration: 43200
+      remember-me-expiration: 604800
+
+blog:
+  site-url: http://YOUR_DOMAIN:PORT
+  site-base-path: /pblog
+  oauth:
+    enabled: true
+    client-id: YOUR_GITHUB_CLIENT_ID
+    client-secret: CHANGE_ME_GITHUB_CLIENT_SECRET
+    redirect-uri: http://YOUR_DOMAIN:PORT/pblog/login/oauth2/code/github
+    frontend-callback-url: http://YOUR_DOMAIN:PORT/pblog/oauth/callback
+  notify-mail-enabled: false
+  notify-from: your-mail@example.com
+
+minio:
+  enabled: true
+  endpoint: http://YOUR_MINIO_HOST:9000
+  access-key: YOUR_MINIO_ACCESS_KEY
+  secret-key: CHANGE_ME_MINIO_SECRET_KEY
+  public-base-url: http://YOUR_DOMAIN:PORT/minio
+  buckets:
+    chat: blog-chat
+    avatars: blog-avatars
+    diary: blog-diary
+    versions: blog-versions
+    logs: blog-logs
+    reports: blog-reports
+    backups: blog-backups
+
+logging:
+  level:
+    root: WARN
+    com.blog.auth: INFO
+    org.mybatis.spring: WARN
+    org.springframework.web: WARN
+    org.springframework.security: WARN

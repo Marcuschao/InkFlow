@@ -1,0 +1,25 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: blog-ai
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        fail-fast: false
+
+management:
+  server:
+    port: 9084
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true

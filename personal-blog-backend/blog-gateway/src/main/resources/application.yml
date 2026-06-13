@@ -1,0 +1,75 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: blog-gateway
+  profiles:
+    active: dev
+  codec:
+    max-in-memory-size: 10MB
+  cloud:
+    nacos:
+      discovery:
+        fail-fast: false
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false
+          routes:
+            - id: blog-auth-api
+              uri: lb://blog-auth
+              order: -10
+              predicates:
+                - Path=/api/auth/**,/auth/**,/api/captcha/**
+            - id: blog-auth-user
+              uri: lb://blog-auth
+              order: -9
+              predicates:
+                - Path=/api/user/me/**,/api/user/profile,/api/user/avatar,/api/user/{id:\\d+}
+            - id: blog-auth-oauth
+              uri: lb://blog-auth
+              order: -9
+              predicates:
+                - Path=/oauth2/**,/login/oauth2/**
+            - id: blog-content-user-social
+              uri: lb://blog-content
+              order: -1
+              predicates:
+                - Path=/api/user/feed,/api/user/me/favorites,/api/user/*/follow,/api/user/*/follow/status,/api/user/*/followers,/api/user/*/following
+            - id: blog-ai-seo
+              uri: lb://blog-ai
+              predicates:
+                - Path=/api/admin/articles/*/seo-ai
+              order: -1
+            - id: blog-ai-admin
+              uri: lb://blog-ai
+              predicates:
+                - Path=/api/admin/translations/**,/api/admin/freshness/**,/api/admin/reports/**,/api/admin/stats/**
+            - id: blog-ai-agent
+              uri: lb://blog-ai
+              predicates:
+                - Path=/api/agent/**
+            - id: blog-content-ws
+              uri: lb:ws://blog-content
+              predicates:
+                - Path=/ws/**
+            - id: blog-content-feed
+              uri: lb://blog-content
+              predicates:
+                - Path=/rss.xml,/sitemap.xml,/robots.txt,/upload/**
+            - id: blog-content-default
+              uri: lb://blog-content
+              order: 100
+              predicates:
+                - Path=/api/**
+
+management:
+  server:
+    port: 9081
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus

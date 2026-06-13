@@ -1,0 +1,17 @@
+spring:
+  cloud:
+    inetutils:
+      preferred-networks:
+        - 172.18
+    nacos:
+      username: nacos
+      password: CHANGE_ME_NACOS_PASSWORD
+      discovery:
+        server-addr: YOUR_NACOS_HOST:8848
+        port: 8081
+        fail-fast: false
+
+logging:
+  level:
+    root: WARN
+    org.springframework.cloud.gateway: INFO

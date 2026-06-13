@@ -14,7 +14,7 @@ export function unbindGithub() {
 
 export function githubLoginUrl() {
   if (import.meta.env.DEV) {
-    return 'http://localhost:8080/oauth2/authorization/github';
+    return 'http://localhost:8081/oauth2/authorization/github';
   }
   const base = import.meta.env.VITE_APP_WS_BASE_URL || '';
   if (base && base !== '/') {

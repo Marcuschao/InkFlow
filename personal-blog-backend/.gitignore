@@ -33,3 +33,14 @@ build/
 .vscode/
 
 upload/
+logs/
+deploy/env/*.env
+deploy/jars/*.jar
+
+### 环境配置（含密钥，勿提交）###
+**/application-dev.yml
+**/application-dev.yaml
+**/application-local.yml
+**/application-local.yaml
+**/application-prod.yml
+**/application-prod.yaml

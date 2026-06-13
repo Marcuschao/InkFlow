@@ -1,8 +1,0 @@
-package com.blog.personalblogbackend.model.dto.agent;
-
-import lombok.Data;
-
-@Data
-public class PolishRequest {
-    private String text;
-}

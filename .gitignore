@@ -1,8 +1,14 @@
-# 后端
-personal-blog-backend/src/main/resources/application-dev.yml
-personal-blog-backend/src/main/resources/application-local.yml
+# 后端 - 环境配置（含密钥，勿提交）
+personal-blog-backend/**/application-dev.yml
+personal-blog-backend/**/application-dev.yaml
+personal-blog-backend/**/application-local.yml
+personal-blog-backend/**/application-local.yaml
+personal-blog-backend/**/application-prod.yml
+personal-blog-backend/**/application-prod.yaml
 personal-blog-backend/src/main/resources/blog_db.sql
-personal-blog-backend/scripts/
+personal-blog-backend/scripts/*
+!personal-blog-backend/scripts/init-config.sh
+!personal-blog-backend/scripts/init-config.ps1
 
 # 前端
 personal-blog-frontend/.env.development

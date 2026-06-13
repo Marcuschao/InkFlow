@@ -1,0 +1,71 @@
+spring:
+  cloud:
+    nacos:
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: 127.0.0.1:8848
+        port: 8084
+        fail-fast: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/blog_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: guest
+    password: guest
+
+  security:
+    jwt:
+      secret: local-dev-jwt-secret-change-me
+      expiration: 43200
+      remember-me-expiration: 604800
+
+  ai:
+    openai:
+      api-key: CHANGE_ME_AI_API_KEY
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.7
+          max-tokens: 1024
+
+blog:
+  site-url: http://127.0.0.1:5173
+  site-base-path: /pblog
+  search:
+    enabled: false
+  oauth:
+    enabled: false
+  notify-mail-enabled: false
+
+minio:
+  enabled: true
+  endpoint: http://127.0.0.1:9005
+  access-key: minioadmin
+  secret-key: minioadmin
+  public-base-url: http://127.0.0.1:9005
+  buckets:
+    chat: blog-chat
+    avatars: blog-avatars
+    diary: blog-diary
+    versions: blog-versions
+    logs: blog-logs
+    reports: blog-reports
+    backups: blog-backups
+
+logging:
+  level:
+    root: INFO
+    com.blog.ai: DEBUG
