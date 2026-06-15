@@ -69,6 +69,9 @@ service.interceptors.response.use(
         useAuthStore().clearAuth();
       }
     }
+    if (res?.status === 403 && useAuthStore().token) {
+      useAuthStore().clearAuth();
+    }
     if (!cfg.skipErrorToast) {
       try {
         useToastStore().push(msg, 'error');

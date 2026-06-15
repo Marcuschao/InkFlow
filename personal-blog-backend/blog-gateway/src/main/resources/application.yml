@@ -12,6 +12,10 @@ spring:
     nacos:
       discovery:
         fail-fast: false
+        register-enabled: true
+        heart-beat-interval: 5000
+        heart-beat-timeout: 15000
+        ip-delete-timeout: 30000
     gateway:
       server:
         webflux:
@@ -24,21 +28,21 @@ spring:
               order: -10
               predicates:
                 - Path=/api/auth/**,/auth/**,/api/captcha/**
+            - id: blog-content-user-social
+              uri: lb://blog-content
+              order: -11
+              predicates:
+                - Path=/api/user/feed,/api/user/me/favorites,/api/user/*/follow,/api/user/*/follow/status,/api/user/*/followers,/api/user/*/following
             - id: blog-auth-user
               uri: lb://blog-auth
               order: -9
               predicates:
-                - Path=/api/user/me/**,/api/user/profile,/api/user/avatar,/api/user/{id:\\d+}
+                - Path=/api/user/me,/api/user/me/oauth/**,/api/user/profile,/api/user/avatar,/api/user/{id:\\d+}
             - id: blog-auth-oauth
               uri: lb://blog-auth
               order: -9
               predicates:
                 - Path=/oauth2/**,/login/oauth2/**
-            - id: blog-content-user-social
-              uri: lb://blog-content
-              order: -1
-              predicates:
-                - Path=/api/user/feed,/api/user/me/favorites,/api/user/*/follow,/api/user/*/follow/status,/api/user/*/followers,/api/user/*/following
             - id: blog-ai-seo
               uri: lb://blog-ai
               predicates:

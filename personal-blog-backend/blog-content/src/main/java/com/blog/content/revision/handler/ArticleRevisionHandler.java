@@ -92,6 +92,9 @@ public class ArticleRevisionHandler extends AbstractRevisionTargetHandler {
         List<String> curTags = articleMapper.selectTagNamesByArticleId(articleId);
         snapshot(cur, String.join(",", curTags), "回退前自动存档");
         applyRevisionToArticle(cur, target);
+        if (cur.getVersion() == null) {
+            cur.setVersion(0);
+        }
         articleMapper.updateById(cur);
         syncArticleTagsFromCsv(articleId, target.getArticleTags());
         Article fresh = articleMapper.selectById(articleId);

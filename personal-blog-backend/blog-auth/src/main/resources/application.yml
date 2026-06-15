@@ -10,6 +10,10 @@ spring:
     nacos:
       discovery:
         fail-fast: false
+        register-enabled: true
+        heart-beat-interval: 5000
+        heart-beat-timeout: 15000
+        ip-delete-timeout: 30000
 
 management:
   server:

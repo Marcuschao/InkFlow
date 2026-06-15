@@ -2,6 +2,7 @@ package com.blog.content.search;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
@@ -9,12 +10,15 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.IndexOperation;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
+import co.elastic.clients.elasticsearch.indices.DeleteIndexRequest;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
 import com.blog.content.config.properties.SearchProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +30,8 @@ import java.util.Set;
 @Component
 @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
 public class ElasticsearchIndexClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ElasticsearchIndexClient.class);
 
     private final ElasticsearchClient client;
     private final SearchProperties properties;
@@ -63,7 +69,20 @@ public class ElasticsearchIndexClient {
                                 "createTime":{"type":"date"},"updateTime":{"type":"date"}
                                 }}}"""))));
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.error("[search] ensureIndex failed index={}: {}", index, ex.getMessage());
+        }
+    }
+
+    public void recreateIndex(String index) {
+        try {
+            boolean exists = client.indices().exists(ExistsRequest.of(e -> e.index(index))).value();
+            if (exists) {
+                client.indices().delete(DeleteIndexRequest.of(d -> d.index(index)));
+            }
+            ensureIndex(index);
+        } catch (Exception ex) {
+            log.error("[search] recreateIndex failed index={}: {}", index, ex.getMessage());
         }
     }
 
@@ -84,13 +103,23 @@ public class ElasticsearchIndexClient {
             return;
         }
         try {
-            BulkRequest.Builder bulk = new BulkRequest.Builder();
+            BulkRequest.Builder bulk = new BulkRequest.Builder().refresh(Refresh.True);
             for (ArticleSearchDocument doc : documents) {
                 bulk.operations(BulkOperation.of(op -> op.index(IndexOperation.of(i -> i
                         .index(indexUid).id(String.valueOf(doc.getId())).document(doc)))));
             }
-            client.bulk(bulk.build());
-        } catch (Exception ignored) {
+            var response = client.bulk(bulk.build());
+            if (response.errors()) {
+                response.items().forEach(item -> {
+                    if (item.error() != null) {
+                        log.warn("[search] bulk item error id={}: {}", item.id(), item.error().reason());
+                    }
+                });
+            } else {
+                log.info("[search] bulk indexed {} docs into {}", documents.size(), indexUid);
+            }
+        } catch (Exception ex) {
+            log.error("[search] bulk index failed index={} size={}: {}", indexUid, documents.size(), ex.getMessage());
         }
     }
 
@@ -136,7 +165,15 @@ public class ElasticsearchIndexClient {
         return found;
     }
 
-    public void swapIndexes(String uidA, String uidB) {
+    public void swapIndexes(String targetIndex, String sourceIndex) {
+        try {
+            client.reindex(r -> r
+                    .source(s -> s.index(sourceIndex))
+                    .dest(d -> d.index(targetIndex))
+                    .waitForCompletion(true));
+        } catch (Exception ex) {
+            log.error("[search] reindex {} -> {} failed: {}", sourceIndex, targetIndex, ex.getMessage());
+        }
     }
 
     public void deleteIndex(String indexUid) {

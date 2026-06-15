@@ -15,11 +15,14 @@ public class ElasticsearchIndexInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ElasticsearchIndexInitializer.class);
     private final ObjectProvider<ElasticsearchIndexClient> clientProvider;
+    private final ObjectProvider<SearchReindexService> reindexServiceProvider;
     private final SearchProperties searchProperties;
 
     public ElasticsearchIndexInitializer(ObjectProvider<ElasticsearchIndexClient> clientProvider,
+                                           ObjectProvider<SearchReindexService> reindexServiceProvider,
                                            SearchProperties searchProperties) {
         this.clientProvider = clientProvider;
+        this.reindexServiceProvider = reindexServiceProvider;
         this.searchProperties = searchProperties;
     }
 
@@ -32,6 +35,18 @@ public class ElasticsearchIndexInitializer implements ApplicationRunner {
         }
         client.ensureIndex();
         client.updateSettings();
-        log.info("[search] Elasticsearch index ready, docs={}", client.getNumberOfDocuments());
+        long docs = client.getNumberOfDocuments();
+        log.info("[search] Elasticsearch index ready, docs={}", docs);
+        if (searchProperties.isInitReindexOnStartup() && docs == 0) {
+            SearchReindexService reindexService = reindexServiceProvider.getIfAvailable();
+            if (reindexService != null) {
+                try {
+                    SearchReindexResult result = reindexService.reindexAllPublishedOnStartup();
+                    log.info("[search] startup reindex done, indexed={}", result.getIndexed());
+                } catch (Exception ex) {
+                    log.error("[search] startup reindex failed", ex);
+                }
+            }
+        }
     }
 }

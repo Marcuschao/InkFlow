@@ -236,8 +236,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 s = s.substring(l, r + 1);
             }
             JsonNode node = objectMapper.readTree(s);
+            Article existing = articleMapper.selectById(articleId);
+            if (existing == null) {
+                throw new ServiceException(404, "文章不存在");
+            }
             Article patch = new Article();
             patch.setId(articleId);
+            patch.setVersion(resolveVersion(existing.getVersion()));
             patch.setSeoTitle(textOrNull(node.get("seoTitle")));
             patch.setSeoDescription(textOrNull(node.get("seoDescription")));
             articleMapper.updateById(patch);
@@ -335,6 +340,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         Article patch = new Article();
         patch.setId(articleId);
+        patch.setVersion(resolveVersion(previous.getVersion()));
         patch.setStatus(ArticleStatus.PUBLISHED);
         patch.setReviewedBy(reviewerId);
         patch.setReviewedAt(LocalDateTime.now());
@@ -355,6 +361,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         Article patch = new Article();
         patch.setId(articleId);
+        patch.setVersion(resolveVersion(previous.getVersion()));
         patch.setStatus(ArticleStatus.REJECTED);
         patch.setReviewedBy(reviewerId);
         patch.setReviewedAt(LocalDateTime.now());
@@ -434,7 +441,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             throw new ServiceException(404, "文章不存在");
         }
         if (article.getVersion() == null) {
-            article.setVersion(previous.getVersion());
+            article.setVersion(resolveVersion(previous.getVersion()));
         }
         List<String> prevTagNames = articleMapper.selectTagNamesByArticleId(previous.getId());
         contentRevisionService.snapshotArticle(previous, String.join(",", prevTagNames), "保存");
@@ -470,6 +477,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         requireOwnerOrAdmin(article, userId, isAdmin);
         return deleteArticle(id);
+    }
+
+    private static Integer resolveVersion(Integer version) {
+        return version != null ? version : 0;
     }
 
     private void handleArticleTags(Long articleId, List<String> tagNames) {

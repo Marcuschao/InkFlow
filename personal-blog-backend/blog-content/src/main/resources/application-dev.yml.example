@@ -15,7 +15,7 @@ spring:
       username: nacos
       password: CHANGE_ME_NACOS_PASSWORD
       discovery:
-        server-addr: YOUR_NACOS_HOST:8848
+        server-addr: 172.18.0.7:8848
         ip: YOUR_PUBLIC_IP
         port: 8083
         fail-fast: false
