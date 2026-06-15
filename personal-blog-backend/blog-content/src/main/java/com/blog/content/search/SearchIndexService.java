@@ -76,6 +76,11 @@ public class SearchIndexService {
         doc.setViewCount(article.getViewCount());
         doc.setCreateTime(article.getCreateTime());
         doc.setUpdateTime(article.getUpdateTime());
+        List<Long> tagIds = articleMapper.selectTagIdsByArticleId(article.getId());
+        if (tagIds != null && !tagIds.isEmpty()) {
+            doc.setTagIds(tagIds);
+            doc.setTagNames(articleMapper.selectTagNamesByArticleId(article.getId()));
+        }
         return doc;
     }
 

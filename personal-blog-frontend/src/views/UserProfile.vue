@@ -67,6 +67,10 @@
             </div>
           </div>
 
+          <div v-else-if="t.id === 'landscape'" class="tab-panel">
+            <UserLandscapePanel v-if="user?.id" :user-id="user.id" />
+          </div>
+
           <div v-else-if="t.id === 'favorites'" class="tab-panel">
             <n-skeleton v-if="favLoading" height="128px" :sharp="false" />
             <n-empty v-else-if="!favorites.length" description="暂无收藏" />
@@ -126,6 +130,7 @@ import { useAuthStore } from '../stores/auth';
 import { useChatUserProfiles } from '../composables/useChatUserProfiles';
 import { useToastStore } from '../stores/toast';
 import ArticleCard from '../components/ArticleCard.vue';
+import UserLandscapePanel from '../components/knowledge/UserLandscapePanel.vue';
 import UserAvatar from '../components/UserAvatar.vue';
 import UserListItem from '../components/UserListItem.vue';
 import Pagination from '../components/Pagination.vue';
@@ -139,6 +144,7 @@ const toast = useToastStore();
 
 const tabs = [
   { id: 'profile', label: '资料' },
+  { id: 'landscape', label: '知识版图' },
   { id: 'favorites', label: '收藏' },
   { id: 'following', label: '关注' },
   { id: 'followers', label: '粉丝' },

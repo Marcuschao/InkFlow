@@ -23,6 +23,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -66,7 +67,8 @@ public class ElasticsearchIndexClient {
                                 "content":{"type":"text"},"cover":{"type":"keyword"},
                                 "categoryId":{"type":"long"},"authorId":{"type":"long"},
                                 "status":{"type":"integer"},"viewCount":{"type":"integer"},
-                                "createTime":{"type":"date"},"updateTime":{"type":"date"}
+                                "createTime":{"type":"date"},"updateTime":{"type":"date"},
+                                "tagIds":{"type":"long"},"tagNames":{"type":"keyword"}
                                 }}}"""))));
             }
         } catch (Exception ex) {
@@ -191,7 +193,7 @@ public class ElasticsearchIndexClient {
                     .index(properties.getIndex()).from(offset).size(limit)
                     .query(Query.of(q -> q.bool(b -> b
                             .must(m -> m.term(t -> t.field("status").value(FieldValue.of(1))))
-                            .must(m -> m.multiMatch(mm -> mm.fields("title", "summary", "content")
+                            .must(m -> m.multiMatch(mm -> mm.fields("title", "summary", "content", "tagNames")
                                     .query(query != null ? query : ""))))))),
                     ArticleSearchDocument.class);
             long total = resp.hits().total() != null ? resp.hits().total().value() : 0;
@@ -207,5 +209,34 @@ public class ElasticsearchIndexClient {
         }
         root.set("hits", hits);
         return root;
+    }
+
+    public List<String> aggregateRelatedTagNames(String query, int limit) {
+        List<String> tags = new ArrayList<>();
+        if (query == null || query.isBlank()) {
+            return tags;
+        }
+        try {
+            int aggSize = Math.max(1, limit);
+            SearchResponse<ArticleSearchDocument> resp = client.search(
+                    SearchRequest.of(s -> s
+                            .index(properties.getIndex())
+                            .size(0)
+                            .query(Query.of(q -> q.bool(b -> b
+                                    .must(m -> m.term(t -> t.field("status").value(FieldValue.of(1))))
+                                    .must(m -> m.multiMatch(mm -> mm
+                                            .fields("title", "summary", "content", "tagNames")
+                                            .query(query.trim()))))))
+                            .aggregations("related_tags", a -> a.terms(t -> t.field("tagNames").size(aggSize)))),
+                    ArticleSearchDocument.class);
+            if (resp.aggregations() != null && resp.aggregations().containsKey("related_tags")) {
+                var buckets = resp.aggregations().get("related_tags").sterms().buckets().array();
+                for (var bucket : buckets) {
+                    tags.add(bucket.key().stringValue());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return tags;
     }
 }

@@ -170,7 +170,7 @@ const navMenuActiveKey = computed(() => {
 const MAIN_NAV_OPTIONS = [
   { label: '首页', key: '/' },
   { label: '归档', key: '/archive' },
-  { label: '标签', key: '/tags' },
+  { label: '知识星系', key: '/tags' },
   { label: '热搜', key: '/hot-search' },
   { label: '友链', key: '/links' },
   { label: '分享', key: '/share' },

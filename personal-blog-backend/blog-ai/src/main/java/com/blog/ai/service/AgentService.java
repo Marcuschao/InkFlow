@@ -22,6 +22,12 @@ public interface AgentService {
 
     List<String> tags(TagsRequest request);
 
+    List<com.blog.common.dto.AutoTagItemDto> autoTag(com.blog.common.dto.AutoTagRequest request);
+
+    com.blog.common.dto.LearningPathResult learningPath(com.blog.common.dto.LearningPathRequest request);
+
+    String weeklyInsight();
+
     ChatResponse chat(ChatRequest request);
 
     List<RecommendArticleDto> recommend(Long articleId);

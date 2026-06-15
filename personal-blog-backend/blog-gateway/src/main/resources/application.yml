@@ -5,7 +5,7 @@ spring:
   application:
     name: blog-gateway
   profiles:
-    active: dev
+    active: local
   codec:
     max-in-memory-size: 10MB
   cloud:

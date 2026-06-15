@@ -76,6 +76,9 @@ public interface ArticleMapper extends BaseMapper<Article> {
     @Select("SELECT t.name FROM article_tag at INNER JOIN tag t ON at.tag_id = t.id WHERE at.article_id = #{articleId} ORDER BY t.id")
     List<String> selectTagNamesByArticleId(@Param("articleId") Long articleId);
 
+    @Select("SELECT tag_id FROM article_tag WHERE article_id = #{articleId}")
+    List<Long> selectTagIdsByArticleId(@Param("articleId") Long articleId);
+
     @Update("UPDATE article SET like_count = like_count + 1 WHERE id = #{articleId}")
     int incrementLikeCount(@Param("articleId") Long articleId);
 

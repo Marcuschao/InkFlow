@@ -61,6 +61,10 @@ public class ElasticsearchSearchService {
         return list;
     }
 
+    public List<String> relatedTagNames(String keyword, int limit) {
+        return indexClient.aggregateRelatedTagNames(keyword, limit);
+    }
+
     private ArticleSearchHitVo toHitVo(JsonNode hit) {
         ArticleSearchHitVo vo = new ArticleSearchHitVo();
         vo.setId(hit.path("id").asLong());

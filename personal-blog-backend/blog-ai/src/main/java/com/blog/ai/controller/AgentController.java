@@ -56,6 +56,21 @@ public class AgentController {
         return Result.success(agentService.tags(request));
     }
 
+    @PostMapping("/auto-tag")
+    public Result<List<com.blog.common.dto.AutoTagItemDto>> autoTag(@RequestBody com.blog.common.dto.AutoTagRequest request) {
+        return Result.success(agentService.autoTag(request));
+    }
+
+    @PostMapping("/learning-path")
+    public Result<com.blog.common.dto.LearningPathResult> learningPath(@RequestBody com.blog.common.dto.LearningPathRequest request) {
+        return Result.success(agentService.learningPath(request));
+    }
+
+    @GetMapping("/weekly-insight")
+    public Result<String> weeklyInsight() {
+        return Result.success(agentService.weeklyInsight());
+    }
+
     /**
      * 博客问答接口，多Agent协同，基于 Langchain4j 实现 Agent 间的工具调用和对话管理
      *

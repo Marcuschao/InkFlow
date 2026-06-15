@@ -105,7 +105,8 @@
         </section>
       </div>
 
-      <aside class="home-aside" aria-label="猜你喜欢">
+      <aside class="home-aside" aria-label="侧边栏">
+        <HotTagsCard class="home-hot-tags" />
         <n-card title="猜你喜欢">
           <template v-if="!authStore.isLoggedIn">
             <n-empty description="请先登录" size="small" />
@@ -137,6 +138,7 @@ import { NAlert, NCard, NEmpty, NGi, NGrid, NSkeleton, NSpace, NTab, NTabs, NTag
 import { useArticleStore } from '../stores/article';
 import ArticleCard from '../components/ArticleCard.vue';
 import HotSearchCard from '../components/HotSearchCard.vue';
+import HotTagsCard from '../components/knowledge/HotTagsCard.vue';
 import ListSkeleton from '../components/ListSkeleton.vue';
 import Pagination from '../components/Pagination.vue';
 import { fetchAllHotSearch } from '../api/hotSearch';
@@ -345,6 +347,9 @@ watch(
 }
 
 .home-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
   position: sticky;
   top: calc(var(--layout-navbar-bottom) + var(--space-4));
 }

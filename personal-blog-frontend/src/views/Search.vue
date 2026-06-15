@@ -15,6 +15,16 @@
         />
         <n-button type="primary" @click="runSearch">搜索</n-button>
       </div>
+      <n-space v-if="relatedTags.length" class="related-tags" :size="8">
+        <span class="related-label">知识星系：</span>
+        <router-link
+          v-for="t in relatedTags"
+          :key="t.tagId"
+          :to="{ path: '/tags', query: { focus: t.tagId } }"
+        >
+          <n-tag size="small" type="primary" :bordered="false">{{ t.name }}</n-tag>
+        </router-link>
+      </n-space>
       <n-alert v-if="listErr" type="error" class="state-err">{{ listErr }}</n-alert>
       <n-grid v-if="loading" :cols="1" :y-gap="12">
         <n-gi v-for="n in 5" :key="'s-' + n">
@@ -47,7 +57,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { NAlert, NButton, NCard, NEmpty, NGi, NGrid, NInput, NSkeleton } from 'naive-ui';
+import { NAlert, NButton, NCard, NEmpty, NGi, NGrid, NInput, NSkeleton, NSpace, NTag } from 'naive-ui';
 import Pagination from '../components/Pagination.vue';
 import { searchArticles } from '../api/search';
 
@@ -61,7 +71,7 @@ const page = ref(1);
 const pageSize = ref(10);
 const loading = ref(false);
 const searched = ref(false);
-const listErr = ref('');
+const relatedTags = ref([]);
 
 function formatDate(t) {
   if (!t) return '';
@@ -87,8 +97,10 @@ async function load() {
   try {
     const res = await searchArticles({ keyword: q, page: page.value, size: pageSize.value });
     const data = res.data;
-    hits.value = data?.records || [];
-    total.value = Number(data?.total) || 0;
+    const pageData = data?.page || data;
+    hits.value = pageData?.records || [];
+    total.value = Number(pageData?.total) || 0;
+    relatedTags.value = data?.relatedTags || [];
   } catch (e) {
     listErr.value = e?.message || '加载失败';
     hits.value = [];
@@ -132,6 +144,16 @@ watch(
 .search-bar-wrap :deep(.n-input) {
   flex: 1 1 240px;
   max-width: 420px;
+}
+
+.related-tags {
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.related-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .state-err {

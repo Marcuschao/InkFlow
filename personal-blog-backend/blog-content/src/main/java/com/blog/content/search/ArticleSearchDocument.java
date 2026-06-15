@@ -2,6 +2,7 @@ package com.blog.content.search;
 
 import lombok.Data;
 
+import java.util.List;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,4 +18,6 @@ public class ArticleSearchDocument {
     private Integer viewCount;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    private List<Long> tagIds;
+    private List<String> tagNames;
 }

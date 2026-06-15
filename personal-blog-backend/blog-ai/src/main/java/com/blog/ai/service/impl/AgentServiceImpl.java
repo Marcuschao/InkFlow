@@ -1,6 +1,16 @@
 package com.blog.ai.service.impl;
 
 import com.blog.ai.agent.KeywordHelper;
+import com.blog.common.dto.AutoTagItemDto;
+import com.blog.common.dto.AutoTagRequest;
+import com.blog.common.dto.KnowledgeEdgeDto;
+import com.blog.common.dto.KnowledgeGraphDto;
+import com.blog.common.dto.KnowledgeNodeDto;
+import com.blog.common.dto.LearningPathRequest;
+import com.blog.common.dto.LearningPathResult;
+import com.blog.common.dto.LearningPathStepDto;
+import com.blog.common.feign.KnowledgeFeignClient;
+import com.blog.common.support.Result;
 import com.blog.ai.agent.langchain.BlogChatAssistant;
 import com.blog.ai.agent.tools.ArticleSearchTools;
 import com.blog.ai.model.dto.agent.*;
@@ -23,11 +33,14 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,18 +56,21 @@ public class AgentServiceImpl implements AgentService {
     private final ObjectMapper objectMapper;
     private final Optional<BlogChatAssistant> blogChatAssistant;
     private final ArticleSearchTools articleSearchTools;
-    private final ReportStorageService reportStorageService;
+    private final Optional<ReportStorageService> reportStorageService;
+    private final Optional<KnowledgeFeignClient> knowledgeFeignClient;
 
     public AgentServiceImpl(AiService aiService, ArticleMapper articleMapper, ObjectMapper objectMapper,
                             @Autowired(required = false) BlogChatAssistant blogChatAssistant,
                             ArticleSearchTools articleSearchTools,
-                            @Autowired(required = false) ReportStorageService reportStorageService) {
+                            @Autowired(required = false) ReportStorageService reportStorageService,
+                            @Autowired(required = false) KnowledgeFeignClient knowledgeFeignClient) {
         this.aiService = aiService;
         this.articleMapper = articleMapper;
         this.objectMapper = objectMapper;
         this.blogChatAssistant = Optional.ofNullable(blogChatAssistant);
         this.articleSearchTools = articleSearchTools;
-        this.reportStorageService = reportStorageService;
+        this.reportStorageService = Optional.ofNullable(reportStorageService);
+        this.knowledgeFeignClient = Optional.ofNullable(knowledgeFeignClient);
     }
 
     @Override
@@ -419,6 +435,166 @@ public class AgentServiceImpl implements AgentService {
     }
 
     @Override
+    public List<AutoTagItemDto> autoTag(AutoTagRequest request) {
+        if (request == null || !StringUtils.hasText(request.getTitle())) {
+            throw new ServiceException(400, "标题不能为空");
+        }
+        TagsRequest tagsRequest = new TagsRequest();
+        tagsRequest.setTitle(request.getTitle());
+        tagsRequest.setContent(request.getContent());
+        List<String> names = tags(tagsRequest);
+        List<AutoTagItemDto> items = new ArrayList<>();
+        for (String name : names) {
+            AutoTagItemDto item = new AutoTagItemDto();
+            item.setName(name);
+            item.setScore(1.0);
+            items.add(item);
+        }
+        return items;
+    }
+
+    @Override
+    public LearningPathResult learningPath(LearningPathRequest request) {
+        if (request == null) {
+            throw new ServiceException(400, "请求不能为空");
+        }
+        if (request.getStartTagId() != null && request.getEndTagId() != null) {
+            return learningPathBetweenTags(request.getStartTagId(), request.getEndTagId(), request.getGoal());
+        }
+        if (!StringUtils.hasText(request.getGoal())) {
+            throw new ServiceException(400, "目标不能为空");
+        }
+        List<String> keywords = KeywordHelper.fromText(request.getGoal());
+        List<Article> articles = articleMapper.searchPublishedByKeywords(keywords, null, 12);
+        if (articles == null || articles.isEmpty()) {
+            articles = articleMapper.selectList(new QueryWrapper<Article>()
+                    .eq("status", 1).orderByDesc("view_count").last("LIMIT 8"));
+        }
+        String sys = "你是学习路径规划师。根据用户目标和相关文章，输出 JSON 对象："
+                + "{\"name\":\"路径名\",\"steps\":[{\"title\":\"阶段名\",\"description\":\"说明\",\"articleIds\":[1,2]}]}。"
+                + "只使用提供的文章 ID，不要编造。";
+        StringBuilder user = new StringBuilder("学习目标：").append(request.getGoal()).append("\n相关文章：\n");
+        for (Article a : articles) {
+            user.append("ID=").append(a.getId()).append(" 标题=").append(a.getTitle()).append("\n");
+        }
+        return parseLearningPath(aiService.chat(sys, user.toString()), request.getGoal());
+    }
+
+    @Override
+    public String weeklyInsight() {
+        WeeklyReportRequest req = new WeeklyReportRequest();
+        req.setFocus("知识星系趋势：本周热门标签方向、新兴技术主题、推荐阅读路径");
+        return weeklyReport(req);
+    }
+
+    private LearningPathResult learningPathBetweenTags(Long startTagId, Long endTagId, String goal) {
+        List<Long> path = findTagPath(startTagId, endTagId);
+        LearningPathResult result = new LearningPathResult();
+        result.setName(StringUtils.hasText(goal) ? goal : "标签路径探索");
+        List<LearningPathStepDto> steps = new ArrayList<>();
+        for (int i = 0; i < path.size(); i++) {
+            LearningPathStepDto step = new LearningPathStepDto();
+            step.setTitle("节点 " + (i + 1));
+            step.setDescription("标签 ID: " + path.get(i));
+            step.setArticleIds(List.of());
+            steps.add(step);
+        }
+        result.setSteps(steps);
+        return result;
+    }
+
+    private List<Long> findTagPath(Long start, Long end) {
+        if (start == null || end == null || start.equals(end)) {
+            return start != null ? List.of(start) : List.of();
+        }
+        if (knowledgeFeignClient.isEmpty()) {
+            return List.of(start, end);
+        }
+        try {
+            Result<KnowledgeGraphDto> graphResult = knowledgeFeignClient.get().getGraph();
+            if (graphResult == null || graphResult.getData() == null || graphResult.getData().getEdges() == null) {
+                return List.of(start, end);
+            }
+            Map<Long, List<Long>> adj = new HashMap<>();
+            for (KnowledgeEdgeDto e : graphResult.getData().getEdges()) {
+                if (!"tag-tag".equals(e.getType()) && e.getType() != null) {
+                    continue;
+                }
+                Long a = parseRefId(e.getSource());
+                Long b = parseRefId(e.getTarget());
+                if (a == null || b == null) {
+                    continue;
+                }
+                adj.computeIfAbsent(a, k -> new ArrayList<>()).add(b);
+                adj.computeIfAbsent(b, k -> new ArrayList<>()).add(a);
+            }
+            Queue<Long> queue = new LinkedList<>();
+            Map<Long, Long> prev = new HashMap<>();
+            queue.add(start);
+            prev.put(start, null);
+            while (!queue.isEmpty()) {
+                Long cur = queue.poll();
+                if (end.equals(cur)) {
+                    break;
+                }
+                for (Long next : adj.getOrDefault(cur, List.of())) {
+                    if (prev.containsKey(next)) {
+                        continue;
+                    }
+                    prev.put(next, cur);
+                    queue.add(next);
+                }
+            }
+            if (!prev.containsKey(end)) {
+                return List.of(start, end);
+            }
+            LinkedList<Long> path = new LinkedList<>();
+            Long cur = end;
+            while (cur != null) {
+                path.addFirst(cur);
+                cur = prev.get(cur);
+            }
+            return path;
+        } catch (Exception ex) {
+            return List.of(start, end);
+        }
+    }
+
+    private static Long parseRefId(String nodeId) {
+        if (!StringUtils.hasText(nodeId) || !nodeId.startsWith("tag:")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(nodeId.substring(4));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private LearningPathResult parseLearningPath(String raw, String fallbackName) {
+        LearningPathResult result = new LearningPathResult();
+        result.setName(fallbackName);
+        result.setSteps(List.of());
+        if (!StringUtils.hasText(raw)) {
+            return result;
+        }
+        String s = raw.trim();
+        int l = s.indexOf('{');
+        int r = s.lastIndexOf('}');
+        if (l >= 0 && r > l) {
+            s = s.substring(l, r + 1);
+        }
+        try {
+            LearningPathResult parsed = objectMapper.readValue(s, LearningPathResult.class);
+            if (parsed != null && parsed.getSteps() != null) {
+                return parsed;
+            }
+        } catch (Exception ignored) {
+        }
+        return result;
+    }
+
+    @Override
     public String weeklyReport(WeeklyReportRequest request) {
         if (request == null) {
             request = new WeeklyReportRequest();
@@ -472,14 +648,14 @@ public class AgentServiceImpl implements AgentService {
     }
 
     private void persistWeeklyReport(String markdown, LocalDate weekStart) {
-        if (reportStorageService == null || !StringUtils.hasText(markdown)) {
+        if (reportStorageService.isEmpty() || !StringUtils.hasText(markdown)) {
             return;
         }
         if (markdown.startsWith("暂无")) {
             return;
         }
         try {
-            reportStorageService.saveWeeklyReport("周报 " + weekStart, markdown);
+            reportStorageService.get().saveWeeklyReport("周报 " + weekStart, markdown);
         } catch (Exception ignored) {
         }
     }

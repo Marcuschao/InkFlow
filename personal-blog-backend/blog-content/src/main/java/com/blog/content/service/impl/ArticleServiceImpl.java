@@ -1,5 +1,9 @@
 package com.blog.content.service.impl;
 
+import com.blog.content.cache.MetaCacheService;
+import com.blog.content.knowledge.cache.KnowledgeGraphCacheService;
+import com.blog.content.config.properties.KnowledgeProperties;
+import com.blog.content.knowledge.service.KnowledgeAutoTagService;
 import com.blog.content.cache.ArticleBloomFilter;
 import com.blog.content.cache.ArticleCacheService;
 import com.blog.content.concurrency.ArticleDetailRequestCoalescer;
@@ -73,6 +77,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private ArticleContentCheckService articleContentCheckService;
     @Autowired
     private ArticleDetailRequestCoalescer articleDetailRequestCoalescer;
+    @Autowired(required = false)
+    private MetaCacheService metaCacheService;
+    @Autowired(required = false)
+    private KnowledgeGraphCacheService knowledgeGraphCacheService;
+    @Autowired(required = false)
+    private KnowledgeAutoTagService knowledgeAutoTagService;
+    @Autowired(required = false)
+    private KnowledgeProperties knowledgeProperties;
 
     @Override
     @ReadOnly
@@ -311,6 +323,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setId(null);
         article.setAuthorId(userId);
         prepareSubmission(article, null, isAdmin);
+        tagNames = resolveTagNames(article, tagNames);
         createArticle(article, tagNames);
         Article fresh = articleMapper.selectById(article.getId());
         return submitResult(fresh);
@@ -326,6 +339,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         requireOwnerOrAdmin(previous, userId, isAdmin);
         article.setAuthorId(previous.getAuthorId());
         prepareSubmission(article, previous, isAdmin);
+        tagNames = resolveTagNames(article, tagNames);
         updateArticle(article, tagNames);
         Article fresh = articleMapper.selectById(article.getId());
         return submitResult(fresh);
@@ -503,5 +517,20 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (!CollectionUtils.isEmpty(tagIdsToInsert)) {
             articleMapper.insertArticleTags(articleId, tagIdsToInsert);
         }
+        if (metaCacheService != null) {
+            metaCacheService.evictTags();
+        }
+        if (knowledgeGraphCacheService != null) {
+            knowledgeGraphCacheService.evictGraph();
+        }
+    }
+
+    private List<String> resolveTagNames(Article article, List<String> tagNames) {
+        if (knowledgeProperties != null && knowledgeProperties.isAutoTagEnabled()
+                && knowledgeAutoTagService != null
+                && (CollectionUtils.isEmpty(tagNames))) {
+            return knowledgeAutoTagService.generateTags(article.getTitle(), article.getContent());
+        }
+        return tagNames;
     }
 }

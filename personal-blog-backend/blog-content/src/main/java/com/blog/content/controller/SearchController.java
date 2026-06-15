@@ -1,9 +1,8 @@
 package com.blog.content.controller;
 
-import com.blog.content.common.support.PageResult;
 import com.blog.content.common.support.Result;
-import com.blog.content.model.vo.search.ArticleSearchHitVo;
 import com.blog.content.model.vo.search.ArticleSearchSuggestVo;
+import com.blog.content.model.vo.search.SearchResultVo;
 import com.blog.content.model.dto.search.SearchPageQuery;
 import com.blog.content.service.SearchService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +21,8 @@ public class SearchController {
     private SearchService searchService;
 
     @GetMapping
-    public Result<PageResult<ArticleSearchHitVo>> search(SearchPageQuery query) {
-        return Result.success(searchService.searchPublished(query));
+    public Result<SearchResultVo> search(SearchPageQuery query) {
+        return Result.success(searchService.searchWithRelated(query));
     }
 
     @GetMapping("/suggest")

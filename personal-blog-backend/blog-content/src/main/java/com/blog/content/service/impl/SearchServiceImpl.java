@@ -8,6 +8,11 @@ import com.blog.content.model.entity.Article;
 import com.blog.content.model.vo.search.ArticleSearchHitVo;
 import com.blog.content.model.vo.search.ArticleSearchSuggestVo;
 import com.blog.content.search.ElasticsearchSearchService;
+import com.blog.content.model.vo.search.SearchResultVo;
+import com.blog.content.model.vo.knowledge.RelatedTagVo;
+import com.blog.content.knowledge.cache.KnowledgeGraphCacheService;
+import com.blog.content.mapper.TagMapper;
+import com.blog.content.model.entity.Tag;
 import com.blog.content.service.ArticleService;
 import com.blog.content.service.SearchService;
 import com.blog.content.common.util.HighlightUtils;
@@ -18,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,6 +41,12 @@ public class SearchServiceImpl implements SearchService {
 
     @Autowired(required = false)
     private ElasticsearchSearchService meilisearchSearchService;
+
+    @Autowired(required = false)
+    private KnowledgeGraphCacheService knowledgeGraphCacheService;
+
+    @Autowired
+    private TagMapper tagMapper;
 
     @Override
     public PageResult<ArticleSearchHitVo> searchPublished(SearchPageQuery query) {
@@ -55,6 +67,41 @@ public class SearchServiceImpl implements SearchService {
             }
         }
         return searchPublishedMysql(query);
+    }
+
+    @Override
+    public SearchResultVo searchWithRelated(SearchPageQuery query) {
+        PageResult<ArticleSearchHitVo> page = searchPublished(query);
+        SearchResultVo vo = new SearchResultVo();
+        vo.setPage(page);
+        vo.setRelatedTags(resolveRelatedTags(query.getKeyword()));
+        return vo;
+    }
+
+    private List<RelatedTagVo> resolveRelatedTags(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return Collections.emptyList();
+        }
+        List<String> names = Collections.emptyList();
+        if (searchProperties.isEnabled() && meilisearchSearchService != null && meilisearchSearchService.canSearch()) {
+            names = meilisearchSearchService.relatedTagNames(keyword.trim(), 8);
+        }
+        List<RelatedTagVo> result = new ArrayList<>();
+        for (String name : names) {
+            Tag tag = tagMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Tag>().eq("name", name));
+            if (tag == null) {
+                continue;
+            }
+            RelatedTagVo rt = new RelatedTagVo();
+            rt.setTagId(tag.getId());
+            rt.setName(tag.getName());
+            rt.setWeight(1.0);
+            result.add(rt);
+            if (knowledgeGraphCacheService != null) {
+                knowledgeGraphCacheService.incrementSearchTag(tag.getId());
+            }
+        }
+        return result;
     }
 
     @Override

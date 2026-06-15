@@ -33,6 +33,10 @@
             <n-empty v-else description="暂无简介" />
           </div>
 
+          <div v-else-if="t.id === 'landscape'" class="tab-panel">
+            <UserLandscapePanel v-if="u?.id" :user-id="u.id" />
+          </div>
+
           <div v-else-if="t.id === 'following'" class="tab-panel">
             <n-skeleton v-if="listLoading" height="128px" :sharp="false" />
             <n-empty v-else-if="!followingList.length" description="暂无关注" />
@@ -82,6 +86,7 @@ import { getFollowStatus, fetchFollowers, fetchFollowing } from '../api/interact
 import FollowButton from '../components/FollowButton.vue';
 import UserAvatar from '../components/UserAvatar.vue';
 import UserListItem from '../components/UserListItem.vue';
+import UserLandscapePanel from '../components/knowledge/UserLandscapePanel.vue';
 
 const route = useRoute();
 const loading = ref(true);
@@ -94,6 +99,7 @@ const followersList = ref([]);
 
 const tabs = [
   { id: 'profile', label: '资料' },
+  { id: 'landscape', label: '知识版图' },
   { id: 'following', label: '关注' },
   { id: 'followers', label: '粉丝' },
 ];

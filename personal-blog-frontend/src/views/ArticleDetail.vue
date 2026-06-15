@@ -127,6 +127,10 @@
             <n-empty v-else description="暂无推荐" />
           </section>
 
+          <section v-if="articleIdNum" class="kg-section" aria-label="知识星系">
+            <KnowledgeGraphCard :article-id="articleIdNum" />
+          </section>
+
           <section v-if="articleStore.currentArticle" class="comments-section" aria-label="评论">
             <h2 class="comments-title">评论</h2>
             <n-skeleton v-if="commentsLoading" height="100px" />
@@ -235,6 +239,7 @@ import {
 import { useArticleStore } from '../stores/article';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import ArticleCard from '../components/ArticleCard.vue';
+import KnowledgeGraphCard from '../components/knowledge/KnowledgeGraphCard.vue';
 import ArticleActionBar from '../components/ArticleActionBar.vue';
 import FollowButton from '../components/FollowButton.vue';
 import UserAvatar from '../components/UserAvatar.vue';
