@@ -1,5 +1,5 @@
 <template>
-  <div class="diary-list-page">
+  <div class="diary-list-page ds-page">
     <div class="container">
       <header class="list-head" style="margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
         <div>

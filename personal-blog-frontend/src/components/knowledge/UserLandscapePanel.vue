@@ -1,6 +1,7 @@
 <template>
   <div class="landscape-panel">
-    <n-spin :show="loading">
+    <n-skeleton v-if="loading" height="120px" :sharp="false" />
+    <template v-else>
       <n-empty v-if="!nodes.length" description="暂无知识版图数据" />
       <div v-else class="landscape-cloud">
         <router-link
@@ -14,13 +15,13 @@
           <span class="landscape-src">{{ sourceLabel(n.source) }}</span>
         </router-link>
       </div>
-    </n-spin>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from 'vue';
-import { NEmpty, NSpin, NTag } from 'naive-ui';
+import { NEmpty, NSkeleton, NTag } from 'naive-ui';
 import { getUserLandscape } from '../../api/knowledge';
 import { useReadingHistory } from '../../composables/useReadingHistory';
 

@@ -213,7 +213,7 @@ async function send() {
   font-weight: 800;
   font-size: 0.95rem;
   color: #fff;
-  background: var(--gradient-cta);
+  background: var(--gradient-brand);
   box-shadow: var(--shadow-chat);
 }
 
@@ -362,7 +362,7 @@ async function send() {
   font-size: 0.82rem;
   cursor: pointer;
   color: #fff;
-  background: var(--gradient-cta);
+  background: var(--gradient-brand);
   font-family: inherit;
 }
 

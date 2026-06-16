@@ -20,6 +20,7 @@ import { useAuthStore } from './stores/auth';
 import { useNotificationStore } from './stores/notification';
 import { useToastStore } from './stores/toast';
 import { useTheme } from './composables/useTheme';
+import { themeOverrides } from './theme/naiveTheme';
 import { mountClickRipple } from './composables/useClickRipple';
 import { connect, disconnect, onNotification } from './services/websocket';
 import { pingPresence } from './api/chat';
@@ -28,7 +29,7 @@ const siteStore = useSiteStore();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const toastStore = useToastStore();
-const { isDark, naiveTheme } = useTheme();
+const { naiveTheme } = useTheme();
 
 let stopRipple = () => {};
 let stopNotifListener = () => {};
@@ -115,25 +116,18 @@ onUnmounted(() => {
     :locale="zhCN"
     :date-locale="dateZhCN"
     :theme="naiveTheme"
-    :theme-overrides="{
-      common: {
-        primaryColor: '#2563eb',
-        primaryColorHover: '#1d4ed8',
-        primaryColorPressed: '#1e40af',
-        borderRadius: '6px',
-        fontFamily: 'Quicksand, system-ui, sans-serif',
-      },
-    }"
+    :theme-overrides="themeOverrides"
   >
     <n-message-provider>
       <n-dialog-provider>
         <div id="app-wrapper">
-          <Navbar v-model:dark="isDark" />
+          <Navbar />
+          <div class="nav-layout-spacer" aria-hidden="true" />
           <OfflineBanner />
           <main class="main-content">
-            <RouterView v-slot="{ Component }">
+            <RouterView v-slot="{ Component, route }">
               <Transition name="page-fade" mode="out-in">
-                <component :is="Component" />
+                <component :is="Component" v-if="Component" :key="route.path" />
               </Transition>
             </RouterView>
           </main>
@@ -170,7 +164,7 @@ onUnmounted(() => {
 <style>
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.22s var(--ease-out-soft), transform 0.22s var(--ease-out-soft);
+  transition: opacity 0.2s var(--ease-out-soft), transform 0.2s var(--ease-out-soft);
 }
 
 .page-fade-enter-from,

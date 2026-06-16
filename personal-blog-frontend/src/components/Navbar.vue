@@ -1,5 +1,6 @@
 <template>
   <header
+    ref="navbarRef"
     class="navbar"
     :class="{ scrolled: isScrolled, 'nav-hidden': hideNav, 'navbar-menu-open': isMenuOpen }"
   >
@@ -15,9 +16,7 @@
           aria-controls="primary-nav"
           @click="toggleMenu"
         >
-          <span class="bar"></span>
-          <span class="bar"></span>
-          <span class="bar"></span>
+          <n-icon :component="isMenuOpen ? CloseOutline : MenuOutline" :size="24" />
         </button>
         <div id="primary-nav" class="nav-links" :class="{ open: isMenuOpen }">
           <div v-if="!authStore.isLoggedIn && isMobileNav && isMenuOpen" class="nav-auth-actions">
@@ -121,17 +120,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { NMenu, NBadge, NDropdown, NSwitch, NIcon } from 'naive-ui';
-import { NotificationsOutline, Moon, SunnyOutline } from '@vicons/ionicons5';
+import { NMenu, NBadge, NDropdown, NIcon } from 'naive-ui';
+import { NotificationsOutline, MenuOutline, CloseOutline } from '@vicons/ionicons5';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { useSiteStore } from '../stores/site';
 import UserAvatar from './UserAvatar.vue';
 import SearchSuggest from './SearchSuggest.vue';
-
-const dark = defineModel('dark', { type: Boolean, default: false });
 
 const route = useRoute();
 const router = useRouter();
@@ -144,7 +141,33 @@ const isScrolled = ref(false);
 const hideNav = ref(false);
 const userMenuOpen = ref(false);
 const navUserWrapRef = ref(null);
+const navbarRef = ref(null);
 let lastY = 0;
+let navResizeObserver = null;
+
+function syncNavLayoutOffset() {
+  if (!window.matchMedia('(min-width: 1024px)').matches) {
+    document.documentElement.style.removeProperty('--layout-navbar-bottom');
+    document.documentElement.style.removeProperty('--layout-main-pad-top');
+    return;
+  }
+  const el = navbarRef.value?.querySelector('.nav-inner') || navbarRef.value;
+  if (!el) return;
+  const bottom = Math.ceil(el.getBoundingClientRect().height);
+  const gap = 24;
+  document.documentElement.style.setProperty('--layout-navbar-bottom', `${bottom}px`);
+  document.documentElement.style.setProperty('--layout-main-pad-top', `${bottom + gap}px`);
+}
+
+function bindNavResizeObserver() {
+  navResizeObserver?.disconnect();
+  navResizeObserver = null;
+  if (typeof ResizeObserver === 'undefined') return;
+  const el = navbarRef.value?.querySelector('.nav-inner') || navbarRef.value;
+  if (!el) return;
+  navResizeObserver = new ResizeObserver(() => syncNavLayoutOffset());
+  navResizeObserver.observe(el);
+}
 
 const unreadCount = computed(() => notificationStore.unreadCount);
 
@@ -273,18 +296,45 @@ const onScroll = () => {
     lastY = y;
     return;
   }
-  hideNav.value = y > lastY && y > 96;
-  lastY = y;
+  const delta = y - lastY;
+  if (y <= 96) {
+    hideNav.value = false;
+  } else if (delta > 10) {
+    hideNav.value = true;
+  } else if (delta < -10) {
+    hideNav.value = false;
+  }
+  if (Math.abs(delta) >= 10) {
+    lastY = y;
+  }
 };
 
 onMounted(() => {
   syncMobileNav();
+  nextTick(() => {
+    syncNavLayoutOffset();
+    bindNavResizeObserver();
+  });
   window.addEventListener('resize', syncMobileNav, { passive: true });
+  window.addEventListener('resize', syncNavLayoutOffset, { passive: true });
   lastY = window.scrollY || 0;
   window.addEventListener('scroll', onScroll, { passive: true });
   document.addEventListener('click', onDocClick);
   if (authStore.isLoggedIn) refreshUnread();
 });
+
+watch(
+  () => authStore.isLoggedIn,
+  () => nextTick(() => {
+    syncNavLayoutOffset();
+    bindNavResizeObserver();
+  })
+);
+
+watch(
+  () => route.path,
+  () => nextTick(syncNavLayoutOffset)
+);
 
 watch(
   () => authStore.isLoggedIn,
@@ -354,31 +404,28 @@ watch(isMenuOpen, (open) => {
 });
 
 onUnmounted(() => {
+  navResizeObserver?.disconnect();
+  navResizeObserver = null;
   if (isMenuOpen.value) {
     unlockBodyScroll();
   }
   window.removeEventListener('resize', syncMobileNav);
+  window.removeEventListener('resize', syncNavLayoutOffset);
   window.removeEventListener('scroll', onScroll);
   document.removeEventListener('click', onDocClick);
+  document.documentElement.style.removeProperty('--layout-navbar-bottom');
+  document.documentElement.style.removeProperty('--layout-main-pad-top');
 });
 </script>
 
 <style scoped>
 .navbar {
   position: fixed;
-  top: var(--layout-navbar-top);
+  top: 0;
   left: 0;
   right: 0;
   z-index: var(--z-nav);
   transition: transform var(--transition-smooth), box-shadow var(--transition-fast);
-}
-
-@media (min-width: 1024px) {
-  .navbar {
-    left: var(--nav-float-gap);
-    right: var(--nav-float-gap);
-    width: auto;
-  }
 }
 
 .navbar.nav-hidden:not(.navbar-menu-open) {
@@ -390,8 +437,7 @@ onUnmounted(() => {
 }
 
 .navbar.scrolled .nav-inner {
-  box-shadow: var(--shadow-sm);
-  background: var(--color-surface);
+  box-shadow: var(--shadow-nav);
 }
 
 .nav-inner {
@@ -399,24 +445,12 @@ onUnmounted(() => {
   min-height: var(--nav-height);
   display: flex;
   align-items: center;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--color-border);
-  box-shadow: none;
-  transition: background var(--transition-fast), box-shadow var(--transition-fast),
-    min-height var(--transition-fast);
-}
-
-@media (min-width: 1024px) {
-  .nav-inner {
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--color-border);
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: var(--shadow-md);
-  }
-}
-
-.navbar.scrolled .nav-inner {
-  min-height: 3.5rem;
+  box-shadow: var(--shadow-nav);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .nav-row {
@@ -424,13 +458,21 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: var(--space-2);
+}
+
+@media (min-width: 1024px) {
+  .nav-links {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .logo {
-  font-family: var(--font-display), var(--font-ui);
-  font-weight: 700;
-  font-size: 1.35rem;
-  letter-spacing: 0.02em;
+  font-family: var(--font-ui);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-lg);
+  letter-spacing: 0;
   text-decoration: none;
   color: var(--color-text);
   transition: color var(--transition-fast);
@@ -442,43 +484,20 @@ onUnmounted(() => {
 
 .menu-toggle {
   display: none;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 5px;
   width: 44px;
   height: 44px;
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--color-text);
 }
 
 .menu-toggle:focus-visible {
   outline: 2px solid var(--color-primary);
-}
-
-.bar {
-  display: block;
-  width: 22px;
-  height: 2px;
-  margin: 0 auto;
-  background: currentColor;
-  border-radius: var(--radius-pill);
-  transition: transform var(--transition-fast), opacity var(--transition-fast);
-}
-
-.menu-toggle.open .bar:nth-child(1) {
-  transform: translateY(7px) rotate(45deg);
-}
-
-.menu-toggle.open .bar:nth-child(2) {
-  opacity: 0;
-}
-
-.menu-toggle.open .bar:nth-child(3) {
-  transform: translateY(-7px) rotate(-45deg);
 }
 
 .nav-write-btn {
@@ -538,6 +557,25 @@ onUnmounted(() => {
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content) {
   padding: 0 var(--space-3);
+  position: relative;
+}
+
+.nav-naive-menu--desktop :deep(.n-menu-item-content::after) {
+  content: '';
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: 4px;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transition: transform var(--transition-smooth);
+}
+
+.nav-naive-menu--desktop :deep(.n-menu-item-content:hover::after),
+.nav-naive-menu--desktop :deep(.n-menu-item-content--selected::after) {
+  transform: scaleX(1);
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content-header) {
@@ -711,16 +749,6 @@ onUnmounted(() => {
   white-space: nowrap;
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
-}
-
-.nav-dark-wrap {
-  display: flex;
-  align-items: center;
-}
-
-.nav-dark-switch {
-  display: flex;
-  align-items: center;
 }
 
 @media (max-width: 1023px) {

@@ -2,9 +2,15 @@
   <div class="home-page ds-page">
     <div class="container home-layout">
       <div class="home-main">
-        <header class="ds-page-hero">
-          <h1 class="ds-page-title ds-page-title-lg">{{ homeTab === 'feed' ? '关注动态' : '最新文章' }}</h1>
-          <p class="ds-page-sub">{{ homeTab === 'feed' ? '你关注的人最近 7 天发布的内容' : '探索想法、笔记与技术碎片' }}</p>
+        <div class="home-hero-banner">
+          <div>
+            <h2>{{ siteStore.siteTitle || '知识平台' }}</h2>
+            <p>{{ homeTab === 'feed' ? '关注动态 · 你关注的人最近发布的内容' : '探索想法、笔记与技术碎片' }}</p>
+          </div>
+        </div>
+
+        <header class="ds-page-hero home-page-head">
+          <h1 class="ds-page-title">{{ homeTab === 'feed' ? '关注动态' : '最新文章' }}</h1>
         </header>
 
         <n-tabs
@@ -41,9 +47,9 @@
           <ListSkeleton v-if="listingLoading" />
           <n-alert v-else-if="articleStore.listError" type="error" class="home-list-err">{{ articleStore.listError }}</n-alert>
           <n-empty v-else-if="!articleStore.articles.length" description="暂无文章" />
-          <n-grid v-else :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-            <n-gi v-for="(article, idx) in articleStore.articles" :key="article.id" span="24 m:12 l:8">
-              <ArticleCard class="card-enter" :article="article" :style="{ '--stagger': `${Math.min(idx, 8) * 45}ms` }" />
+          <n-grid v-else cols="1 m:2 l:3" :x-gap="16" :y-gap="16" class="home-article-grid" responsive="screen">
+            <n-gi v-for="(article, idx) in articleStore.articles" :key="article.id">
+              <ArticleCard hide-cover class="card-enter" :article="article" :style="{ '--stagger': `${Math.min(idx, 8) * 45}ms` }" />
             </n-gi>
           </n-grid>
           <Pagination
@@ -55,15 +61,16 @@
         </template>
 
         <template v-else>
-          <n-grid v-if="feedLoading" :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-            <n-gi v-for="n in 6" :key="'fsk-' + n" span="24 m:12 l:8">
+          <n-grid v-if="feedLoading" cols="1 m:2 l:3" :x-gap="16" :y-gap="16" responsive="screen">
+            <n-gi v-for="n in 6" :key="'fsk-' + n">
               <n-card><n-skeleton text :repeat="3" /></n-card>
             </n-gi>
           </n-grid>
           <n-empty v-else-if="!feedArticles.length" description="关注用户后，这里会显示他们的新文章" />
-          <n-grid v-else :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-            <n-gi v-for="(article, idx) in feedArticles" :key="article.id" span="24 m:12 l:8">
+          <n-grid v-else cols="1 m:2 l:3" :x-gap="16" :y-gap="16" class="home-article-grid" responsive="screen">
+            <n-gi v-for="(article, idx) in feedArticles" :key="article.id">
               <ArticleCard
+                hide-cover
                 class="card-enter"
                 :article="article"
                 :like-count="article.likeCount"
@@ -107,7 +114,7 @@
 
       <aside class="home-aside" aria-label="侧边栏">
         <HotTagsCard class="home-hot-tags" />
-        <n-card title="猜你喜欢">
+        <n-card title="猜你喜欢" class="aside-rec-card ds-surface-card">
           <template v-if="!authStore.isLoggedIn">
             <n-empty description="请先登录" size="small" />
           </template>
@@ -147,6 +154,7 @@ import { usePageViewHome } from '../composables/usePageView';
 import { useAuthStore } from '../stores/auth';
 import { agentRecommendHome } from '../api/agent';
 import { fetchFeed } from '../api/interaction';
+import { useSiteStore } from '../stores/site';
 import { useReadingHistory } from '../composables/useReadingHistory';
 
 usePageViewHome();
@@ -154,6 +162,7 @@ const articleStore = useArticleStore();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const siteStore = useSiteStore();
 const { getRecentArticleIds } = useReadingHistory();
 
 const currentTagId = ref(null);
@@ -162,7 +171,7 @@ const homeTab = ref('latest');
 const feedLoading = ref(false);
 const feedArticles = ref([]);
 const feedPage = ref(1);
-const feedSize = ref(10);
+const feedSize = ref(9);
 const feedTotal = ref(0);
 const recItems = ref([]);
 const recLoading = ref(false);
@@ -323,35 +332,43 @@ watch(
   min-width: 0;
 }
 
+.home-page-head {
+  text-align: left;
+  margin-bottom: var(--space-8);
+}
+
+.home-page-head .ds-page-title {
+  font-size: var(--text-xl);
+}
+
 .home-tabs {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
-.home-tab-btn {
-  border: none;
-  background: none;
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  border-radius: var(--radius-sm);
+.tag-row {
+  margin-bottom: var(--space-8);
 }
 
-.home-tab-btn.active {
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
+.home-article-grid {
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 768px) {
+  .home-article-grid {
+    --n-gap: 24px !important;
+  }
 }
 
 .home-aside {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
   position: sticky;
   top: calc(var(--layout-navbar-bottom) + var(--space-4));
+}
+
+.aside-rec-card :deep(.n-card-header) {
+  padding-bottom: var(--space-2);
 }
 
 .aside-card {

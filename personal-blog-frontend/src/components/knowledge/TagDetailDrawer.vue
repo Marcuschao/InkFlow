@@ -1,8 +1,8 @@
 <template>
   <n-drawer v-model:show="visible" :width="360" placement="right">
     <n-drawer-content :title="detail?.name || '标签详情'" closable>
-      <n-spin :show="loading">
-        <n-space v-if="detail" vertical :size="16">
+      <TagDetailSkeleton v-if="loading" />
+      <n-space v-else-if="detail" vertical :size="16">
           <div class="meta-row">
             <span class="muted">{{ detail.articleCount || 0 }} 篇文章</span>
             <n-button
@@ -36,14 +36,14 @@
           </div>
           <n-empty v-else description="暂无文章" size="small" />
         </n-space>
-      </n-spin>
     </n-drawer-content>
   </n-drawer>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
-import { NButton, NDrawer, NDrawerContent, NEmpty, NSpace, NSpin, NTag } from 'naive-ui';
+import { NButton, NDrawer, NDrawerContent, NEmpty, NSpace, NTag } from 'naive-ui';
+import TagDetailSkeleton from '../skeleton/TagDetailSkeleton.vue';
 import { getKnowledgeNode, subscribeTag, unsubscribeTag } from '../../api/knowledge';
 import { useAuthStore } from '../../stores/auth';
 import ArticleCard from '../ArticleCard.vue';

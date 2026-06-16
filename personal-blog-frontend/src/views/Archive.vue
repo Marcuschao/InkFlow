@@ -6,7 +6,7 @@
         <p class="ds-page-sub">按时间浏览全部文章</p>
       </header>
 
-      <ListSkeleton v-if="loading" :count="3" span="24" />
+      <ListSkeleton v-if="loading" :count="3" />
 
       <div v-else-if="archives.length">
         <n-timeline>

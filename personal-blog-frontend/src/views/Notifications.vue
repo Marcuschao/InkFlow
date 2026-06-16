@@ -12,26 +12,23 @@
     </header>
 
     <div class="notif-panel">
-      <n-skeleton v-if="loading" height="128px" :sharp="false" class="notif-skeleton" />
+      <NotificationSkeleton v-if="loading" />
       <n-empty v-else-if="!items.length" description="暂无消息" class="notif-empty" />
-      <n-list v-else class="notif-list" hoverable clickable>
-        <n-list-item
+      <div v-else class="notif-list">
+        <div
           v-for="item in items"
           :key="item.id"
-          :class="{ unread: !item.read }"
+          :class="['notif-card', 'ds-hover-lift', { unread: !item.read }]"
         >
-          <template #prefix>
-            <UserAvatar :src="item.actorAvatar" :name="item.actorNickname" :size="40" />
-          </template>
+          <span v-if="!item.read" class="unread-dot" aria-hidden="true" />
+          <UserAvatar :src="item.actorAvatar" :name="item.actorNickname" :size="40" />
           <div class="notif-body" @click="openItem(item)">
             <span class="content">{{ item.content }}</span>
             <time class="time">{{ formatTime(item.createTime) }}</time>
           </div>
-          <template #suffix>
-            <n-button quaternary size="small" @click.stop="onDelete(item.id)">删除</n-button>
-          </template>
-        </n-list-item>
-      </n-list>
+          <n-button quaternary size="small" @click.stop="onDelete(item.id)">删除</n-button>
+        </div>
+      </div>
     </div>
 
     <Pagination
@@ -47,7 +44,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { NButton, NEmpty, NList, NListItem, NSkeleton } from 'naive-ui';
+import { NButton, NEmpty } from 'naive-ui';
+import NotificationSkeleton from '../components/skeleton/NotificationSkeleton.vue';
 import Pagination from '../components/Pagination.vue';
 import UserAvatar from '../components/UserAvatar.vue';
 import {
@@ -158,35 +156,54 @@ onMounted(() => loadPage(1));
 }
 
 .notif-panel {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  overflow: hidden;
-}
-
-.notif-panel :deep(.n-list) {
-  border: none;
-  box-shadow: none;
-  border-radius: 0;
   background: transparent;
 }
 
-.notif-skeleton {
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   padding: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  transition: background var(--transition-fast);
+}
+
+.notif-card.unread {
+  background: var(--color-primary-soft);
+}
+
+.unread-dot {
+  position: absolute;
+  left: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.notif-card.unread {
+  padding-left: calc(var(--space-4) + var(--space-3));
 }
 
 .notif-empty {
   padding: var(--space-8) var(--space-4);
 }
 
-.unread {
-  background: var(--color-primary-soft);
-}
-
 .notif-body {
+  flex: 1;
   cursor: pointer;
   min-width: 0;
-  padding: var(--space-1) 0;
 }
 
 .content {
@@ -228,20 +245,8 @@ onMounted(() => loadPage(1));
   }
 
   .notifications-page .notif-panel {
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .notifications-page .notif-list :deep(.n-list-item) {
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .notifications-page .notif-list :deep(.n-list-item .n-list-item__prefix) {
-    margin-right: var(--space-3);
-  }
-
-  .notifications-page .notif-list :deep(.n-list-item .n-list-item__suffix) {
-    margin-left: var(--space-2);
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 </style>

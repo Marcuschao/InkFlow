@@ -1,6 +1,6 @@
 <template>
   <div class="profile-page ds-page container">
-    <n-skeleton v-if="loading" height="128px" :sharp="false" />
+    <UserProfileSkeleton v-if="loading" />
     <n-empty v-else-if="!user" description="无法加载资料" />
     <n-card v-else class="profile-panel">
       <template #header>
@@ -132,6 +132,7 @@ import { useToastStore } from '../stores/toast';
 import ArticleCard from '../components/ArticleCard.vue';
 import UserLandscapePanel from '../components/knowledge/UserLandscapePanel.vue';
 import UserAvatar from '../components/UserAvatar.vue';
+import UserProfileSkeleton from '../components/skeleton/UserProfileSkeleton.vue';
 import UserListItem from '../components/UserListItem.vue';
 import Pagination from '../components/Pagination.vue';
 import { fetchOAuthBindings, bindGithub, unbindGithub } from '../api/oauth';

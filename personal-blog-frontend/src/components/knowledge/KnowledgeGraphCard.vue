@@ -1,23 +1,23 @@
 <template>
-  <n-card title="知识星系" size="small" class="kg-card">
-    <n-spin :show="loading">
-      <KnowledgeGraph
-        v-if="graphData.nodes?.length"
-        :graph-data="graphData"
-        @node-click="onNodeClick"
-        @node-dblclick="onNodeDblclick"
-      />
-      <n-empty v-else description="暂无关联" size="small" />
-    </n-spin>
+  <n-card title="知识星系" size="small" class="kg-card ds-surface-card">
+    <KnowledgeGraphSkeleton v-if="loading" />
+    <KnowledgeGraph
+      v-else-if="graphData.nodes?.length"
+      :graph-data="graphData"
+      @node-click="onNodeClick"
+      @node-dblclick="onNodeDblclick"
+    />
+    <n-empty v-else description="暂无关联" size="small" />
   </n-card>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { NCard, NEmpty, NSpin } from 'naive-ui';
+import { NCard, NEmpty } from 'naive-ui';
 import { getKnowledgeSubgraph } from '../../api/knowledge';
 import KnowledgeGraph from './KnowledgeGraph.vue';
+import KnowledgeGraphSkeleton from '../skeleton/KnowledgeGraphSkeleton.vue';
 
 const props = defineProps({
   articleId: { type: [Number, String], required: true },

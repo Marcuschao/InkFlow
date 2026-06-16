@@ -2,31 +2,20 @@
   <button
     v-show="visible"
     type="button"
-    class="scroll-top-btn"
+    class="scroll-top-btn ds-active-scale"
     :class="{ 'scroll-top-btn--article': isArticlePage }"
     aria-label="回到顶部"
     @click="scrollTop"
   >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M5 15l7-7 7 7" />
-    </svg>
+    <n-icon :component="ChevronUpOutline" :size="20" />
   </button>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { NIcon } from 'naive-ui';
+import { ChevronUpOutline } from '@vicons/ionicons5';
 
 const route = useRoute();
 const visible = ref(false);
@@ -57,25 +46,23 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
   width: 44px;
   height: 44px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
+  border: none;
   background: var(--color-surface);
   color: var(--color-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-card);
   transition:
-    border-color var(--transition-fast),
     color var(--transition-fast),
-    box-shadow var(--transition-fast),
+    box-shadow var(--transition-smooth),
     background var(--transition-fast);
 }
 
 .scroll-top-btn:hover {
-  border-color: var(--color-primary);
   color: var(--color-primary);
-  box-shadow: var(--shadow-hover);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .scroll-top-btn:focus-visible {
@@ -98,6 +85,10 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
 @media (min-width: 768px) {
   .scroll-top-btn {
     bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .scroll-top-btn--article {
+    bottom: calc(var(--space-4) + 3.25rem + var(--space-3) + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

@@ -4,17 +4,22 @@ import { darkTheme } from 'naive-ui';
 const STORAGE_KEY = 'blog-theme-dark';
 const isDark = ref(localStorage.getItem(STORAGE_KEY) === '1');
 
+watch(
+  isDark,
+  (v) => {
+    localStorage.setItem(STORAGE_KEY, v ? '1' : '0');
+    document.documentElement.classList.toggle('dark', v);
+    document.documentElement.style.colorScheme = v ? 'dark' : 'light';
+  },
+  { immediate: true }
+);
+
 export function useTheme() {
   const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
 
   function toggleDark(val) {
     isDark.value = typeof val === 'boolean' ? val : !isDark.value;
   }
-
-  watch(isDark, (v) => {
-    localStorage.setItem(STORAGE_KEY, v ? '1' : '0');
-    document.documentElement.classList.toggle('dark', v);
-  }, { immediate: true });
 
   return { isDark, naiveTheme, toggleDark };
 }

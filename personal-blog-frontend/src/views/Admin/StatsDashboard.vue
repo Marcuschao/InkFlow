@@ -23,29 +23,15 @@
 
       <template v-else>
         <n-grid cols="2 m:4" :x-gap="12" :y-gap="12" responsive="screen" class="summary-grid">
-          <n-gi>
-            <n-card size="small" class="stat-card">
-              <n-statistic label="已发布文章" :value="summary?.articleCount ?? '—'" />
-            </n-card>
-          </n-gi>
-          <n-gi>
-            <n-card size="small" class="stat-card">
-              <n-statistic label="PV 累计" :value="summary?.pvTotal ?? '—'" />
-            </n-card>
-          </n-gi>
-          <n-gi>
-            <n-card size="small" class="stat-card">
-              <n-statistic label="UV 估算" :value="summary?.uvEstimate ?? '—'" />
-            </n-card>
-          </n-gi>
-          <n-gi>
-            <n-card size="small" class="stat-card">
-              <n-statistic label="AI 调用" :value="summary?.aiCallTotal ?? '—'" />
-            </n-card>
+          <n-gi v-for="(stat, idx) in statItems" :key="idx">
+            <div class="admin-stat-card">
+              <div class="stat-label">{{ stat.label }}</div>
+              <div class="stat-value">{{ stat.value }}</div>
+            </div>
           </n-gi>
         </n-grid>
 
-        <n-card class="panel" style="margin-top: 16px;">
+        <n-card class="panel admin-panel-gap">
           <template #header>
             <n-space justify="space-between" align="center">
               <span>PV 趋势</span>
@@ -60,7 +46,7 @@
           </div>
         </n-card>
 
-        <n-grid :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive class="two-col" style="margin-top: 16px;">
+        <n-grid :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive class="two-col admin-panel-gap">
           <n-gi span="24 m:12">
             <n-card :title="'热门 Top ' + topArticles.length">
               <n-list v-if="topArticles.length" hoverable clickable>
@@ -108,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import {
   NAlert,
@@ -123,7 +109,6 @@ import {
   NRadioGroup,
   NRadioButton,
   NSpace,
-  NStatistic,
   NTag,
 } from 'naive-ui';
 import {
@@ -150,6 +135,13 @@ const weeklyOpen = ref(false);
 const weeklyMd = ref('');
 const weeklyLoading = ref(false);
 
+const statItems = computed(() => [
+  { label: '已发布文章', value: summary.value?.articleCount ?? '—' },
+  { label: 'PV 累计', value: summary.value?.pvTotal ?? '—' },
+  { label: 'UV 估算', value: summary.value?.uvEstimate ?? '—' },
+  { label: 'AI 调用', value: summary.value?.aiCallTotal ?? '—' },
+]);
+
 async function refreshTrend() {
   pvTrend.value = await fetchPvTrend(trendDays.value);
   await nextTick();
@@ -175,8 +167,8 @@ function paintChart() {
           data: values,
           fill: true,
           tension: 0.25,
-          borderColor: 'rgba(79, 70, 229, 0.85)',
-          backgroundColor: 'rgba(79, 70, 229, 0.08)',
+          borderColor: 'rgba(30, 111, 255, 0.85)',
+          backgroundColor: 'rgba(30, 111, 255, 0.08)',
         },
       ],
     },
@@ -241,24 +233,12 @@ async function openWeekly() {
   margin-bottom: var(--space-4);
 }
 
-.stat-card :deep(.n-card__content) {
-  padding: var(--space-3) var(--space-4);
+.admin-panel-gap {
+  margin-top: var(--space-4);
 }
 
-.stat-card :deep(.n-statistic) {
-  text-align: center;
-}
-
-.stat-card :deep(.n-statistic-value) {
-  font-size: var(--text-xl);
-  line-height: 1.2;
-}
-
-.stat-card :deep(.n-statistic-label) {
-  font-size: var(--text-sm);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.panel :deep(.n-card) {
+  box-shadow: var(--shadow-card);
 }
 
 .chart-wrap {

@@ -109,10 +109,9 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   margin-top: var(--space-1, 4px);
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
   z-index: 200;
   max-height: 240px;
   overflow-y: auto;
@@ -126,10 +125,10 @@ onUnmounted(() => {
   text-align: left;
   cursor: pointer;
   font-size: var(--text-sm, 14px);
-  color: #111827;
+  color: var(--color-text);
 }
 .suggest-item:hover {
-  background: #f3f4f6;
+  background: var(--surface-muted);
 }
 .suggest-title :deep(mark) {
   background: #fef08a;

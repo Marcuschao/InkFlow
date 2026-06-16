@@ -56,8 +56,8 @@ function toG6Data(data) {
     style: {
       labelText: n.label,
       size: nodeSize(n),
-      fill: n.type === 'article' ? '#fef3c7' : n.type === 'author' ? '#dbeafe' : '#dcfce7',
-      stroke: '#6b7280',
+      fill: n.type === 'article' ? 'rgba(30, 111, 255, 0.15)' : n.type === 'author' ? 'rgba(0, 180, 42, 0.15)' : 'rgba(30, 111, 255, 0.25)',
+      stroke: '#4E5969',
     },
   }));
   if (nodes.length > 100) {
@@ -97,7 +97,7 @@ async function renderGraph() {
     },
     node: {
       style: {
-        labelFill: '#111827',
+        labelFill: '#1D2129',
         labelFontSize: 12,
       },
     },
@@ -143,9 +143,9 @@ onUnmounted(() => {
 .kg-canvas {
   width: 100%;
   min-height: 420px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #ffffff;
+  border-radius: var(--radius-md);
+  background: var(--color-page);
+  box-shadow: var(--shadow-card);
 }
 
 .kg-mobile-list {

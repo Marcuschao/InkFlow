@@ -1,8 +1,8 @@
 <template>
-  <div class="login-page">
-    <div class="login-bg" aria-hidden="true" />
-    <div class="container login-wrap">
-      <n-card class="login-card" :bordered="true">
+  <div class="auth-page">
+    <div class="auth-page-bg" aria-hidden="true" />
+    <div class="login-wrap">
+      <n-card class="auth-card" :bordered="false">
         <template #header>
           <div class="card-header-inner">
             <h1 class="card-title">注册账号</h1>
@@ -246,35 +246,9 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.login-page {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - var(--layout-main-pad-top) - 140px);
-  padding: var(--space-10) 0;
-  overflow: hidden;
-}
-
-.login-bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 70% 55% at 20% 30%, rgba(37, 99, 235, 0.14), transparent),
-    radial-gradient(ellipse 60% 45% at 85% 65%, rgba(63, 63, 70, 0.08), transparent);
-  pointer-events: none;
-}
-
 .login-wrap {
   position: relative;
-  z-index: var(--space-1);
-}
-
-.login-card {
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-  text-align: center;
+  z-index: 1;
 }
 
 .card-header-inner {
@@ -283,15 +257,14 @@ async function handleRegister() {
 
 .card-title {
   margin: 0;
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.03em;
   color: var(--color-text);
 }
 
 .card-hint {
   margin: var(--space-2) 0 0;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
@@ -303,6 +276,7 @@ async function handleRegister() {
   display: flex;
   gap: var(--space-2);
   align-items: stretch;
+  width: 100%;
 }
 
 .captcha-line :deep(.n-input) {
@@ -312,7 +286,7 @@ async function handleRegister() {
 
 .captcha-placeholder {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  color: var(--color-text-soft);
 }
 
 .form-alert-tight {

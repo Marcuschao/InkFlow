@@ -1,6 +1,16 @@
 <template>
   <router-link :to="`/article/${article.id}`" class="article-card-link">
-    <n-card hoverable class="article-card">
+    <n-card hoverable class="article-card ds-hover-lift">
+      <div v-if="!hideCover" class="cover-wrap">
+        <img
+          v-if="coverUrl"
+          :src="coverUrl"
+          :alt="article.title"
+          class="cover-img"
+          loading="lazy"
+        />
+        <div v-else class="cover-placeholder" aria-hidden="true" />
+      </div>
       <h3 class="title">{{ article.title }}</h3>
       <p v-if="reasonLine" class="reason">{{ reasonLine }}</p>
       <p class="excerpt">{{ excerpt }}</p>
@@ -11,9 +21,10 @@
           :key="tag.id"
           size="small"
           :bordered="false"
+          type="info"
         >{{ tag.name }}</n-tag>
         <span v-if="showLike" class="like-stat" @click.prevent>
-          <n-icon :color="displayLiked ? '#2563eb' : undefined" size="14">
+          <n-icon :color="displayLiked ? 'var(--color-primary)' : undefined" size="14">
             <HeartOutline v-if="!displayLiked" />
             <Heart v-else />
           </n-icon>
@@ -35,7 +46,12 @@ const props = defineProps({
   reason: { type: String, default: '' },
   showLike: { type: Boolean, default: false },
   likeCount: { type: Number, default: undefined },
-  liked: { type: Boolean, default: undefined },
+  hideCover: { type: Boolean, default: true },
+});
+
+const coverUrl = computed(() => {
+  const c = props.article.cover || props.article.coverUrl || '';
+  return typeof c === 'string' && c.trim() ? c.trim() : '';
 });
 
 const displayLikeCount = computed(() => {
@@ -77,6 +93,32 @@ const formatDate = (dateString) => {
 
 .article-card {
   height: 100%;
+  overflow: hidden;
+}
+
+.article-card :deep(.n-card__content) {
+  padding: var(--space-4);
+}
+
+.cover-wrap {
+  margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) var(--space-4);
+  height: 180px;
+  overflow: hidden;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-brand);
+  opacity: 0.85;
 }
 
 .title {
@@ -85,6 +127,10 @@ const formatDate = (dateString) => {
   font-weight: var(--weight-semibold);
   color: var(--color-text);
   line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .article-card-link:hover .title {
@@ -100,10 +146,14 @@ const formatDate = (dateString) => {
 
 .excerpt {
   margin: 0 0 var(--space-4);
-  font-size: var(--text-base);
-  color: var(--color-text-muted);
-  line-height: 1.62;
-  min-height: 3em;
+  font-size: var(--text-sm);
+  color: var(--color-text-soft);
+  line-height: 1.5;
+  min-height: 2.625em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .meta {

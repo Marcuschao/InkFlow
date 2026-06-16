@@ -8,7 +8,7 @@ export const useArticleStore = defineStore('article', {
     currentArticle: null,
     pagination: {
       total: 0,
-      pageSize: 10,
+      pageSize: 9,
       currentPage: 1,
     },
     tags: [],

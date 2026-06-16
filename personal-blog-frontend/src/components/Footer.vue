@@ -182,9 +182,29 @@ onUnmounted(() => {
 <style scoped>
 .footer {
   margin-top: var(--space-12);
-  border-top: 1px solid var(--color-border);
-  padding: var(--space-10) 0 calc(var(--space-10) + env(safe-area-inset-bottom, 0px));
-  background: var(--color-surface);
+  padding: var(--space-12) 0 calc(var(--space-12) + env(safe-area-inset-bottom, 0px));
+  background: var(--gradient-footer);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.footer :deep(.n-button) {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.footer :deep(.n-button:hover) {
+  color: #fff;
+}
+
+.footer :deep(.n-input) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.footer :deep(.n-input .n-input__input-el) {
+  color: #fff;
+}
+
+.footer :deep(.n-input .n-input__placeholder) {
+  color: var(--color-text-soft);
 }
 
 .footer-inner {
@@ -231,7 +251,7 @@ onUnmounted(() => {
 
 .footer-hint {
   max-width: 28rem;
-  color: var(--color-text-muted);
+  color: var(--color-text-soft);
   font-size: var(--text-sm);
   line-height: 1.5;
 }
@@ -246,7 +266,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  color: var(--color-text-muted);
+  color: var(--color-text-soft);
   font-size: var(--text-sm);
 }
 

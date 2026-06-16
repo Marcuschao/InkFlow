@@ -1,6 +1,6 @@
 <template>
   <div class="public-user ds-page container">
-    <n-skeleton v-if="loading" height="128px" :sharp="false" />
+    <UserProfileSkeleton v-if="loading" />
     <n-empty v-else-if="!u" description="用户不存在" />
     <n-card v-else class="pub-panel">
       <template #header>
@@ -85,6 +85,7 @@ import { fetchPublicUser } from '../api/user';
 import { getFollowStatus, fetchFollowers, fetchFollowing } from '../api/interaction';
 import FollowButton from '../components/FollowButton.vue';
 import UserAvatar from '../components/UserAvatar.vue';
+import UserProfileSkeleton from '../components/skeleton/UserProfileSkeleton.vue';
 import UserListItem from '../components/UserListItem.vue';
 import UserLandscapePanel from '../components/knowledge/UserLandscapePanel.vue';
 

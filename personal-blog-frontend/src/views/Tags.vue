@@ -8,7 +8,8 @@
 
       <n-tabs v-model:value="activeTab" type="line" class="tags-tabs">
         <n-tab-pane name="graph" tab="图谱">
-          <n-spin :show="graphLoading">
+          <KnowledgeGraphSkeleton v-if="graphLoading" />
+          <template v-else>
             <KnowledgeGraph
               v-if="graphData.nodes?.length"
               :graph-data="graphData"
@@ -17,7 +18,7 @@
               @node-dblclick="onNodeDblclick"
             />
             <n-empty v-else description="暂无图谱数据" />
-          </n-spin>
+          </template>
           <div v-if="activeTab === 'graph'" class="path-explore">
             <n-input v-model:value="pathGoal" placeholder="输入学习目标，如：学会微服务" />
             <n-button type="primary" :loading="pathLoading" @click="generatePath">生成学习路径</n-button>
@@ -58,7 +59,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { NButton, NCard, NEmpty, NInput, NSpin, NTabPane, NTabs, NTag } from 'naive-ui';
+import { NButton, NCard, NEmpty, NInput, NTabPane, NTabs, NTag } from 'naive-ui';
+import KnowledgeGraphSkeleton from '../components/skeleton/KnowledgeGraphSkeleton.vue';
 import { useArticleStore } from '../stores/article';
 import { getKnowledgeGraph } from '../api/knowledge';
 import KnowledgeGraph from '../components/knowledge/KnowledgeGraph.vue';

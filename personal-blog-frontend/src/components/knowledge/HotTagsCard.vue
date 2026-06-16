@@ -1,8 +1,10 @@
 <template>
-  <n-card title="热门知识节点" size="small" class="hot-tags-card">
-    <n-spin :show="loading">
-      <n-empty v-if="!items.length" description="暂无数据" size="small" />
-      <template v-else>
+  <n-card title="热门知识节点">
+    <n-space v-if="loading" vertical :size="12">
+      <n-skeleton height="240px" :sharp="false" />
+    </n-space>
+    <n-empty v-else-if="!items.length" description="暂无数据" size="small" />
+    <template v-else>
         <div
           ref="sphereRef"
           class="tag-sphere"
@@ -33,18 +35,17 @@
             {{ item.name }}
           </router-link>
         </div>
-      </template>
-    </n-spin>
+    </template>
   </n-card>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
-import { NCard, NEmpty, NSpin } from 'naive-ui';
+import { NCard, NEmpty, NSkeleton, NSpace } from 'naive-ui';
 import { getHotTags } from '../../api/knowledge';
 
-const TAG_COLORS = ['#2563eb', '#b91c1c', '#166534', '#d97706', '#7c3aed', '#0891b2'];
+const TAG_COLORS = ['#1E6FFF', '#0050E6', '#00B4FF', '#4E5969', '#86909C', '#00B42A'];
 const DEFAULT_VEL_X = 0.0006;
 const DEFAULT_VEL_Y = 0.0012;
 const DRAG_THRESHOLD = 5;
@@ -237,17 +238,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.hot-tags-card :deep(.n-card-header) {
-  padding-bottom: var(--space-2);
-}
-
 .tag-sphere {
   position: relative;
   height: 240px;
   overflow: hidden;
   cursor: grab;
   user-select: none;
-  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
 }
 
 .tag-sphere:active {

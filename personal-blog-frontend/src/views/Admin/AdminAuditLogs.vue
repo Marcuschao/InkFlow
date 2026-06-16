@@ -66,7 +66,7 @@ const columns = [
     width: 120,
     ellipsis: { tooltip: true },
     render(row) {
-      return h('code', { style: 'font-family: monospace; background-color: var(--surface-muted); padding: 2px 6px; border-radius: 4px;' }, row.action);
+      return h('code', { class: 'admin-type-badge' }, row.action);
     },
   },
   { title: '详情', key: 'detail', minWidth: 160, ellipsis: { tooltip: true } },

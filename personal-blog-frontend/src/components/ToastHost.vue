@@ -64,6 +64,6 @@ const toast = useToastStore();
 .toast-pop-enter-from,
 .toast-pop-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateX(24px);
 }
 </style>

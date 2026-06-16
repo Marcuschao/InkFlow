@@ -6,10 +6,8 @@
       aria-hidden="true"
     />
     <div class="container article-grid">
-      <div v-if="loading" class="detail-skeleton">
-        <n-skeleton height="40px" width="80%" style="margin-bottom: 20px" />
-        <n-skeleton height="20px" width="40%" style="margin-bottom: 40px" />
-        <n-skeleton text :repeat="5" />
+      <div v-if="loading" class="detail-skeleton-wrap">
+        <ArticleDetailSkeleton />
       </div>
       <template v-else>
         <div ref="articleMainRef" class="article-main-stack">
@@ -239,6 +237,7 @@ import {
 import { useArticleStore } from '../stores/article';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
 import ArticleCard from '../components/ArticleCard.vue';
+import ArticleDetailSkeleton from '../components/skeleton/ArticleDetailSkeleton.vue';
 import KnowledgeGraphCard from '../components/knowledge/KnowledgeGraphCard.vue';
 import ArticleActionBar from '../components/ArticleActionBar.vue';
 import FollowButton from '../components/FollowButton.vue';
@@ -590,19 +589,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.detail-skeleton {
-  max-width: 44rem;
+.detail-skeleton-wrap {
+  max-width: 720px;
   margin: 0 auto;
-  padding: 2rem;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
 }
 
 .state-msg {
   text-align: center;
-  padding: 4rem 1.5rem;
+  padding: var(--space-12) var(--space-6);
 }
 
 .article-main-stack {
@@ -610,6 +604,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .article-grid {
@@ -632,10 +629,9 @@ onUnmounted(() => {
 .article-content {
   margin: 0;
   background: var(--color-surface);
-  padding: clamp(1.5rem, 3vw, 2.5rem);
+  padding: var(--space-8);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .lang-bar {
@@ -665,7 +661,7 @@ onUnmounted(() => {
 .lang-pill.lang-on {
   border-color: transparent;
   color: #fff;
-  background: var(--gradient-cta);
+  background: var(--gradient-brand);
 }
 
 .trans-hint {
@@ -677,13 +673,13 @@ onUnmounted(() => {
 
 .article-title {
   font-family: var(--font-ui);
-  font-size: var(--text-display);
-  font-weight: var(--weight-bold, 700);
-  letter-spacing: -0.035em;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
   color: var(--color-text);
   margin: 0 0 var(--space-4);
   word-break: break-word;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .article-meta {
@@ -734,17 +730,28 @@ onUnmounted(() => {
 }
 
 .prose-shell {
-  max-width: 42rem;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
 }
 
 .prose-shell :deep(.markdown-prose) {
   font-family: var(--font-prose);
+  line-height: 1.8;
+}
+
+.prose-shell :deep(.markdown-prose p) {
+  margin-bottom: 1.2em;
+}
+
+.prose-shell :deep(.markdown-prose img) {
+  max-width: 100%;
+  border-radius: var(--radius-md);
 }
 
 .table-of-contents {
   position: sticky;
-  top: calc(var(--layout-navbar-bottom) + 1rem);
+  top: calc(var(--layout-navbar-bottom) + var(--space-4));
+  box-shadow: var(--shadow-card);
 }
 
 .table-of-contents ul {
@@ -789,7 +796,10 @@ onUnmounted(() => {
 
 .table-of-contents a.is-active {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
+  background: var(--color-primary-soft);
+  border-left: 2px solid var(--color-primary);
+  padding-left: calc(var(--space-3) - 2px);
 }
 
 .table-of-contents a.is-active::before {
@@ -810,10 +820,9 @@ onUnmounted(() => {
 
 .ai-recommend-section {
   background: var(--color-surface);
-  padding: clamp(1.25rem, 3vw, 1.85rem);
+  padding: var(--space-6);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .ai-recommend-title {
@@ -841,31 +850,39 @@ onUnmounted(() => {
   height: 3px;
   z-index: 1350;
   transform-origin: left center;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+  background: var(--gradient-brand);
   pointer-events: none;
   opacity: 0.95;
 }
 
 .comments-section {
-  background: var(--color-surface);
-  padding: clamp(1.25rem, 3vw, 1.85rem);
+  background: var(--surface-muted);
+  padding: var(--space-6);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
 }
 
 .comments-title {
   margin: 0 0 var(--space-4);
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
 }
 
 .comment-row {
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-bottom: none;
 }
 
-.comment-row:last-child {
-  border-bottom: none;
+.comments-section :deep(.n-list) {
+  background: transparent;
+}
+
+.comments-section :deep(.n-list-item) {
+  padding: 0;
+  margin-bottom: var(--space-3);
 }
 
 .comment-body-wrap {
@@ -905,9 +922,9 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .comment-login-hint a {

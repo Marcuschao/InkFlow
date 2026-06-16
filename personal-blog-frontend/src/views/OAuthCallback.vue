@@ -2,7 +2,7 @@
   <div class="oauth-callback-page ds-page">
     <div class="container">
       <n-card>
-        <n-spin v-if="loading" size="large" />
+        <n-skeleton v-if="loading" height="80px" :sharp="false" />
         <n-alert v-else-if="error" type="error">{{ error }}</n-alert>
         <p v-else class="muted">登录成功，正在跳转…</p>
       </n-card>
@@ -13,7 +13,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { NAlert, NCard, NSpin } from 'naive-ui';
+import { NAlert, NCard, NSkeleton } from 'naive-ui';
 import { useAuthStore } from '../stores/auth';
 
 const route = useRoute();

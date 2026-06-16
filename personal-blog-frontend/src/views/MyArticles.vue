@@ -1,5 +1,5 @@
 <template>
-  <div class="my-articles-page">
+  <div class="my-articles-page ds-page">
     <div class="container">
       <header class="page-head">
         <div>
