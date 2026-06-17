@@ -32,12 +32,18 @@ spring:
               uri: lb://blog-content
               order: -11
               predicates:
-                - Path=/api/user/feed,/api/user/me/favorites,/api/user/*/follow,/api/user/*/follow/status,/api/user/*/followers,/api/user/*/following
+                - Path=/api/user/feed,/api/user/me/favorites,/api/user/*/follow,/api/user/*/follow/status,/api/user/*/followers,/api/user/*/following,/api/user/*/social-card,/api/user/timeline,/api/user/points,/api/sign/**,/api/badges/**,/api/badges,/api/profile/**
+            - id: blog-auth-public-user
+              uri: lb://blog-auth
+              order: -8
+              predicates:
+                - Path=/api/user/*
+                - Method=GET
             - id: blog-auth-user
               uri: lb://blog-auth
               order: -9
               predicates:
-                - Path=/api/user/me,/api/user/me/oauth/**,/api/user/profile,/api/user/avatar,/api/user/{id:\\d+}
+                - Path=/api/user/me,/api/user/me/oauth/**,/api/user/profile,/api/user/avatar
             - id: blog-auth-oauth
               uri: lb://blog-auth
               order: -9

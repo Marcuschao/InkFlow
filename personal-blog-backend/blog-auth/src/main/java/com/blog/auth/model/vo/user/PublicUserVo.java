@@ -17,4 +17,5 @@ public class PublicUserVo {
     private String bio;
     private Integer followerCount;
     private Integer followingCount;
+    private Integer points;
 }

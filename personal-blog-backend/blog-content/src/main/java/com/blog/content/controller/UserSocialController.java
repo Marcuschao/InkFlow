@@ -7,9 +7,11 @@ import com.blog.content.model.vo.ArticleVO;
 import com.blog.content.model.vo.interaction.FollotatusVo;
 import com.blog.content.model.vo.interaction.FollowToggleVo;
 import com.blog.content.model.vo.interaction.UserBriefVo;
+import com.blog.content.model.vo.user.PublicUserVo;
 import com.blog.content.service.ArticleFavoriteService;
 import com.blog.content.service.UserFeedService;
 import com.blog.content.service.UserFollowService;
+import com.blog.content.service.UserPublicService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,7 +31,14 @@ public class UserSocialController {
     @Autowired
     private UserFeedService userFeedService;
     @Autowired
+    private UserPublicService userPublicService;
+    @Autowired
     private CurrentUserService currentUserService;
+
+    @GetMapping("/{id:\\d+}")
+    public Result<PublicUserVo> publicProfile(@PathVariable Long id) {
+        return Result.success(userPublicService.getPublicProfile(id));
+    }
 
     @GetMapping("/feed")
     public Result<PageResult<ArticleVO>> feed(

@@ -2,23 +2,25 @@
   <div class="profile-page ds-page container">
     <UserProfileSkeleton v-if="loading" />
     <n-empty v-else-if="!user" description="无法加载资料" />
-    <n-card v-else class="profile-panel">
+    <div v-else class="profile-layout">
+      <n-card class="profile-panel">
       <template #header>
-        <div class="user-head">
-          <UserAvatar class="user-head-avatar" :src="avatar" :name="user.nickname || user.username" :size="64" />
-          <div class="user-head-main">
-            <h1 class="profile-title user-head-name">{{ user.nickname || user.username }}</h1>
-            <n-space class="counts muted user-head-counts" :size="12">
-              <span>{{ user.followerCount ?? 0 }} 粉丝</span>
-              <span>{{ user.followingCount ?? 0 }} 关注</span>
-            </n-space>
-          </div>
-        </div>
+        <ProfileHeader :user="user" :badges="socialCard?.badges || []" :points="socialCard?.points ?? user.points">
+          <template #action />
+        </ProfileHeader>
       </template>
 
       <n-tabs type="line" :value="tab" @update:value="setTab">
         <n-tab-pane v-for="t in tabs" :key="t.id" :name="t.id" :tab="t.label">
-          <div v-if="t.id === 'profile'" class="tab-panel">
+          <div v-if="t.id === 'activity'" class="tab-panel">
+            <InteractionTimeline :items="timelineItems" />
+          </div>
+
+          <div v-else-if="t.id === 'visitors'" class="tab-panel">
+            <VisitorList :visitors="visitors" />
+          </div>
+
+          <div v-else-if="t.id === 'profile'" class="tab-panel">
             <p class="extra muted">
               <span v-if="user.registerRegion">注册地区：{{ user.registerRegion }}</span>
               <span v-if="user.region" class="ml">展示地区：{{ user.region }}</span>
@@ -59,11 +61,21 @@
               <p v-if="githubBinding" class="muted">
                 已绑定 GitHub：{{ githubBinding.providerUsername || '—' }}
               </p>
-              <p v-else class="muted">未绑定 GitHub</p>
-              <n-space>
-                <n-button v-if="!githubBinding" :loading="oauthLoading" @click="startBindGithub">绑定 GitHub</n-button>
-                <n-button v-else :loading="oauthLoading" @click="doUnbindGithub">解绑 GitHub</n-button>
-              </n-space>
+              <div class="oauth-providers">
+                <button
+                  v-if="!githubBinding"
+                  type="button"
+                  class="oauth-provider-btn"
+                  aria-label="绑定 GitHub"
+                  :disabled="oauthLoading"
+                  @click="startBindGithub"
+                >
+                  <svg class="oauth-provider-icon" aria-hidden="true">
+                    <use :href="`${iconsSprite}#github-icon`" />
+                  </svg>
+                </button>
+                <n-button v-else :loading="oauthLoading" size="small" @click="doUnbindGithub">解绑 GitHub</n-button>
+              </div>
             </div>
           </div>
 
@@ -100,6 +112,8 @@
         </n-tab-pane>
       </n-tabs>
     </n-card>
+      <SignWidget class="profile-sign-side" />
+    </div>
   </div>
 </template>
 
@@ -126,6 +140,7 @@ import {
 } from 'naive-ui';
 import { fetchMe, updateProfile, uploadAvatar } from '../api/user';
 import { fetchMyFavorites, fetchFollowers, fetchFollowing } from '../api/interaction';
+import { getSocialCard, getTimeline, getVisitors } from '../api/social';
 import { useAuthStore } from '../stores/auth';
 import { useChatUserProfiles } from '../composables/useChatUserProfiles';
 import { useToastStore } from '../stores/toast';
@@ -134,6 +149,10 @@ import UserLandscapePanel from '../components/knowledge/UserLandscapePanel.vue';
 import UserAvatar from '../components/UserAvatar.vue';
 import UserProfileSkeleton from '../components/skeleton/UserProfileSkeleton.vue';
 import UserListItem from '../components/UserListItem.vue';
+import ProfileHeader from '../components/profile/ProfileHeader.vue';
+import SignWidget from '../components/profile/SignWidget.vue';
+import InteractionTimeline from '../components/profile/InteractionTimeline.vue';
+import VisitorList from '../components/profile/VisitorList.vue';
 import Pagination from '../components/Pagination.vue';
 import { fetchOAuthBindings, bindGithub, unbindGithub } from '../api/oauth';
 
@@ -142,11 +161,14 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { setProfile } = useChatUserProfiles();
 const toast = useToastStore();
+const iconsSprite = `${import.meta.env.BASE_URL}icons.svg`;
 
 const tabs = [
+  { id: 'activity', label: '动态' },
   { id: 'profile', label: '资料' },
   { id: 'landscape', label: '知识版图' },
   { id: 'favorites', label: '收藏' },
+  { id: 'visitors', label: '访客' },
   { id: 'following', label: '关注' },
   { id: 'followers', label: '粉丝' },
 ];
@@ -154,8 +176,11 @@ const tabs = [
 const loading = ref(true);
 const saving = ref(false);
 const avatarUploading = ref(false);
-const tab = ref('profile');
+const tab = ref('activity');
 const user = ref(null);
+const socialCard = ref(null);
+const timelineItems = ref([]);
+const visitors = ref([]);
 const nickname = ref('');
 const avatar = ref('');
 const gender = ref(0);
@@ -179,10 +204,42 @@ const githubBinding = computed(() =>
 
 function setTab(id) {
   tab.value = id;
-  router.replace({ query: { ...route.query, tab: id === 'profile' ? undefined : id } });
+  router.replace({ query: { ...route.query, tab: id } });
   if (id === 'favorites') loadFavorites(1);
   if (id === 'following') loadFollowing();
   if (id === 'followers') loadFollowers();
+  if (id === 'activity') loadTimeline();
+  if (id === 'visitors') loadVisitorList();
+}
+
+async function loadSocialCard() {
+  if (!user.value?.id) return;
+  try {
+    const res = await getSocialCard(user.value.id);
+    socialCard.value = res.data;
+    if (res.data?.recentVisitors) visitors.value = res.data.recentVisitors;
+  } catch {
+    socialCard.value = null;
+  }
+}
+
+async function loadTimeline() {
+  if (!user.value?.id) return;
+  try {
+    const res = await getTimeline(user.value.id);
+    timelineItems.value = res.data || [];
+  } catch {
+    timelineItems.value = [];
+  }
+}
+
+async function loadVisitorList() {
+  try {
+    const res = await getVisitors();
+    visitors.value = res.data || [];
+  } catch {
+    visitors.value = socialCard.value?.recentVisitors || [];
+  }
 }
 
 async function loadFavorites(page = 1) {
@@ -240,6 +297,7 @@ onMounted(async () => {
     gender.value = u?.gender ?? 0;
     bio.value = u?.bio ?? '';
     authStore.user = u;
+    await loadSocialCard();
   } catch {
     user.value = null;
   } finally {
@@ -251,12 +309,14 @@ onMounted(async () => {
   if (tab.value === 'favorites') loadFavorites(1);
   if (tab.value === 'following') loadFollowing();
   if (tab.value === 'followers') loadFollowers();
+  if (tab.value === 'activity') loadTimeline();
+  if (tab.value === 'visitors') loadVisitorList();
 });
 
 watch(
   () => route.query.tab,
   (q) => {
-    const id = q && tabs.some((t) => t.id === q) ? q : 'profile';
+    const id = q && tabs.some((t) => t.id === q) ? q : 'activity';
     if (id !== tab.value) setTab(id);
   }
 );
@@ -345,6 +405,20 @@ async function save() {
   padding-bottom: var(--space-16);
 }
 
+.profile-layout {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.profile-sign-side {
+  flex-shrink: 0;
+  position: sticky;
+  top: var(--space-6);
+}
+
 .user-head {
   display: flex;
   align-items: center;
@@ -363,8 +437,8 @@ async function save() {
 }
 
 .profile-panel {
-  max-width: 40rem;
-  margin: 0 auto;
+  flex: 1;
+  min-width: 0;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
@@ -439,6 +513,16 @@ async function save() {
 }
 
 @media (max-width: 767px) {
+  .profile-layout {
+    flex-direction: column;
+  }
+
+  .profile-sign-side {
+    position: static;
+    order: -1;
+    align-self: stretch;
+  }
+
   .profile-page {
     padding: var(--space-4) var(--space-4)
       calc(var(--space-12) + var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px));
@@ -505,5 +589,42 @@ async function save() {
   margin: 0 0 var(--space-3);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
+}
+
+.oauth-providers {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.oauth-provider-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.oauth-provider-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.oauth-provider-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.oauth-provider-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  color: var(--color-text);
 }
 </style>

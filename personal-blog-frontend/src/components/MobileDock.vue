@@ -12,13 +12,21 @@
       <n-icon :component="ChatbubbleOutline" :size="20" />
       <span>聊天</span>
     </router-link>
+    <router-link
+      v-if="authStore.isLoggedIn"
+      to="/user/me"
+      class="dock-link"
+    >
+      <n-icon :component="PersonOutline" :size="20" />
+      <span>我的</span>
+    </router-link>
+    <router-link v-else to="/login" class="dock-link">
+      <n-icon :component="PersonOutline" :size="20" />
+      <span>登录</span>
+    </router-link>
     <router-link to="/hot-search" class="dock-link">
       <n-icon :component="FlameOutline" :size="20" />
       <span>热搜</span>
-    </router-link>
-    <router-link to="/about" class="dock-link">
-      <n-icon :component="InformationCircleOutline" :size="20" />
-      <span>关于</span>
     </router-link>
   </nav>
 </template>
@@ -30,8 +38,11 @@ import {
   ArchiveOutline,
   ChatbubbleOutline,
   FlameOutline,
-  InformationCircleOutline,
+  PersonOutline,
 } from '@vicons/ionicons5';
+import { useAuthStore } from '../stores/auth';
+
+const authStore = useAuthStore();
 </script>
 
 <style scoped>

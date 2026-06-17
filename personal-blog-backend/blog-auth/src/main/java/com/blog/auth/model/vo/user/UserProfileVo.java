@@ -24,4 +24,5 @@ public class UserProfileVo {
     private LocalDateTime lastLoginTime;
     private Integer followerCount;
     private Integer followingCount;
+    private Integer points;
 }

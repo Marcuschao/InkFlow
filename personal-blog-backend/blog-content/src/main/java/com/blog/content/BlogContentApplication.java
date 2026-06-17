@@ -14,7 +14,12 @@ import java.util.TimeZone;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@MapperScan("com.blog.content.mapper")
+@MapperScan({
+        "com.blog.content.mapper",
+        "com.blog.content.gamification.badge.mapper",
+        "com.blog.content.gamification.points.mapper",
+        "com.blog.content.profile.mapper"
+})
 @EnableScheduling
 @EnableAsync
 @Import(CommonAutoConfiguration.class)

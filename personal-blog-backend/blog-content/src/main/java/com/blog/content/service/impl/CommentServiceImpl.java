@@ -12,6 +12,8 @@ import com.blog.content.model.entity.Comment;
 import com.blog.content.model.entity.User;
 import com.blog.content.model.entity.UserProfile;
 import com.blog.content.common.exception.ServiceException;
+import com.blog.content.gamification.event.ActivityType;
+import com.blog.content.gamification.event.UserActivityEventPublisher;
 import com.blog.content.mapper.CommentMapper;
 import com.blog.content.notification.DomainEvent;
 import com.blog.content.notification.NotificationProducer;
@@ -51,6 +53,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     private com.blog.content.service.SensitiveWordService sensitiveWordService;
     @Autowired
     private WriteIdempotencyService writeIdempotencyService;
+    @Autowired
+    private UserActivityEventPublisher activityEventPublisher;
 
     @Override
     public List<CommentPublicVo> listApprovedForArticle(Long articleId) {
@@ -162,6 +166,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         }
         notificationProducer.sendDomainEvent(DomainEvent.commentApproved(c));
         contentChangeProducer.send(c.getArticleId(), ContentChangeEventType.COMMENT_APPROVED);
+        if (c.getUserId() != null) {
+            activityEventPublisher.publish(ActivityType.COMMENT_APPROVED, c.getUserId());
+        }
     }
 
     @Override

@@ -71,22 +71,20 @@
           </div>
 
           <div v-if="authStore.isLoggedIn" class="nav-user-wrap">
-            <div ref="navUserWrapRef" class="nav-user-dropdown-wrap">
+            <div class="nav-user-dropdown-wrap">
               <n-dropdown
                 trigger="click"
                 placement="bottom-end"
                 :options="userDropdownOptions"
                 :show-arrow="false"
+                :z-index="1300"
                 :style="{ minWidth: '10rem' }"
                 @select="onUserDropdownSelect"
-                @clickoutside="closeUserMenu"
               >
                 <button
                   type="button"
                   class="nav-user-trigger"
                   aria-haspopup="menu"
-                  :aria-expanded="userMenuOpen"
-                  @click.stop="toggleUserMenu"
                 >
                   <UserAvatar
                     class="nav-avatar"
@@ -139,8 +137,6 @@ const isMenuOpen = ref(false);
 const isMobileNav = ref(false);
 const isScrolled = ref(false);
 const hideNav = ref(false);
-const userMenuOpen = ref(false);
-const navUserWrapRef = ref(null);
 const navbarRef = ref(null);
 let lastY = 0;
 let navResizeObserver = null;
@@ -186,6 +182,7 @@ const STATIC_NAV_KEYS = [
 const navMenuActiveKey = computed(() => {
   const p = route.path;
   if (STATIC_NAV_KEYS.includes(p)) return p;
+  if (p === '/user/me') return '/user/me';
   if (!authStore.isLoggedIn && (p === '/login' || p === '/register')) return p;
   return null;
 });
@@ -210,7 +207,13 @@ const navMenuOptions = computed(() => {
   return base;
 });
 
-const mobileNavMenuOptions = computed(() => [...MAIN_NAV_OPTIONS]);
+const mobileNavMenuOptions = computed(() => {
+  const base = [...MAIN_NAV_OPTIONS];
+  if (authStore.isLoggedIn) {
+    base.unshift({ label: '个人主页', key: '/user/me' });
+  }
+  return base;
+});
 
 function syncMobileNav() {
   isMobileNav.value = window.matchMedia('(max-width: 1023px)').matches;
@@ -243,32 +246,17 @@ async function refreshUnread() {
   await notificationStore.refreshUnread();
 }
 
-const toggleUserMenu = () => {
-  userMenuOpen.value = !userMenuOpen.value;
-};
-
-const closeUserMenu = () => {
-  userMenuOpen.value = false;
-};
-
-const onDocClick = (e) => {
-  const el = navUserWrapRef.value;
-  if (el && !el.contains(e.target)) {
-    userMenuOpen.value = false;
-  }
-};
-
 function onUserDropdownSelect(key) {
-  if (key === 'profile') router.push('/user/me');
-  else if (key === 'my-articles') router.push('/my-articles');
-  else if (key === 'my-shares') router.push('/my-shares');
-  else if (key === 'admin') router.push('/admin');
+  closeMenu();
+  if (key === 'profile') router.push('/user/me').catch(() => {});
+  else if (key === 'my-articles') router.push('/my-articles').catch(() => {});
+  else if (key === 'my-shares') router.push('/my-shares').catch(() => {});
+  else if (key === 'admin') router.push('/admin').catch(() => {});
   else if (key === 'logout') handleLogoutFromMenu();
 }
 
 const handleLogoutFromMenu = () => {
   authStore.logout();
-  userMenuOpen.value = false;
   closeMenu();
   if (route.path.startsWith('/admin')) {
     router.push({ name: 'Home' });
@@ -277,16 +265,12 @@ const handleLogoutFromMenu = () => {
 
 const closeMenu = () => {
   isMenuOpen.value = false;
-  userMenuOpen.value = false;
 };
 
 const toggleMenu = () => {
-  userMenuOpen.value = false;
   hideNav.value = false;
   isMenuOpen.value = !isMenuOpen.value;
 };
-
-
 
 const onScroll = () => {
   const y = window.scrollY || document.documentElement.scrollTop;
@@ -319,7 +303,6 @@ onMounted(() => {
   window.addEventListener('resize', syncNavLayoutOffset, { passive: true });
   lastY = window.scrollY || 0;
   window.addEventListener('scroll', onScroll, { passive: true });
-  document.addEventListener('click', onDocClick);
   if (authStore.isLoggedIn) refreshUnread();
 });
 
@@ -359,10 +342,8 @@ watch(
     if (path.startsWith('/admin')) {
       hideNav.value = false;
     }
-    userMenuOpen.value = false;
-    if (isMenuOpen.value) {
-      closeMenu();
-    }
+    closeMenu();
+    forceUnlockBodyScroll();
   }
 );
 
@@ -394,6 +375,12 @@ function unlockBodyScroll() {
   window.scrollTo(0, lockedScrollY);
 }
 
+function forceUnlockBodyScroll() {
+  if (document.body.classList.contains('nav-menu-scroll-lock')) {
+    unlockBodyScroll();
+  }
+}
+
 watch(isMenuOpen, (open) => {
   if (open) {
     hideNav.value = false;
@@ -412,7 +399,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', syncMobileNav);
   window.removeEventListener('resize', syncNavLayoutOffset);
   window.removeEventListener('scroll', onScroll);
-  document.removeEventListener('click', onDocClick);
   document.documentElement.style.removeProperty('--layout-navbar-bottom');
   document.documentElement.style.removeProperty('--layout-main-pad-top');
 });

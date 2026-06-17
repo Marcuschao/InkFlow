@@ -3,6 +3,8 @@ package com.blog.content.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.blog.content.common.exception.ServiceException;
 import com.blog.content.common.support.PageResult;
+import com.blog.content.gamification.event.ActivityType;
+import com.blog.content.gamification.event.UserActivityEventPublisher;
 import com.blog.content.mapper.UserFollowMapper;
 import com.blog.content.mapper.UserMapper;
 import com.blog.content.mapper.UserProfileMapper;
@@ -38,6 +40,8 @@ public class UserFollowServiceImpl implements UserFollowService {
     private UserProfileMapper userProfileMapper;
     @Autowired
     private NotificationProducer notificationProducer;
+    @Autowired
+    private UserActivityEventPublisher activityEventPublisher;
 
     private User requireUser(Long userId) {
         User user = userMapper.selectById(userId);
@@ -102,6 +106,7 @@ public class UserFollowServiceImpl implements UserFollowService {
             userFollowMapper.insert(row);
             bumpCounts(followerId, followeeId, 1);
             notificationProducer.notifyFollow(followerId, followeeId);
+            activityEventPublisher.publish(ActivityType.FOLLOWER_GAINED, followeeId);
         }
         UserProfile target = userProfileMapper.selectById(followeeId);
         UserProfile self = userProfileMapper.selectById(followerId);
@@ -164,7 +169,9 @@ public class UserFollowServiceImpl implements UserFollowService {
                     ? p.getNickname()
                     : (u != null ? u.getUsername() : "用户");
             String avatar = p != null ? p.getAvatar() : null;
-            out.add(new UserBriefVo(id, nickname, avatar, followingSet.contains(id)));
+            Integer mutual = viewerId != null ? userFollowMapper.countMutualFollowing(viewerId, id) : 0;
+            LocalDateTime lastActive = p != null ? p.getLastLoginTime() : null;
+            out.add(new UserBriefVo(id, nickname, avatar, followingSet.contains(id), mutual, lastActive));
         }
         return out;
     }

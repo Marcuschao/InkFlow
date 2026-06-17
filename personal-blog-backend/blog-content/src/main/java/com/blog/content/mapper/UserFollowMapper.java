@@ -32,4 +32,11 @@ public interface UserFollowMapper extends BaseMapper<UserFollow> {
 
     @Select("SELECT COUNT(*) FROM user_follow WHERE follower_id = #{userId}")
     long countFollowing(@Param("userId") Long userId);
+
+    @Select("""
+            SELECT COUNT(*) FROM user_follow a
+            INNER JOIN user_follow b ON a.followee_id = b.followee_id
+            WHERE a.follower_id = #{viewerId} AND b.follower_id = #{targetId}
+            """)
+    int countMutualFollowing(@Param("viewerId") Long viewerId, @Param("targetId") Long targetId);
 }

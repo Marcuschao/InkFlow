@@ -4,33 +4,31 @@
     <n-empty v-else-if="!u" description="用户不存在" />
     <n-card v-else class="pub-panel">
       <template #header>
-        <div class="user-head">
-          <UserAvatar class="user-head-avatar" :src="u.avatar" :name="u.nickname" :size="64" />
-          <div class="user-head-main">
-            <h1 class="pub-name user-head-name">{{ u.nickname || '用户' }}</h1>
-            <n-space v-if="genderLabel || u.region" class="pub-meta muted user-head-meta" :size="8">
-              <span v-if="genderLabel">{{ genderLabel }}</span>
-              <span v-if="u.region">{{ u.region }}</span>
-            </n-space>
-            <n-space class="counts muted user-head-counts" :size="12">
-              <span>{{ u.followerCount ?? 0 }} 粉丝</span>
-              <span>{{ u.followingCount ?? 0 }} 关注</span>
-            </n-space>
-          </div>
-          <FollowButton
-            class="user-head-action"
-            :user-id="u.id"
-            :following="following"
-            @update:following="following = $event"
-          />
-        </div>
+        <ProfileHeader :user="u" :badges="socialCard?.badges || []" :points="socialCard?.points">
+          <template #action>
+            <FollowButton
+              class="user-head-action"
+              :user-id="u.id"
+              :following="following"
+              @update:following="following = $event"
+            />
+          </template>
+        </ProfileHeader>
       </template>
 
       <n-tabs type="line" :value="tab" @update:value="tab = $event">
         <n-tab-pane v-for="t in tabs" :key="t.id" :name="t.id" :tab="t.label">
-          <div v-if="t.id === 'profile'" class="tab-panel">
+          <div v-if="t.id === 'activity'" class="tab-panel">
+            <InteractionTimeline :items="timelineItems" />
+          </div>
+
+          <div v-else-if="t.id === 'profile'" class="tab-panel">
             <p v-if="u.bio" class="pub-bio user-head-bio">{{ u.bio }}</p>
-            <n-empty v-else description="暂无简介" />
+            <n-space v-if="genderLabel || u.region" class="pub-meta muted" :size="8">
+              <span v-if="genderLabel">{{ genderLabel }}</span>
+              <span v-if="u.region">{{ u.region }}</span>
+            </n-space>
+            <n-empty v-if="!u.bio && !genderLabel && !u.region" description="暂无简介" />
           </div>
 
           <div v-else-if="t.id === 'landscape'" class="tab-panel">
@@ -83,22 +81,29 @@ import {
 } from 'naive-ui';
 import { fetchPublicUser } from '../api/user';
 import { getFollowStatus, fetchFollowers, fetchFollowing } from '../api/interaction';
+import { getSocialCard, getTimeline, recordVisit } from '../api/social';
+import { useAuthStore } from '../stores/auth';
 import FollowButton from '../components/FollowButton.vue';
-import UserAvatar from '../components/UserAvatar.vue';
+import ProfileHeader from '../components/profile/ProfileHeader.vue';
+import InteractionTimeline from '../components/profile/InteractionTimeline.vue';
 import UserProfileSkeleton from '../components/skeleton/UserProfileSkeleton.vue';
 import UserListItem from '../components/UserListItem.vue';
 import UserLandscapePanel from '../components/knowledge/UserLandscapePanel.vue';
 
 const route = useRoute();
+const authStore = useAuthStore();
 const loading = ref(true);
 const u = ref(null);
 const following = ref(false);
-const tab = ref('profile');
+const tab = ref('activity');
 const listLoading = ref(false);
 const followingList = ref([]);
 const followersList = ref([]);
+const socialCard = ref(null);
+const timelineItems = ref([]);
 
 const tabs = [
+  { id: 'activity', label: '动态' },
   { id: 'profile', label: '资料' },
   { id: 'landscape', label: '知识版图' },
   { id: 'following', label: '关注' },
@@ -142,12 +147,31 @@ async function loadFollowers() {
   }
 }
 
+async function loadTimeline(id) {
+  try {
+    const res = await getTimeline(id);
+    timelineItems.value = res.data || [];
+  } catch {
+    timelineItems.value = socialCard.value?.timelinePreview || [];
+  }
+}
+
 async function load(id) {
   loading.value = true;
-  tab.value = 'profile';
+  tab.value = 'activity';
   try {
     const res = await fetchPublicUser(id);
     u.value = res.data;
+    try {
+      const sc = await getSocialCard(id);
+      socialCard.value = sc.data;
+      timelineItems.value = sc.data?.timelinePreview || [];
+    } catch {
+      socialCard.value = null;
+    }
+    if (authStore.token && authStore.user?.id && authStore.user.id !== id) {
+      recordVisit(id).catch(() => {});
+    }
     try {
       const fs = await getFollowStatus(id);
       following.value = !!fs.data?.following;
@@ -164,6 +188,7 @@ async function load(id) {
 watch(tab, (t) => {
   if (t === 'following') loadFollowing();
   if (t === 'followers') loadFollowers();
+  if (t === 'activity' && u.value?.id) loadTimeline(u.value.id);
 });
 
 watch(

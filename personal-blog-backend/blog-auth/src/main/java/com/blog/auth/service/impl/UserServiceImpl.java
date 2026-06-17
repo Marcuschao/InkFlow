@@ -277,7 +277,8 @@ public class UserServiceImpl implements UserService {
                 user.getRegisterRegion(),
                 profile != null ? profile.getLastLoginTime() : null,
                 profile != null ? countOrZero(profile.getFollowerCount()) : 0,
-                profile != null ? countOrZero(profile.getFollowingCount()) : 0
+                profile != null ? countOrZero(profile.getFollowingCount()) : 0,
+                0
         );
     }
 
@@ -302,7 +303,8 @@ public class UserServiceImpl implements UserService {
                 region,
                 profile != null ? profile.getBio() : null,
                 profile != null ? countOrZero(profile.getFollowerCount()) : 0,
-                profile != null ? countOrZero(profile.getFollowingCount()) : 0
+                profile != null ? countOrZero(profile.getFollowingCount()) : 0,
+                0
         );
     }
 }

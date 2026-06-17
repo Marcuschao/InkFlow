@@ -93,6 +93,11 @@ const routes = [
     component: () => import('../views/OAuthCallback.vue'),
   },
   {
+    path: '/badges',
+    name: 'Badges',
+    component: () => import('../views/Badges.vue'),
+  },
+  {
     path: '/user/me',
     name: 'UserProfile',
     component: () => import('../views/UserProfile.vue'),
