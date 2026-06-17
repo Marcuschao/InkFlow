@@ -60,7 +60,7 @@
             </div>
           </div>
 
-          <p class="switch-link">没有账号？<router-link to="/register">去注册</router-link></p>
+          <p class="switch-link">忘记密码？<router-link to="/forgot-password">重置密码</router-link><span class="link-divider">|</span>没有账号？<router-link to="/register">去注册</router-link></p>
           <n-alert v-if="success" type="success" class="form-alert-tight">{{ success }}</n-alert>
           <n-alert v-if="error" :key="errorTick" type="error" class="form-alert-tight">{{ error }}</n-alert>
         </n-form>

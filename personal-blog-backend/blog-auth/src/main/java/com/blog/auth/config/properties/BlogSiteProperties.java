@@ -8,8 +8,10 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "blog")
 public class BlogSiteProperties {
+    private String siteUrl = "";
     /** 前端部署子路径，如 /pblog；根路径部署留空 */
     private String siteBasePath = "";
+    private String frontendBaseUrl = "http://tdwqlc.top";
     private boolean notifyMailEnabled = false;
     private String notifyFrom = "";
     private PushSettings push = new PushSettings();

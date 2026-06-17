@@ -13,6 +13,7 @@ public class NotificationRabbitProperties {
     private String inboxQueue = "notification.queue";
     private String pushQueue = "notification.push.queue";
     private String mailQueue = "notification.mail.queue";
+    private String passwordResetMailQueue = "notification.password-reset.mail.queue";
     private String auditQueue = "notification.audit.queue";
     private int idempotencyTtlDays = 7;
 
@@ -21,5 +22,7 @@ public class NotificationRabbitProperties {
     public static final String RK_COMMENT = "notification.comment";
     public static final String RK_FOLLOW = "notification.follow";
     public static final String RK_ARTICLE_PUBLISHED = "notification.article.published";
+    public static final String RK_PASSWORD_RESET_REQUEST = "notification.password-reset.request";
+    public static final String RK_PASSWORD_RESET_SUCCESS = "notification.password-reset.success";
     public static final String RK_EVENT_PREFIX = "notification.event.";
 }

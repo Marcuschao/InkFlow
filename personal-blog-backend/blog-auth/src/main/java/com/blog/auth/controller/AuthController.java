@@ -5,20 +5,24 @@ import com.blog.auth.common.support.Result;
 import com.blog.auth.common.support.web.ClientIp;
 import com.blog.auth.model.dto.LoginRequest;
 import com.blog.auth.model.dto.auth.LoginResult;
+import com.blog.auth.model.dto.auth.PasswordResetConfirmRequest;
+import com.blog.auth.model.dto.auth.PasswordResetRequest;
+import com.blog.auth.model.dto.auth.PasswordResetValidateResponse;
 import com.blog.auth.model.dto.auth.RegisterRequest;
 import com.blog.auth.model.dto.auth.CaptchaResponseDto;
 import com.blog.auth.common.exception.ServiceException;
 import com.blog.auth.config.security.CaptchaService;
 import com.blog.auth.config.security.LoginThrottleService;
 import com.blog.auth.service.AuthService;
+import com.blog.auth.service.PasswordResetService;
 import com.blog.auth.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +40,7 @@ public class AuthController {
     private final UserService userService;
     private final CaptchaService captchaService;
     private final LoginThrottleService loginThrottleService;
+    private final PasswordResetService passwordResetService;
 
     @GetMapping("/captcha")
     public Result<CaptchaResponseDto> captcha() {
@@ -76,5 +81,22 @@ public class AuthController {
             }
             throw ex;
         }
+    }
+
+    @PostMapping("/password/reset-request")
+    public Result<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request, HttpServletRequest http) {
+        passwordResetService.requestReset(request.getEmail(), ClientIp.resolve(http));
+        return Result.success();
+    }
+
+    @GetMapping("/password/reset-validate")
+    public Result<PasswordResetValidateResponse> validatePasswordReset(@RequestParam String token) {
+        return Result.success(new PasswordResetValidateResponse(passwordResetService.validateToken(token)));
+    }
+
+    @PostMapping("/password/reset")
+    public Result<Void> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request, HttpServletRequest http) {
+        passwordResetService.resetPassword(request.getToken(), request.getNewPassword(), ClientIp.resolve(http));
+        return Result.success();
     }
 }

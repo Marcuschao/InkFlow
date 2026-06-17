@@ -22,3 +22,30 @@ export function register(body) {
     data: body,
   });
 }
+
+export function requestPasswordReset(body) {
+  return request({
+    url: '/auth/password/reset-request',
+    method: 'post',
+    data: body,
+    skipErrorToast: true,
+  });
+}
+
+export function validatePasswordResetToken(token) {
+  return request({
+    url: '/auth/password/reset-validate',
+    method: 'get',
+    params: { token },
+    skipErrorToast: true,
+  }).then((res) => res.data);
+}
+
+export function resetPassword(body) {
+  return request({
+    url: '/auth/password/reset',
+    method: 'post',
+    data: body,
+    skipErrorToast: true,
+  });
+}

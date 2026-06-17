@@ -41,8 +41,10 @@ public class ArticleController {
     private ArticleInteractionEnricher articleInteractionEnricher;
     @Autowired
     private CurrentUserService currentUserService;
+
     /**
      * 分页获取文章列表
+     *
      * @param query 查询参数
      * @return 统一响应格式的文章分页列表
      */
@@ -71,13 +73,14 @@ public class ArticleController {
 
     /**
      * 获取文章详情
+     *
      * @param id 文章ID
      * @return 统一响应格式的文章详情
      */
     @GetMapping("/{id}")
     public ResponseEntity<Result<ArticleVO>> getArticleDetail(WebRequest request,
-                                                                @PathVariable Long id,
-                                                                @RequestParam(required = false) String lang) {
+                                                              @PathVariable Long id,
+                                                              @RequestParam(required = false) String lang) {
         Long viewerId = currentUserService.optionalUserId();
         boolean isAdmin = currentUserService.isAdmin();
         ArticleVO vo = articleService.getArticleVo(id, lang, viewerId, isAdmin);
@@ -100,12 +103,22 @@ public class ArticleController {
 
     /**
      * 新建文章
-     * @param article 文章实体
+     *
+     * @param article  文章实体
      * @param tagNames 标签名称列表
      * @return 统一响应格式
      */
     @PostMapping
     public Result<ArticleSubmitResultVo> createArticle(@RequestBody Article article, @RequestParam(required = false) String tagNames) {
+        // 缺少标题，直接打回
+        if (article.getTitle() == null || article.getTitle().trim().isEmpty()) {
+            return Result.fail(400, "文章标题不能为空");
+        }
+        // 没有文章，直接打回
+        if (article.getContent() == null || article.getContent().trim().isEmpty()) {
+            return Result.fail(400, "文章内容不能为空");
+        }
+
         List<String> tags = tagNames != null ? Arrays.asList(tagNames.split(",")) : null;
         ArticleSubmitResultVo vo = articleService.createArticleForUser(
                 article, tags, currentUserService.requireUserId(), currentUserService.isAdmin());
@@ -114,8 +127,9 @@ public class ArticleController {
 
     /**
      * 更新文章
-     * @param id 文章ID
-     * @param article 文章实体
+     *
+     * @param id       文章ID
+     * @param article  文章实体
      * @param tagNames 标签名称列表
      * @return 统一响应格式
      */
@@ -130,6 +144,7 @@ public class ArticleController {
 
     /**
      * 删除文章
+     *
      * @param id 文章ID
      * @return 统一响应格式
      */
