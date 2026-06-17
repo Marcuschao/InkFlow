@@ -42,6 +42,12 @@ const visible = computed(() => props.badges.slice(0, props.max));
   text-decoration: none;
   color: var(--color-text);
   font-size: var(--text-xs);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.badge-item:hover {
+  border-color: var(--color-border-strong);
+  background: var(--surface-muted);
 }
 
 .badge-icon {
@@ -55,7 +61,8 @@ const visible = computed(() => props.badges.slice(0, props.max));
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary-soft);
+  background: var(--surface-muted);
+  color: var(--color-text-muted);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
 }

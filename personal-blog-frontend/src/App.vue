@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, watch } from 'vue';
+import { onMounted, onUnmounted, watch, computed } from 'vue';
 import { RouterView } from 'vue-router';
 import {
   NConfigProvider,
@@ -20,7 +20,7 @@ import { useAuthStore } from './stores/auth';
 import { useNotificationStore } from './stores/notification';
 import { useToastStore } from './stores/toast';
 import { useTheme } from './composables/useTheme';
-import { themeOverrides } from './theme/naiveTheme';
+import { darkThemeOverrides, lightThemeOverrides } from './theme/naiveTheme';
 import { mountClickRipple } from './composables/useClickRipple';
 import { connect, disconnect, onNotification } from './services/websocket';
 import { pingPresence } from './api/chat';
@@ -29,7 +29,8 @@ const siteStore = useSiteStore();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const toastStore = useToastStore();
-const { naiveTheme } = useTheme();
+const { naiveTheme, isDark } = useTheme();
+const themeOverrides = computed(() => (isDark.value ? darkThemeOverrides : lightThemeOverrides));
 
 let stopRipple = () => {};
 let stopNotifListener = () => {};
@@ -164,13 +165,13 @@ onUnmounted(() => {
 <style>
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.2s var(--ease-out-soft), transform 0.2s var(--ease-out-soft);
+  transition: opacity 0.35s var(--ease-out-soft), transform 0.35s var(--ease-out-soft);
 }
 
 .page-fade-enter-from,
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(20px);
 }
 
 @media (prefers-reduced-motion: reduce) {

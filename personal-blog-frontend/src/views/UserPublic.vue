@@ -2,7 +2,7 @@
   <div class="public-user ds-page container">
     <UserProfileSkeleton v-if="loading" />
     <n-empty v-else-if="!u" description="用户不存在" />
-    <n-card v-else class="pub-panel">
+    <n-card v-else class="pub-panel ds-brutal-surface">
       <template #header>
         <ProfileHeader :user="u" :badges="socialCard?.badges || []" :points="socialCard?.points">
           <template #action>
@@ -209,7 +209,18 @@ watch(
   max-width: 40rem;
   margin: 0 auto;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.pub-panel :deep(.n-tabs-tab--active) {
+  color: var(--color-primary) !important;
+}
+
+.pub-panel :deep(.n-tabs-bar) {
+  background: var(--color-text) !important;
+  height: 1px !important;
 }
 
 .user-head {

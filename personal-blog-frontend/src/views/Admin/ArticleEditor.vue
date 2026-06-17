@@ -548,6 +548,12 @@ watch(
 .article-form-card {
   flex: 1;
   min-width: 0;
+  background: var(--color-surface) !important;
+  border: var(--border-brutal) !important;
+}
+
+.article-form-card :deep(.n-card) {
+  background: transparent !important;
 }
 
 @media (min-width: 961px) {

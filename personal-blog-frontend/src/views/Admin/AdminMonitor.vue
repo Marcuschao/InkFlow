@@ -155,7 +155,7 @@ function paintChart() {
           cache.value.redisHit || 0,
           cache.value.redisMiss || 0,
         ],
-        backgroundColor: ['#4f46e5', '#e5e7eb', '#059669', '#d1d5db'],
+        backgroundColor: ['#FFD600', '#3B82F6', '#10B981', '#71717A'],
       }],
     },
     options: { responsive: true, maintainAspectRatio: false },

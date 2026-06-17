@@ -167,8 +167,8 @@ function paintChart() {
           data: values,
           fill: true,
           tension: 0.25,
-          borderColor: 'rgba(30, 111, 255, 0.85)',
-          backgroundColor: 'rgba(30, 111, 255, 0.08)',
+          borderColor: '#FFD600',
+          backgroundColor: 'rgba(255, 214, 0, 0.15)',
         },
       ],
     },
@@ -239,10 +239,16 @@ async function openWeekly() {
 
 .panel :deep(.n-card) {
   box-shadow: var(--shadow-card);
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
 }
 
 .chart-wrap {
   height: 220px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
 }
 
 .article-link {

@@ -2,7 +2,8 @@ import { ref, computed, watch } from 'vue';
 import { darkTheme } from 'naive-ui';
 
 const STORAGE_KEY = 'blog-theme-dark';
-const isDark = ref(localStorage.getItem(STORAGE_KEY) === '1');
+const stored = localStorage.getItem(STORAGE_KEY);
+const isDark = ref(stored === null ? false : stored === '1');
 
 watch(
   isDark,

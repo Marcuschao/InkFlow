@@ -3,9 +3,41 @@
     <div class="container home-layout">
       <div class="home-main">
         <div class="home-hero-banner">
-          <div>
-            <h2>{{ siteStore.siteTitle || '知识平台' }}</h2>
+          <div class="home-hero-content">
+            <span class="ds-brutal-tag ds-brutal-tag--yellow">{{ siteStore.siteTitle || '知识平台' }}</span>
+            <h2 class="home-hero-title">
+              探索<span class="ds-highlight">技术</span>与<span class="ds-highlight">想法</span>
+            </h2>
             <p>{{ homeTab === 'feed' ? '关注动态 · 你关注的人最近发布的内容' : '探索想法、笔记与技术碎片' }}</p>
+            <div class="home-hero-cta">
+              <router-link to="/archive" class="ds-btn ds-btn--primary ds-btn--pill">浏览文章</router-link>
+              <router-link to="/tags" class="ds-btn ds-btn--secondary ds-btn--pill">知识星系</router-link>
+            </div>
+          </div>
+          <div class="home-hero-shapes" aria-hidden="true">
+            <span class="hero-shape hero-shape--circle" />
+            <span class="hero-shape hero-shape--square" />
+            <span class="hero-shape hero-shape--triangle" />
+            <span class="hero-shape hero-shape--cross" />
+          </div>
+        </div>
+
+        <div class="ds-stat-row" aria-label="站点统计">
+          <div class="ds-stat-item">
+            <span class="ds-stat-num">{{ articleStore.pagination.total || '—' }}</span>
+            <span class="ds-stat-label">文章</span>
+          </div>
+          <div class="ds-stat-item">
+            <span class="ds-stat-num">{{ articleStore.tags.length || '—' }}</span>
+            <span class="ds-stat-label">标签</span>
+          </div>
+          <div class="ds-stat-item">
+            <span class="ds-stat-num">{{ hotLists.length || '—' }}</span>
+            <span class="ds-stat-label">热搜源</span>
+          </div>
+          <div class="ds-stat-item">
+            <span class="ds-stat-num">{{ feedTotal || '—' }}</span>
+            <span class="ds-stat-label">动态</span>
           </div>
         </div>
 
@@ -47,7 +79,7 @@
           <ListSkeleton v-if="listingLoading" />
           <n-alert v-else-if="articleStore.listError" type="error" class="home-list-err">{{ articleStore.listError }}</n-alert>
           <n-empty v-else-if="!articleStore.articles.length" description="暂无文章" />
-          <n-grid v-else cols="1 m:2 l:3" :x-gap="16" :y-gap="16" class="home-article-grid" responsive="screen">
+          <n-grid v-else cols="1 m:2 l:3" :x-gap="24" :y-gap="24" class="home-article-grid" responsive="screen">
             <n-gi v-for="(article, idx) in articleStore.articles" :key="article.id">
               <ArticleCard hide-cover class="card-enter" :article="article" :style="{ '--stagger': `${Math.min(idx, 8) * 45}ms` }" />
             </n-gi>
@@ -61,13 +93,13 @@
         </template>
 
         <template v-else>
-          <n-grid v-if="feedLoading" cols="1 m:2 l:3" :x-gap="16" :y-gap="16" responsive="screen">
+          <n-grid v-if="feedLoading" cols="1 m:2 l:3" :x-gap="24" :y-gap="24" responsive="screen">
             <n-gi v-for="n in 6" :key="'fsk-' + n">
               <n-card><n-skeleton text :repeat="3" /></n-card>
             </n-gi>
           </n-grid>
           <n-empty v-else-if="!feedArticles.length" description="关注用户后，这里会显示他们的新文章" />
-          <n-grid v-else cols="1 m:2 l:3" :x-gap="16" :y-gap="16" class="home-article-grid" responsive="screen">
+          <n-grid v-else cols="1 m:2 l:3" :x-gap="24" :y-gap="24" class="home-article-grid" responsive="screen">
             <n-gi v-for="(article, idx) in feedArticles" :key="article.id">
               <ArticleCard
                 hide-cover
@@ -114,7 +146,7 @@
 
       <aside class="home-aside" aria-label="侧边栏">
         <HotTagsCard class="home-hot-tags" />
-        <n-card title="猜你喜欢" class="aside-rec-card ds-surface-card">
+        <n-card title="猜你喜欢" class="aside-rec-card ds-surface-card ds-brutal-surface">
           <template v-if="!authStore.isLoggedIn">
             <n-empty description="请先登录" size="small" />
           </template>
@@ -349,6 +381,38 @@ watch(
   margin-bottom: var(--space-8);
 }
 
+.tag-row :deep(.n-tag)::before {
+  display: none;
+}
+
+.home-hero-banner {
+  position: relative;
+}
+
+.home-hero-content {
+  position: relative;
+}
+
+.home-hero-content .ds-brutal-tag {
+  margin-bottom: var(--space-4);
+}
+
+.home-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.home-hero-title {
+  margin: 0;
+  font-size: var(--text-display-xl);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
 .home-article-grid {
   margin-top: var(--space-2);
 }
@@ -478,7 +542,7 @@ watch(
 .home-hot-section {
   margin-top: var(--space-12);
   padding-top: var(--space-8);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-brutal);
 }
 
 .home-hot-head {
@@ -502,7 +566,7 @@ watch(
 }
 
 .home-hot-more:hover {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .home-hot-scroll {

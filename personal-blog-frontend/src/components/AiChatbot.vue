@@ -208,13 +208,13 @@ async function send() {
   width: 3.25rem;
   height: 3.25rem;
   border-radius: 50%;
-  border: none;
+  border: var(--border-brutal);
   cursor: pointer;
   font-weight: 800;
   font-size: 0.95rem;
-  color: #fff;
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-chat);
+  color: var(--color-on-primary);
+  background: var(--color-accent);
+  box-shadow: var(--shadow-brutal);
 }
 
 .ai-chat-panel {
@@ -223,9 +223,9 @@ async function send() {
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-brutal-card);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal-lg);
   overflow: hidden;
 }
 
@@ -234,8 +234,9 @@ async function send() {
   align-items: center;
   gap: 0.35rem;
   padding: 0.55rem 0.65rem;
-  border-bottom: 1px solid var(--color-border);
-  background: rgba(248, 250, 252, 0.9);
+  border-bottom: var(--border-brutal);
+  background: var(--color-accent);
+  color: var(--color-on-primary);
 }
 
 .ai-chat-title {
@@ -361,8 +362,8 @@ async function send() {
   font-weight: 650;
   font-size: 0.82rem;
   cursor: pointer;
-  color: #fff;
-  background: var(--gradient-brand);
+  color: var(--color-on-primary);
+  background: var(--gradient-cta);
   font-family: inherit;
 }
 

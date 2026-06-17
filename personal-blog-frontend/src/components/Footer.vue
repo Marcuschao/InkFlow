@@ -181,26 +181,38 @@ onUnmounted(() => {
 
 <style scoped>
 .footer {
+  position: relative;
   margin-top: var(--space-12);
   padding: var(--space-12) 0 calc(var(--space-12) + env(safe-area-inset-bottom, 0px));
-  background: var(--gradient-footer);
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--color-page);
+  color: var(--color-text-muted);
+  border-top: var(--border-brutal);
 }
 
-.footer :deep(.n-button) {
-  color: rgba(255, 255, 255, 0.85);
+.footer::before {
+  display: none;
 }
 
-.footer :deep(.n-button:hover) {
-  color: #fff;
+.footer :deep(.n-button:not(.n-button--primary-type)) {
+  color: var(--color-text-muted);
+}
+
+.footer :deep(.n-button:not(.n-button--primary-type):hover) {
+  color: var(--color-text);
+}
+
+.footer :deep(.n-button--primary-type) {
+  color: var(--color-on-primary);
 }
 
 .footer :deep(.n-input) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal-sm);
 }
 
 .footer :deep(.n-input .n-input__input-el) {
-  color: #fff;
+  color: var(--color-text);
 }
 
 .footer :deep(.n-input .n-input__placeholder) {

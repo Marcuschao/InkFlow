@@ -2,7 +2,7 @@
   <div class="auth-page">
     <div class="auth-page-bg" aria-hidden="true" />
     <div class="login-wrap">
-      <n-card class="auth-card" :bordered="false">
+      <n-card class="auth-card ds-brutal-surface" :bordered="false">
         <template #header>
           <div class="card-header-inner">
             <h1 class="card-title">注册账号</h1>
@@ -258,8 +258,34 @@ async function handleRegister() {
 .card-title {
   margin: 0;
   font-size: var(--text-xl);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.04em;
   color: var(--color-text);
+}
+
+.login-form :deep(.n-input) {
+  border-radius: var(--radius-brutal-btn);
+  border: var(--border-brutal) !important;
+  background: var(--surface-input) !important;
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+.login-form :deep(.n-input--focus) {
+  border-color: var(--border-focus-input) !important;
+  box-shadow: var(--shadow-brutal-sm) !important;
+}
+
+.login-form :deep(.n-button--primary-type) {
+  background: var(--color-accent) !important;
+  color: var(--color-on-primary) !important;
+  border: var(--border-brutal) !important;
+  box-shadow: var(--shadow-brutal) !important;
+  font-weight: var(--weight-bold) !important;
+}
+
+.login-form :deep(.n-button--primary-type:hover) {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-brutal-sm) !important;
 }
 
 .card-hint {

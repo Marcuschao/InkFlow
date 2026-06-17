@@ -3,9 +3,9 @@
     <UserProfileSkeleton v-if="loading" />
     <n-empty v-else-if="!user" description="无法加载资料" />
     <div v-else class="profile-layout">
-      <n-card class="profile-panel">
+      <n-card class="profile-panel ds-brutal-surface">
       <template #header>
-        <ProfileHeader :user="user" :badges="socialCard?.badges || []" :points="socialCard?.points ?? user.points">
+        <ProfileHeader :user="user" :badges="socialCard?.badges || []" :points="socialCard?.points">
           <template #action />
         </ProfileHeader>
       </template>
@@ -138,7 +138,7 @@ import {
   NTabs,
   NUpload,
 } from 'naive-ui';
-import { fetchMe, updateProfile, uploadAvatar } from '../api/user';
+import { fetchMe, fetchPublicUser, updateProfile, uploadAvatar } from '../api/user';
 import { fetchMyFavorites, fetchFollowers, fetchFollowing } from '../api/interaction';
 import { getSocialCard, getTimeline, getVisitors } from '../api/social';
 import { useAuthStore } from '../stores/auth';
@@ -291,6 +291,17 @@ onMounted(async () => {
   try {
     const res = await fetchMe();
     const u = res.data;
+    if (u?.id) {
+      try {
+        const pub = await fetchPublicUser(u.id);
+        if (pub.data) {
+          u.followerCount = pub.data.followerCount;
+          u.followingCount = pub.data.followingCount;
+        }
+      } catch {
+        /* keep auth counts */
+      }
+    }
     user.value = u;
     nickname.value = u?.nickname ?? u?.username ?? '';
     avatar.value = u?.avatar ?? '';
@@ -440,7 +451,18 @@ async function save() {
   flex: 1;
   min-width: 0;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.profile-panel :deep(.n-tabs-tab--active) {
+  color: var(--color-primary) !important;
+}
+
+.profile-panel :deep(.n-tabs-bar) {
+  background: var(--color-text) !important;
+  height: 1px !important;
 }
 
 .profile-title {
@@ -582,7 +604,7 @@ async function save() {
 .oauth-section {
   margin-top: var(--space-8);
   padding-top: var(--space-6);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-brutal);
 }
 
 .oauth-heading {
@@ -595,36 +617,5 @@ async function save() {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-}
-
-.oauth-provider-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-}
-
-.oauth-provider-btn:hover:not(:disabled) {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-}
-
-.oauth-provider-btn:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
-.oauth-provider-icon {
-  width: 20px;
-  height: 20px;
-  display: block;
-  color: var(--color-text);
 }
 </style>

@@ -1,5 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="InkFlow">
-  <rect width="32" height="32" rx="7" fill="#111827"/>
-  <path fill="#f8fafc" d="M16 7.5c-2.8 0-4.5 2.1-4.5 4.6 0 2.2 1.2 3.5 2.4 4.2.5.3.8.8.8 1.3v1.2h2.6v-1.2c0-.5.3-1 .8-1.3 1.2-.7 2.4-2 2.4-4.2 0-2.5-1.7-4.6-4.5-4.6z"/>
-  <path fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" d="M9 22.5c2.2 1.4 4.5 2.1 7 2.1s4.8-.7 7-2.1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="拾壹博客">
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F7E08A"/>
+      <stop offset="100%" stop-color="#E8C547"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="#F8F7F2"/>
+  <rect x="9" y="9" width="16" height="16" rx="3" fill="#111827"/>
+  <path d="M6 22 L22 22 L24 24 L8 24 Z" fill="#9A7B18" stroke="#111827" stroke-width="0.8"/>
+  <path d="M22 6 L24 8 L24 22 L22 22 Z" fill="#D4AF37" stroke="#111827" stroke-width="0.8"/>
+  <rect x="6" y="6" width="16" height="16" rx="3" fill="url(#t)" stroke="#111827" stroke-width="1.2"/>
+  <text x="14" y="17" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="900" fill="#111827">11</text>
+  <rect x="9" y="18" width="10" height="1.2" rx="0.6" fill="#111827"/>
 </svg>

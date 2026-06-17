@@ -1,6 +1,6 @@
 <template>
   <router-link :to="`/article/${article.id}`" class="article-card-link">
-    <n-card hoverable class="article-card ds-hover-lift">
+    <n-card hoverable class="article-card ds-brutal-surface ds-card-hover">
       <div v-if="!hideCover" class="cover-wrap">
         <img
           v-if="coverUrl"
@@ -94,6 +94,10 @@ const formatDate = (dateString) => {
 .article-card {
   height: 100%;
   overflow: hidden;
+  background: var(--color-surface) !important;
+  border: var(--border-brutal) !important;
+  border-radius: var(--radius-brutal-card) !important;
+  box-shadow: var(--shadow-brutal-lg) !important;
 }
 
 .article-card :deep(.n-card__content) {
@@ -104,7 +108,8 @@ const formatDate = (dateString) => {
   margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) var(--space-4);
   height: 180px;
   overflow: hidden;
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border: var(--border-brutal);
+  border-radius: var(--radius-md);
 }
 
 .cover-img {
@@ -117,14 +122,13 @@ const formatDate = (dateString) => {
 .cover-placeholder {
   width: 100%;
   height: 100%;
-  background: var(--gradient-brand);
-  opacity: 0.85;
+  background: var(--surface-muted);
 }
 
 .title {
   margin: 0 0 var(--space-3);
   font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold);
   color: var(--color-text);
   line-height: 1.35;
   display: -webkit-box;
@@ -134,14 +138,20 @@ const formatDate = (dateString) => {
 }
 
 .article-card-link:hover .title {
-  color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.article-card :deep(.n-tag) {
+  border: var(--border-brutal) !important;
+  font-weight: var(--weight-bold) !important;
+  border-radius: var(--radius-pill) !important;
 }
 
 .reason {
   margin: calc(var(--space-1) * -1) 0 var(--space-3);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  color: var(--color-primary);
+  color: var(--color-text-muted);
 }
 
 .excerpt {
@@ -174,7 +184,7 @@ const formatDate = (dateString) => {
   margin-top: var(--space-4);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  color: var(--color-primary);
+  color: var(--color-text-muted);
   opacity: 0;
   transform: translateY(6px);
   transition: opacity var(--transition-fast), transform var(--transition-fast);

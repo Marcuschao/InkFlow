@@ -61,11 +61,9 @@ const authStore = useAuthStore();
     justify-content: space-around;
     align-items: center;
     padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-top: 1px solid var(--color-border);
-    box-shadow: var(--shadow-nav);
+    background: var(--color-surface);
+    border-top: var(--border-brutal);
+    box-shadow: var(--shadow-brutal-sm);
   }
 
   .dock-link {
@@ -76,18 +74,28 @@ const authStore = useAuthStore();
     gap: var(--space-1);
     text-align: center;
     font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
+    font-weight: var(--weight-bold);
     color: var(--color-text-soft);
     text-decoration: none;
     padding: var(--space-1);
     cursor: pointer;
-    border-radius: var(--radius-sm);
-    transition: color var(--transition-fast), background var(--transition-fast);
+    border-radius: var(--radius-md);
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast),
+      transform var(--transition-fast);
+    position: relative;
   }
 
   .dock-link.router-link-active {
-    color: var(--color-primary);
-    background: var(--surface-primary-tint);
+    color: var(--color-on-primary);
+    background: var(--color-accent);
+    border: var(--border-brutal);
+    box-shadow: var(--shadow-brutal-sm);
+  }
+
+  .dock-link.router-link-active::before {
+    display: none;
   }
 }
 </style>

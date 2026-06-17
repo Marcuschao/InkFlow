@@ -223,13 +223,13 @@ onUnmounted(() => {
 
 .markdown-prose :deep(pre) {
   position: relative;
-  background: rgba(248, 250, 252, 0.95) !important;
+  background: var(--color-surface-raised) !important;
   padding: 1.1em 1.15em;
   border-radius: var(--radius-md);
   overflow-x: auto;
   margin: 1.15em 0;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-xs);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal-sm);
 }
 
 .markdown-prose :deep(code) {
@@ -253,14 +253,10 @@ onUnmounted(() => {
 }
 
 .markdown-prose :deep(blockquote) {
-  border-left: 4px solid var(--border-focus-input);
+  border-left: 4px solid var(--color-accent);
   padding: 0.65rem 1rem 0.65rem 1.15rem;
   margin: 1.15em 0;
-  background: linear-gradient(
-    90deg,
-    var(--surface-primary-tint),
-    rgba(248, 250, 252, 0.4)
-  );
+  background: var(--surface-primary-tint);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   color: var(--color-text-muted);
 }
@@ -271,7 +267,8 @@ onUnmounted(() => {
   margin: 1.15em 0;
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal-sm);
   font-size: 0.93em;
 }
 

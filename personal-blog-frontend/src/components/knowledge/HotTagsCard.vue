@@ -14,6 +14,7 @@
           @pointerup="onSphereUp"
           @pointercancel="onSphereUp"
         >
+          <div class="tag-sphere-orbit" aria-hidden="true" />
           <a
             v-for="item in items"
             :key="item.tagId"
@@ -46,8 +47,8 @@ import { NCard, NEmpty, NSkeleton, NSpace } from 'naive-ui';
 import { getHotTags } from '../../api/knowledge';
 
 const TAG_COLORS = ['#1E6FFF', '#0050E6', '#00B4FF', '#4E5969', '#86909C', '#00B42A'];
-const DEFAULT_VEL_X = 0.0006;
-const DEFAULT_VEL_Y = 0.0012;
+const SPHERE_TILT_X = 0.36;
+const DEFAULT_VEL_Y = 0.0024;
 const DRAG_THRESHOLD = 5;
 
 const router = useRouter();
@@ -57,9 +58,8 @@ const sphereRef = ref(null);
 const tagRefs = ref([]);
 
 let nodes = [];
-let angleX = 0.22;
+let angleX = SPHERE_TILT_X;
 let angleY = 0;
-let velX = DEFAULT_VEL_X;
 let velY = DEFAULT_VEL_Y;
 let dragging = false;
 let moved = false;
@@ -126,7 +126,16 @@ function applyLayout() {
   const h = el.clientHeight;
   const cx = w / 2;
   const cy = h / 2;
-  const baseR = Math.min(w, h) * 0.42;
+  const baseR = Math.min(w, h) * 0.34;
+  const orbitScale = Math.min(w, h) * 0.36;
+  const orbitEl = el.querySelector('.tag-sphere-orbit');
+  if (orbitEl) {
+    const orbitW = orbitScale * 2;
+    orbitEl.style.width = `${orbitW}px`;
+    orbitEl.style.height = `${orbitW * 0.58}px`;
+    orbitEl.style.left = `${cx - orbitScale}px`;
+    orbitEl.style.top = `${cy - orbitScale * 0.58}px`;
+  }
 
   nodes.forEach((node, i) => {
     const dom = els[i];
@@ -135,12 +144,14 @@ function applyLayout() {
     let p = rotateY(node, angleY);
     p = rotateX(p, angleX);
     const depth = (p.z + 1) / 2;
-    const persp = 300 / (300 - p.z * 110);
+    const persp = 460 / (460 - p.z * 180);
     const sx = cx + p.x * baseR * persp;
     const sy = cy + p.y * baseR * persp;
     const hot = scoreRatio(node.score);
-    const fontSize = (11 + hot * 8) * (0.5 + depth * 0.75);
-    const opacity = 0.28 + depth * 0.72;
+    const scale = 0.42 + depth * 0.72;
+    const fontSize = (11 + hot * 8) * scale;
+    const visible = p.z > -0.12;
+    const opacity = visible ? 0.12 + depth * 0.88 : 0;
 
     dom.style.left = `${sx}px`;
     dom.style.top = `${sy}px`;
@@ -149,14 +160,17 @@ function applyLayout() {
     dom.style.color = node.color;
     dom.style.zIndex = String(Math.round(depth * 100));
     dom.style.fontWeight = depth > 0.55 ? '600' : '500';
-    dom.style.pointerEvents = depth > 0.4 ? 'auto' : 'none';
+    dom.style.pointerEvents = visible && depth > 0.42 ? 'auto' : 'none';
+    dom.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+    dom.style.filter = depth < 0.35 ? `blur(${(0.35 - depth) * 1.2}px)` : 'none';
   });
 }
 
 function tick() {
   if (!dragging && !reducedMotion) {
     angleY += velY;
-    angleX += velX;
+    velY += (DEFAULT_VEL_Y - velY) * 0.015;
+    angleX += (SPHERE_TILT_X - angleX) * 0.08;
   }
   applyLayout();
   rafId = requestAnimationFrame(tick);
@@ -183,10 +197,9 @@ function onSphereMove(e) {
   if (Math.abs(e.clientX - downX) > DRAG_THRESHOLD || Math.abs(e.clientY - downY) > DRAG_THRESHOLD) {
     moved = true;
   }
-  angleY += dx * 0.004;
-  angleX += dy * 0.004;
-  velY = dx * 0.0008;
-  velX = dy * 0.0008;
+  angleY += dx * 0.005;
+  angleX = Math.min(0.72, Math.max(0.12, SPHERE_TILT_X + dy * 0.0025));
+  velY = dx * 0.0012;
   lastX = e.clientX;
   lastY = e.clientY;
 }
@@ -194,7 +207,6 @@ function onSphereMove(e) {
 function onSphereUp() {
   dragging = false;
   if (!moved) {
-    velX = DEFAULT_VEL_X;
     velY = DEFAULT_VEL_Y;
   }
 }
@@ -244,6 +256,23 @@ onUnmounted(() => {
   overflow: hidden;
   cursor: grab;
   user-select: none;
+  perspective: 720px;
+}
+
+.tag-sphere-orbit {
+  position: absolute;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  opacity: 0.28;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 35% 28%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0) 52%
+  );
+  box-shadow:
+    inset 0 -8px 16px rgba(17, 24, 39, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .tag-sphere:active {
@@ -253,6 +282,7 @@ onUnmounted(() => {
 .tag-sphere-item {
   position: absolute;
   transform: translate(-50%, -50%);
+  transform-origin: center center;
   white-space: nowrap;
   text-decoration: none;
   line-height: 1.2;

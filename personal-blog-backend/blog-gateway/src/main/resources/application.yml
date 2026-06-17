@@ -28,6 +28,12 @@ spring:
               order: -10
               predicates:
                 - Path=/api/auth/**,/auth/**,/api/captcha/**
+            - id: blog-content-user-profile
+              uri: lb://blog-content
+              order: -12
+              predicates:
+                - Path=/api/user/{id:\d+}
+                - Method=GET
             - id: blog-content-user-social
               uri: lb://blog-content
               order: -11

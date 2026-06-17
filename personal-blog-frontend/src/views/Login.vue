@@ -2,7 +2,7 @@
   <div class="auth-page">
     <div class="auth-page-bg" aria-hidden="true" />
     <div class="login-wrap">
-      <n-card class="auth-card" :bordered="false">
+      <n-card class="auth-card ds-brutal-surface" :bordered="false">
         <template #header>
           <div class="card-header-inner">
             <h1 class="card-title">登录</h1>
@@ -209,8 +209,34 @@ const handleLogin = async () => {
 .card-title {
   margin: 0;
   font-size: var(--text-xl);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.04em;
   color: var(--color-text);
+}
+
+.login-form :deep(.n-input) {
+  border-radius: var(--radius-brutal-btn);
+  border: var(--border-brutal) !important;
+  background: var(--surface-input) !important;
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+.login-form :deep(.n-input--focus) {
+  border-color: var(--border-focus-input) !important;
+  box-shadow: var(--shadow-brutal-sm) !important;
+}
+
+.login-form :deep(.n-button--primary-type) {
+  background: var(--color-accent) !important;
+  color: var(--color-on-primary) !important;
+  border: var(--border-brutal) !important;
+  box-shadow: var(--shadow-brutal) !important;
+  font-weight: var(--weight-bold) !important;
+}
+
+.login-form :deep(.n-button--primary-type:hover) {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-brutal-sm) !important;
 }
 
 .login-form {
@@ -250,8 +276,12 @@ const handleLogin = async () => {
 }
 
 .switch-link a {
-  color: var(--color-primary);
+  color: var(--color-text-muted);
   font-weight: var(--weight-semibold);
+}
+
+.switch-link a:hover {
+  color: var(--color-text);
 }
 
 .oauth-section {
@@ -282,36 +312,5 @@ const handleLogin = async () => {
   justify-content: center;
   flex-wrap: wrap;
   gap: var(--space-3);
-}
-
-.oauth-provider-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-}
-
-.oauth-provider-btn:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-}
-
-.oauth-provider-btn:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-.oauth-provider-icon {
-  width: 20px;
-  height: 20px;
-  display: block;
-  color: var(--color-text);
 }
 </style>

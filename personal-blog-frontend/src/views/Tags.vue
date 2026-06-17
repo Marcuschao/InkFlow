@@ -6,7 +6,7 @@
         <p class="ds-page-sub">探索标签之间的关联网络</p>
       </header>
 
-      <n-tabs v-model:value="activeTab" type="line" class="tags-tabs">
+      <n-tabs v-model:value="activeTab" type="segment" class="tags-tabs">
         <n-tab-pane name="graph" tab="图谱">
           <KnowledgeGraphSkeleton v-if="graphLoading" />
           <template v-else>
@@ -144,7 +144,27 @@ onMounted(() => {
 <style scoped>
 .tags-tabs {
   max-width: 960px;
-  margin: 0 auto;
+  margin: 0 auto var(--space-8);
+}
+
+.tags-tabs :deep(.n-tabs-nav) {
+  justify-content: center;
+}
+
+.tags-tabs :deep(.n-tabs-rail) {
+  display: inline-flex;
+  width: auto;
+  min-width: 240px;
+}
+
+.tags-tabs :deep(.n-tabs-tab) {
+  min-width: 96px;
+  justify-content: center;
+  padding: var(--space-2) var(--space-6);
+}
+
+.tags-page {
+  position: relative;
 }
 
 .tag-cloud-card {

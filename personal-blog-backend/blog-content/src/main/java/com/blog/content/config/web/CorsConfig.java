@@ -11,7 +11,7 @@ public class CorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**") // 允许所有 /api/** 路径的接口进行跨域访问
                 .allowedOrigins(
-                        "http://tdwqlc.top:52148", //生产环境 
+                        "http://tdwqlc.top",
                         "http://localhost:5173", 
                         "http://127.0.0.1:5173")  // 允许前端开发服务器地址
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")

@@ -78,6 +78,33 @@ cp personal-blog-frontend/.env.development.example personal-blog-frontend/.env.d
 cp personal-blog-frontend/.env.production.example personal-blog-frontend/.env.production
 ```
 
+| 变量 | 生产（根路径部署） | 说明 |
+|------|-------------------|------|
+| `VITE_APP_BASE_URL` | `/` | 前端路由与静态资源前缀 |
+| `VITE_APP_API_BASE_URL` | `/api` | API 前缀 |
+| `VITE_APP_WS_BASE_URL` | 留空 | WebSocket 走同源 `/ws` |
+
+后端 `blog` 配置（`application-dev.yml`）需与域名一致：
+
+```yaml
+blog:
+  site-url: http://tdwqlc.top
+  site-base-path:          # 根路径部署留空
+  oauth:
+    redirect-uri: http://tdwqlc.top/login/oauth2/code/github
+    frontend-callback-url: http://tdwqlc.top/oauth/callback
+minio:
+  public-base-url: http://tdwqlc.top/minio
+```
+
+GitHub OAuth App 的 **Authorization callback URL** 必须与 `redirect-uri` 完全一致。
+
+数据库站点地址：
+
+```sql
+UPDATE blog_site SET site_url = 'http://tdwqlc.top' WHERE id = 1;
+```
+
 ## 本地启动
 
 ### 依赖
@@ -114,7 +141,40 @@ npm install
 npm run dev
 ```
 
-访问：`http://127.0.0.1:5173/pblog/`
+访问：`http://127.0.0.1:5173/`
+
+## 生产部署
+
+线上入口：`http://tdwqlc.top`（80 端口，根路径部署）。
+
+### 构建与发布
+
+```bash
+cd personal-blog-frontend
+npm run build
+# 将 dist/* 部署到 nginx 静态目录根（如 /usr/share/nginx/html/）
+```
+
+```bash
+cd personal-blog-backend
+mvn -pl blog-gateway,blog-auth,blog-content,blog-ai -am package -DskipTests
+# 上传 jar 并重启各服务（profile: dev）
+```
+
+### Nginx 要点
+
+- `listen 80`，前端 SPA：`location / { try_files $uri $uri/ /index.html; }`
+- 反向代理：`/api/`、`/oauth2/`、`/login/oauth2/`、`/ws`、`/upload/`、`/minio/`
+- 旧链接兼容：`/pblog/*` → 301 到 `/*`
+- 52147 / 52148 可 301 到 80 端口
+
+### 上线检查
+
+- [ ] 安全组放行 80
+- [ ] GitHub OAuth 回调已更新
+- [ ] `blog-auth` 已重启并加载新 `redirect-uri`
+- [ ] `blog_site.site_url` 已更新
+- [ ] 首页、登录、GitHub OAuth、图片/头像加载正常
 
 ## 文档
 

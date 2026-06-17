@@ -7,17 +7,6 @@
     <nav class="nav-inner" aria-label="主导航">
       <div class="container nav-row">
         <router-link to="/" class="logo" @click="closeMenu">{{ siteStore.siteTitle }}</router-link>
-        <button
-          type="button"
-          class="menu-toggle"
-          :class="{ open: isMenuOpen }"
-          aria-label="菜单"
-          :aria-expanded="isMenuOpen"
-          aria-controls="primary-nav"
-          @click="toggleMenu"
-        >
-          <n-icon :component="isMenuOpen ? CloseOutline : MenuOutline" :size="24" />
-        </button>
         <div id="primary-nav" class="nav-links" :class="{ open: isMenuOpen }">
           <div v-if="!authStore.isLoggedIn && isMobileNav && isMenuOpen" class="nav-auth-actions">
             <router-link to="/login" class="nav-auth-btn nav-auth-btn--primary" @click="closeMenu">登录</router-link>
@@ -28,7 +17,6 @@
             v-if="!isMobileNav"
             class="nav-naive-menu nav-naive-menu--desktop"
             mode="horizontal"
-            responsive
             :options="navMenuOptions"
             :value="navMenuActiveKey"
             accordion
@@ -47,6 +35,15 @@
           <div class="nav-search-wrap">
             <SearchSuggest />
           </div>
+
+          <button
+            type="button"
+            class="nav-theme-toggle"
+            :aria-label="isDark ? '切换亮色模式' : '切换暗色模式'"
+            @click="toggleDark()"
+          >
+            <n-icon :class="{ 'theme-icon--spin': true }" :component="isDark ? SunnyOutline : MoonOutline" :size="20" />
+          </button>
 
           <router-link
             v-if="authStore.isLoggedIn"
@@ -103,6 +100,17 @@
           </div>
 
         </div>
+        <button
+          type="button"
+          class="menu-toggle"
+          :class="{ open: isMenuOpen }"
+          aria-label="菜单"
+          :aria-expanded="isMenuOpen"
+          aria-controls="primary-nav"
+          @click="toggleMenu"
+        >
+          <n-icon :component="isMenuOpen ? CloseOutline : MenuOutline" :size="24" />
+        </button>
       </div>
     </nav>
     <transition name="backdrop-fade">
@@ -121,10 +129,11 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { NMenu, NBadge, NDropdown, NIcon } from 'naive-ui';
-import { NotificationsOutline, MenuOutline, CloseOutline } from '@vicons/ionicons5';
+import { NotificationsOutline, MenuOutline, CloseOutline, SunnyOutline, MoonOutline } from '@vicons/ionicons5';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { useSiteStore } from '../stores/site';
+import { useTheme } from '../composables/useTheme';
 import UserAvatar from './UserAvatar.vue';
 import SearchSuggest from './SearchSuggest.vue';
 
@@ -133,8 +142,11 @@ const router = useRouter();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const siteStore = useSiteStore();
+const { isDark, toggleDark } = useTheme();
 const isMenuOpen = ref(false);
-const isMobileNav = ref(false);
+const isMobileNav = ref(
+  typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
+);
 const isScrolled = ref(false);
 const hideNav = ref(false);
 const navbarRef = ref(null);
@@ -142,17 +154,16 @@ let lastY = 0;
 let navResizeObserver = null;
 
 function syncNavLayoutOffset() {
-  if (!window.matchMedia('(min-width: 1024px)').matches) {
-    document.documentElement.style.removeProperty('--layout-navbar-bottom');
-    document.documentElement.style.removeProperty('--layout-main-pad-top');
-    return;
-  }
   const el = navbarRef.value?.querySelector('.nav-inner') || navbarRef.value;
   if (!el) return;
-  const bottom = Math.ceil(el.getBoundingClientRect().height);
-  const gap = 24;
+  const bottom = Math.ceil(el.getBoundingClientRect().bottom);
   document.documentElement.style.setProperty('--layout-navbar-bottom', `${bottom}px`);
-  document.documentElement.style.setProperty('--layout-main-pad-top', `${bottom + gap}px`);
+  if (window.matchMedia('(min-width: 1024px)').matches) {
+    const gap = 24;
+    document.documentElement.style.setProperty('--layout-main-pad-top', `${bottom + gap}px`);
+  } else {
+    document.documentElement.style.removeProperty('--layout-main-pad-top');
+  }
 }
 
 function bindNavResizeObserver() {
@@ -431,12 +442,14 @@ onUnmounted(() => {
   min-height: var(--nav-height);
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-nav);
-  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  background: var(--color-surface);
+  border-bottom: var(--border-brutal);
+  box-shadow: none;
+  transition: box-shadow var(--transition-fast);
+}
+
+.nav-inner::after {
+  display: none;
 }
 
 .nav-row {
@@ -456,16 +469,16 @@ onUnmounted(() => {
 
 .logo {
   font-family: var(--font-ui);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-black);
   font-size: var(--text-lg);
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   text-decoration: none;
   color: var(--color-text);
   transition: color var(--transition-fast);
 }
 
 .logo:hover {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .menu-toggle {
@@ -489,22 +502,61 @@ onUnmounted(() => {
 .nav-write-btn {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  background: var(--color-primary);
-  color: #fff;
-  border: 1px solid var(--color-primary);
+  font-weight: var(--weight-bold);
+  background: var(--color-accent);
+  color: var(--color-on-primary);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal-sm);
   text-decoration: none;
   white-space: nowrap;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .nav-write-btn:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-  color: #fff;
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  color: var(--color-on-primary);
+}
+
+.nav-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: var(--border-brutal);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-brutal-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.nav-theme-toggle:hover {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.nav-theme-toggle:active {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+.theme-icon--spin {
+  transition: transform 0.35s var(--ease-out-soft);
+}
+
+.nav-theme-toggle:hover .theme-icon--spin {
+  transform: rotate(180deg);
 }
 
 .nav-links {
@@ -547,21 +599,33 @@ onUnmounted(() => {
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content::after) {
-  content: '';
-  position: absolute;
-  left: var(--space-3);
-  right: var(--space-3);
-  bottom: 4px;
-  height: 2px;
-  background: var(--color-primary);
-  border-radius: 1px;
-  transform: scaleX(0);
-  transition: transform var(--transition-smooth);
+  display: none;
+}
+
+.nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
+  background: var(--color-text) !important;
+  color: var(--color-surface) !important;
+  border-radius: var(--radius-pill) !important;
+  font-weight: var(--weight-bold) !important;
+}
+
+html:not(.dark) .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
+  background: rgba(17, 24, 39, 0.08) !important;
+  color: var(--color-text) !important;
+}
+
+html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
+  background: rgba(212, 175, 55, 0.18) !important;
+  color: var(--color-text) !important;
+}
+
+.nav-naive-menu--desktop :deep(.n-menu-item-content:hover) {
+  color: var(--color-text) !important;
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content:hover::after),
 .nav-naive-menu--desktop :deep(.n-menu-item-content--selected::after) {
-  transform: scaleX(1);
+  transform: none;
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content-header) {
@@ -598,34 +662,36 @@ onUnmounted(() => {
   justify-content: center;
   min-height: 44px;
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold);
   text-decoration: none;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal-sm);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .nav-auth-btn--primary {
-  background: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-on-primary);
 }
 
 .nav-auth-btn--primary:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-  color: #fff;
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  color: var(--color-on-primary);
 }
 
 .nav-auth-btn--outline {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
   color: var(--color-text);
 }
 
 .nav-auth-btn--outline:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 @media (min-width: 1024px) {
@@ -677,6 +743,11 @@ onUnmounted(() => {
 
 .nav-notif-wrap :deep(.n-badge) {
   display: inline-flex;
+}
+
+.nav-notif-wrap :deep(.n-badge-sup) {
+  background-color: #ef4444 !important;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .nav-bell {
@@ -797,6 +868,9 @@ onUnmounted(() => {
 
   .menu-toggle {
     display: flex;
+    position: relative;
+    z-index: calc(var(--z-nav-menu) + 2);
+    touch-action: manipulation;
   }
 
   .navbar.nav-hidden:not(.navbar-menu-open) {
@@ -831,10 +905,19 @@ onUnmounted(() => {
     z-index: var(--z-nav-menu);
   }
 
+  .nav-links:not(.open),
+  .nav-links:not(.open) * {
+    pointer-events: none !important;
+  }
+
   .nav-links.open {
     transform: translateY(0);
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
+  }
+
+  .nav-links.open * {
     pointer-events: auto;
   }
 

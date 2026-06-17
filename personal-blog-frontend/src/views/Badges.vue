@@ -57,12 +57,18 @@ onMounted(async () => {
 
 .badge-card {
   border: 1px solid var(--color-border);
-  box-shadow: none;
+  box-shadow: var(--shadow-card);
   text-align: center;
+  background: var(--color-surface) !important;
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+}
+
+.badge-card.earned:hover {
+  border-color: var(--color-border-strong);
 }
 
 .badge-card.locked {
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 .badge-card-inner {
@@ -83,7 +89,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary-soft);
+  background: var(--surface-muted);
+  color: var(--color-text-muted);
   border-radius: var(--radius-md);
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);

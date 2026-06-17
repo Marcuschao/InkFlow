@@ -10,9 +10,9 @@
       </div>
       <p v-if="bio" class="profile-header-bio muted">{{ bio }}</p>
       <n-space class="profile-header-stats muted" :size="12">
-        <span>{{ followerCount }} 粉丝</span>
-        <span>{{ followingCount }} 关注</span>
-        <span v-if="points != null">{{ points }} 积分</span>
+        <span><span class="ds-stat-num">{{ followerCount }}</span> 粉丝</span>
+        <span><span class="ds-stat-num">{{ followingCount }}</span> 关注</span>
+        <span v-if="points != null"><span class="ds-stat-num">{{ points }}</span> 积分</span>
       </n-space>
       <BadgeStrip v-if="badges?.length" :badges="badges" />
     </div>
@@ -36,6 +36,7 @@ const avatar = computed(() => props.user?.avatar);
 const bio = computed(() => props.user?.bio);
 const followerCount = computed(() => props.user?.followerCount ?? 0);
 const followingCount = computed(() => props.user?.followingCount ?? 0);
+
 </script>
 
 <style scoped>
@@ -43,6 +44,19 @@ const followingCount = computed(() => props.user?.followingCount ?? 0);
   display: flex;
   align-items: flex-start;
   gap: var(--space-4);
+}
+
+.profile-header-avatar {
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-header-avatar :deep(.n-avatar) {
+  border: 2px solid var(--color-page);
 }
 
 .profile-header-main {

@@ -698,8 +698,9 @@ onUnmounted(() => {
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--border-brutal);
+  border-radius: var(--radius-brutal-card);
+  box-shadow: var(--shadow-brutal-lg);
   background: var(--color-surface);
   overflow: hidden;
 }

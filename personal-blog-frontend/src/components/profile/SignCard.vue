@@ -1,5 +1,5 @@
 <template>
-  <n-card class="sign-card" size="small">
+  <n-card class="sign-card ds-brutal-surface" size="small">
     <div class="sign-card-inner">
       <div class="sign-card-info">
         <p class="sign-title">每日签到</p>
@@ -85,8 +85,13 @@ defineExpose({ reload: loadStatus });
 <style scoped>
 .sign-card {
   margin-top: var(--space-4);
-  border: 1px solid var(--color-border);
-  box-shadow: none;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+  background: var(--color-surface) !important;
+}
+
+.sign-card :deep(.n-progress-graph-line-fill) {
+  background: var(--color-text-muted) !important;
 }
 
 .sign-card-inner {

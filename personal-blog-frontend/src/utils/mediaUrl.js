@@ -2,19 +2,19 @@ const MINIO_HOST = '120.48.48.31:57890';
 
 function minioOrigin() {
   if (typeof window !== 'undefined') return `${window.location.origin}/minio/`;
-  return 'http://tdwqlc.top:52148/minio/';
+  return 'http://tdwqlc.top/minio/';
 }
 
 function rewriteLegacyMediaUrl(url) {
   let next = url.replace(/^https?:\/\/120\.48\.48\.31:57890\//i, minioOrigin());
   next = next.replace(/^https?:\/\/8\.131\.98\.87(?::\d+)?\//i, (m) => {
     if (typeof window !== 'undefined') return `${window.location.origin}/`;
-    return 'http://tdwqlc.top:52148/';
+    return 'http://tdwqlc.top/';
   });
 
   const absUploadAvatar = next.match(/^https?:\/\/[^/]+\/upload\/avatars\/(.+)$/i);
   if (absUploadAvatar) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://tdwqlc.top:52148';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://tdwqlc.top';
     return `${origin}/minio/blog-avatars/avatars/${absUploadAvatar[1]}`;
   }
 
@@ -24,7 +24,7 @@ function rewriteLegacyMediaUrl(url) {
 
   const absUploadDiary = next.match(/^https?:\/\/[^/]+\/upload\/diary\/(.+)$/i);
   if (absUploadDiary) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://tdwqlc.top:52148';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://tdwqlc.top';
     return `${origin}/minio/blog-diary/diary/${absUploadDiary[1]}`;
   }
 

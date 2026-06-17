@@ -108,10 +108,10 @@ defineExpose({ reload: loadStatus });
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--border-brutal);
+  border-radius: var(--radius-brutal-card);
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-brutal);
   width: 7.5rem;
 }
 
@@ -135,8 +135,8 @@ defineExpose({ reload: loadStatus });
 
 .sign-ring-progress {
   fill: none;
-  stroke: var(--color-primary);
-  stroke-width: 4;
+  stroke: var(--color-text-muted);
+  stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.3s ease;
 }
