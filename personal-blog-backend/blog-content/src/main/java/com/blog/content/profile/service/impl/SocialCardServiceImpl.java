@@ -3,6 +3,8 @@ package com.blog.content.profile.service.impl;
 import com.blog.content.gamification.badge.model.vo.BadgeVo;
 import com.blog.content.gamification.badge.service.BadgeService;
 import com.blog.content.gamification.points.service.PointsService;
+import com.blog.content.gamification.shop.model.vo.EquippedItemVo;
+import com.blog.content.gamification.shop.service.ShopService;
 import com.blog.content.gamification.sign.model.vo.SignStatusVo;
 import com.blog.content.gamification.sign.service.SignService;
 import com.blog.content.profile.model.vo.SocialCardVo;
@@ -26,17 +28,20 @@ public class SocialCardServiceImpl implements SocialCardService {
     private final SignService signService;
     private final VisitorService visitorService;
     private final TimelineService timelineService;
+    private final ShopService shopService;
 
     public SocialCardServiceImpl(PointsService pointsService,
                                  BadgeService badgeService,
                                  SignService signService,
                                  VisitorService visitorService,
-                                 TimelineService timelineService) {
+                                 TimelineService timelineService,
+                                 ShopService shopService) {
         this.pointsService = pointsService;
         this.badgeService = badgeService;
         this.signService = signService;
         this.visitorService = visitorService;
         this.timelineService = timelineService;
+        this.shopService = shopService;
     }
 
     @Override
@@ -44,6 +49,7 @@ public class SocialCardServiceImpl implements SocialCardService {
         SocialCardVo vo = new SocialCardVo();
         vo.setPoints(safePoints(userId));
         vo.setBadges(safeBadges(userId));
+        vo.setEquippedItems(safeEquippedItems(userId));
         vo.setTimelinePreview(safeTimeline(userId));
         if (viewerId != null && viewerId.equals(userId)) {
             vo.setSignStatus(safeSignStatus(userId));
@@ -75,6 +81,15 @@ public class SocialCardServiceImpl implements SocialCardService {
             return timelineService.interactionTimeline(userId, 5);
         } catch (Exception e) {
             log.warn("加载互动时间线失败 userId={}: {}", userId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private List<EquippedItemVo> safeEquippedItems(Long userId) {
+        try {
+            return shopService.listEquippedItems(userId);
+        } catch (Exception e) {
+            log.warn("加载用户装备道具失败 userId={}: {}", userId, e.getMessage());
             return Collections.emptyList();
         }
     }

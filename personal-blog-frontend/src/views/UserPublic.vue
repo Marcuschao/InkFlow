@@ -4,7 +4,12 @@
     <n-empty v-else-if="!u" description="用户不存在" />
     <n-card v-else class="pub-panel ds-brutal-surface">
       <template #header>
-        <ProfileHeader :user="u" :badges="socialCard?.badges || []" :points="socialCard?.points">
+        <ProfileHeader
+          :user="u"
+          :badges="socialCard?.badges || []"
+          :points="socialCard?.points"
+          :equipped-items="socialCard?.equippedItems || []"
+        >
           <template #action>
             <FollowButton
               class="user-head-action"

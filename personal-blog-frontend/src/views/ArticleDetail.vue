@@ -93,6 +93,14 @@
                 @headings-extracted="handleHeadings"
               />
             </div>
+            <ArticleRewardPanel
+              v-if="articleIdNum"
+              :article-id="articleIdNum"
+              :records="rewardRecords"
+              :logged-in="authStore.isLoggedIn"
+              :current-user-id="authStore.user?.id"
+              @rewarded="loadRewards(articleIdNum)"
+            />
           </article>
           <div v-else class="state-msg state-fail">
             <n-empty description="文章不存在或加载失败" />
@@ -141,11 +149,11 @@
                   class="comment-row"
                 >
                   <template #prefix>
-                    <UserAvatar :src="c.avatar" :name="commentName(c)" :size="32" />
+                    <UserAvatar :src="c.avatar" :name="commentName(c)" :size="32" :equipped-items="c.equippedItems || []" />
                   </template>
                   <div class="comment-body-wrap">
                     <div class="comment-head">
-                      <strong class="comment-author">{{ commentName(c) }}</strong>
+                      <strong class="comment-author" :class="commentNameClass(c)">{{ commentName(c) }}</strong>
                       <time class="comment-time">{{ formatCommentTime(c.createTime) }}</time>
                     </div>
                     <p class="comment-body">{{ c.content }}</p>
@@ -240,6 +248,7 @@ import ArticleCard from '../components/ArticleCard.vue';
 import ArticleDetailSkeleton from '../components/skeleton/ArticleDetailSkeleton.vue';
 import KnowledgeGraphCard from '../components/knowledge/KnowledgeGraphCard.vue';
 import ArticleActionBar from '../components/ArticleActionBar.vue';
+import ArticleRewardPanel from '../components/reward/ArticleRewardPanel.vue';
 import FollowButton from '../components/FollowButton.vue';
 import UserAvatar from '../components/UserAvatar.vue';
 import { getFollowStatus } from '../api/interaction';
@@ -250,6 +259,8 @@ import { useReadingHistory } from '../composables/useReadingHistory';
 import { useToastStore } from '../stores/toast';
 import { useAuthStore } from '../stores/auth';
 import { reportArticle } from '../api/article';
+import { fetchArticleRewards } from '../api/reward';
+import { effectClass } from '../utils/itemEffects';
 
 const route = useRoute();
 const articleStore = useArticleStore();
@@ -312,6 +323,7 @@ const recommendArticles = ref([]);
 const recommendLoading = ref(false);
 const recommendError = ref('');
 const commentsFlat = ref([]);
+const rewardRecords = ref([]);
 const commentsLoading = ref(false);
 const commentSubmitting = ref(false);
 const deletingId = ref(null);
@@ -432,6 +444,7 @@ const formatCommentTime = (t) => {
 };
 
 const commentName = (c) => (c.nickname && String(c.nickname).trim() ? c.nickname : c.author);
+const commentNameClass = (c) => effectClass(c.equippedItems || [], 'NICKNAME_COLOR');
 
 const canDeleteOwnComment = (c) =>
   authStore.isLoggedIn && c.userId != null && authStore.user?.id != null && c.userId === authStore.user.id;
@@ -474,6 +487,15 @@ async function loadComments(aid) {
     commentsFlat.value = [];
   } finally {
     commentsLoading.value = false;
+  }
+}
+
+async function loadRewards(aid) {
+  try {
+    const res = await fetchArticleRewards(aid);
+    rewardRecords.value = Array.isArray(res.data) ? res.data : [];
+  } catch {
+    rewardRecords.value = [];
   }
 }
 
@@ -530,6 +552,7 @@ watch(
     activeTocId.value = '';
     recommendArticles.value = [];
     recommendError.value = '';
+    rewardRecords.value = [];
     teardownObserver();
     if (!newId) return;
     const langParam =
@@ -571,6 +594,7 @@ watch(
         }
       }
       if (Number.isFinite(rid)) {
+        await loadRewards(rid);
         await loadComments(rid);
         nextTick(() => updateReadProgressBar());
       }
@@ -961,6 +985,14 @@ onUnmounted(() => {
 
 .comment-author {
   font-size: var(--text-sm);
+}
+
+.item-name-gold {
+  color: var(--color-warn);
+}
+
+.item-name-pink {
+  color: var(--color-accent-pink);
 }
 
 .comment-time {

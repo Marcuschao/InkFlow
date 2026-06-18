@@ -51,6 +51,25 @@ public class FileStorageService {
         return saveDiaryImageLocal(file, year, month, name);
     }
 
+    public String saveAssetImage(String folder, MultipartFile file) {
+        validateImage(file);
+        MinioStorageService minio = minioStorageProvider.getIfAvailable();
+        if (minio == null) {
+            throw new ServiceException(503, "对象存储未启用");
+        }
+        String ext = extensionOf(file.getOriginalFilename());
+        String safeFolder = StringUtils.hasText(folder) ? folder.replaceAll("[^a-zA-Z0-9_-]", "") : "assets";
+        String name = UUID.randomUUID().toString().replace("-", "") + "." + ext;
+        String objectKey = "assets/" + safeFolder + "/" + name;
+        try {
+            byte[] bytes = file.getBytes();
+            minio.putObject(minio.bucketAssets(), objectKey, bytes, contentType(ext));
+            return minio.buildPublicUrl(minio.bucketAssets(), objectKey);
+        } catch (IOException e) {
+            throw new ServiceException(500, "图片读取失败");
+        }
+    }
+
     public String saveAvatar(Long userId, MultipartFile file) {
         validateImage(file);
         if (file.getSize() > MAX_AVATAR_BYTES) {

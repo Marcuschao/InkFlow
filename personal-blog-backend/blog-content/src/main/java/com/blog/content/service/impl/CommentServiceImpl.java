@@ -14,6 +14,8 @@ import com.blog.content.model.entity.UserProfile;
 import com.blog.content.common.exception.ServiceException;
 import com.blog.content.gamification.event.ActivityType;
 import com.blog.content.gamification.event.UserActivityEventPublisher;
+import com.blog.content.gamification.shop.model.vo.EquippedItemVo;
+import com.blog.content.gamification.shop.service.ShopService;
 import com.blog.content.mapper.CommentMapper;
 import com.blog.content.notification.DomainEvent;
 import com.blog.content.notification.NotificationProducer;
@@ -55,6 +57,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     private WriteIdempotencyService writeIdempotencyService;
     @Autowired
     private UserActivityEventPublisher activityEventPublisher;
+    @Autowired
+    private ShopService shopService;
 
     @Override
     public List<CommentPublicVo> listApprovedForArticle(Long articleId) {
@@ -67,12 +71,14 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<Long, UserProfile> profileMap = userService.mapProfilesByUserIds(userIds);
+        Map<Long, List<EquippedItemVo>> equippedMap = userIds.stream()
+                .collect(Collectors.toMap(id -> id, shopService::listEquippedItems));
         return list.stream()
-                .map(c -> toPublicVo(c, profileMap.get(c.getUserId())))
+                .map(c -> toPublicVo(c, profileMap.get(c.getUserId()), equippedMap.getOrDefault(c.getUserId(), List.of())))
                 .collect(Collectors.toList());
     }
 
-    private CommentPublicVo toPublicVo(Comment c, UserProfile profile) {
+    private CommentPublicVo toPublicVo(Comment c, UserProfile profile, List<EquippedItemVo> equippedItems) {
         String nickname = profile != null && StringUtils.hasText(profile.getNickname())
                 ? profile.getNickname()
                 : null;
@@ -84,6 +90,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                 c.getAuthor(),
                 nickname,
                 avatar,
+                equippedItems,
                 c.getContent(),
                 c.getCreateTime());
     }

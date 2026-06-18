@@ -7,6 +7,7 @@ import com.blog.content.model.vo.chat.ChatMessageVo;
 import com.blog.content.model.vo.chat.ChatUserDisplayVo;
 import com.blog.content.service.ChatUserDisplayService;
 import com.blog.content.service.UserProfileLookupService;
+import com.blog.content.gamification.shop.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -24,6 +25,7 @@ public class ChatUserDisplayServiceImpl implements ChatUserDisplayService {
 
     private final UserMapper userMapper;
     private final UserProfileLookupService userService;
+    private final ShopService shopService;
 
     @Override
     public Map<Long, ChatUserDisplayVo> mapDisplayByUserIds(Collection<Long> userIds) {
@@ -51,6 +53,7 @@ public class ChatUserDisplayServiceImpl implements ChatUserDisplayService {
             vo.setUserId(user.getId());
             vo.setUsername(resolveDisplayName(user, profile));
             vo.setAvatar(resolveAvatar(user, profile));
+            vo.setEquippedItems(shopService.listEquippedItems(user.getId()));
             result.put(user.getId(), vo);
         }
         
@@ -100,6 +103,7 @@ public class ChatUserDisplayServiceImpl implements ChatUserDisplayService {
             }
             message.setUsername(display.getUsername());
             message.setAvatar(display.getAvatar());
+            message.setEquippedItems(display.getEquippedItems());
         }
     }
 }

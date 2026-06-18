@@ -1,6 +1,6 @@
 <template>
   <router-link :to="`/article/${article.id}`" class="article-card-link">
-    <n-card hoverable class="article-card ds-brutal-surface ds-card-hover">
+    <n-card hoverable class="article-card ds-brutal-surface ds-card-hover" :class="cardSkinClass">
       <div v-if="!hideCover" class="cover-wrap">
         <img
           v-if="coverUrl"
@@ -40,6 +40,7 @@
 import { computed } from 'vue';
 import { NCard, NIcon, NSpace, NTag } from 'naive-ui';
 import { Heart, HeartOutline } from '@vicons/ionicons5';
+import { effectClass } from '../utils/itemEffects';
 
 const props = defineProps({
   article: { type: Object, required: true },
@@ -47,6 +48,7 @@ const props = defineProps({
   showLike: { type: Boolean, default: false },
   likeCount: { type: Number, default: undefined },
   hideCover: { type: Boolean, default: true },
+  equippedItems: { type: Array, default: () => [] },
 });
 
 const coverUrl = computed(() => {
@@ -63,6 +65,8 @@ const displayLiked = computed(() => {
   if (props.liked !== undefined) return props.liked;
   return !!props.article.liked;
 });
+
+const cardSkinClass = computed(() => effectClass(props.equippedItems, 'CARD_SKIN'));
 
 const reasonLine = computed(() => {
   const r = (props.reason || props.article.reason || '').trim();
@@ -98,6 +102,10 @@ const formatDate = (dateString) => {
   border: var(--border-brutal) !important;
   border-radius: var(--radius-brutal-card) !important;
   box-shadow: var(--shadow-brutal-lg) !important;
+}
+
+.item-card-starry {
+  background: var(--surface-muted) !important;
 }
 
 .article-card :deep(.n-card__content) {

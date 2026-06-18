@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: blog-content
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   profiles:
     active: local
   cloud:

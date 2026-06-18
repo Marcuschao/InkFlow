@@ -175,6 +175,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Binding bindReward(Queue inboxQueue, TopicExchange notificationExchange) {
+        return BindingBuilder.bind(inboxQueue).to(notificationExchange).with(NotificationRabbitProperties.RK_REWARD);
+    }
+
+    @Bean
     public Binding bindPush(Queue pushQueue, TopicExchange notificationExchange) {
         return BindingBuilder.bind(pushQueue).to(notificationExchange).with(NotificationRabbitProperties.RK_ARTICLE_PUBLISHED);
     }

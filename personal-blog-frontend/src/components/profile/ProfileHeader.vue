@@ -1,9 +1,15 @@
 <template>
   <div class="profile-header">
-    <UserAvatar class="profile-header-avatar" :src="avatar" :name="displayName" :size="64" />
+    <UserAvatar
+      class="profile-header-avatar"
+      :src="avatar"
+      :name="displayName"
+      :size="64"
+      :equipped-items="equippedItems"
+    />
     <div class="profile-header-main">
       <div class="profile-header-top">
-        <h1 class="profile-header-name">{{ displayName }}</h1>
+        <h1 class="profile-header-name" :class="nameColorClass">{{ displayName }}</h1>
         <div v-if="$slots.action" class="profile-header-action">
           <slot name="action" />
         </div>
@@ -24,11 +30,13 @@ import { computed } from 'vue';
 import { NSpace } from 'naive-ui';
 import UserAvatar from '../UserAvatar.vue';
 import BadgeStrip from './BadgeStrip.vue';
+import { effectClass } from '../../utils/itemEffects';
 
 const props = defineProps({
   user: { type: Object, required: true },
   badges: { type: Array, default: () => [] },
   points: { type: Number, default: null },
+  equippedItems: { type: Array, default: () => [] },
 });
 
 const displayName = computed(() => props.user?.nickname || props.user?.username || '用户');
@@ -36,6 +44,7 @@ const avatar = computed(() => props.user?.avatar);
 const bio = computed(() => props.user?.bio);
 const followerCount = computed(() => props.user?.followerCount ?? 0);
 const followingCount = computed(() => props.user?.followingCount ?? 0);
+const nameColorClass = computed(() => effectClass(props.equippedItems, 'NICKNAME_COLOR'));
 
 </script>
 
@@ -79,6 +88,14 @@ const followingCount = computed(() => props.user?.followingCount ?? 0);
   margin: 0;
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
+}
+
+.item-name-gold {
+  color: var(--color-warn);
+}
+
+.item-name-pink {
+  color: var(--color-accent-pink);
 }
 
 .profile-header-bio {

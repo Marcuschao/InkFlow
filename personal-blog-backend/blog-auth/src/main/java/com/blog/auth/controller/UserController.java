@@ -43,7 +43,7 @@ public class UserController {
         return Result.success(userService.uploadAvatar(currentUserService.requireUserId(), file));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public Result<PublicUserVo> publicProfile(@PathVariable Long id) {
         return Result.success(userService.getPublicProfile(id));
     }

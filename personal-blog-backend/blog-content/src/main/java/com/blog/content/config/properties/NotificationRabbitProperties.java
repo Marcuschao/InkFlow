@@ -20,6 +20,7 @@ public class NotificationRabbitProperties {
     public static final String RK_FAVORITE = "notification.favorite";
     public static final String RK_COMMENT = "notification.comment";
     public static final String RK_FOLLOW = "notification.follow";
+    public static final String RK_REWARD = "notification.reward";
     public static final String RK_ARTICLE_PUBLISHED = "notification.article.published";
     public static final String RK_EVENT_PREFIX = "notification.event.";
 }

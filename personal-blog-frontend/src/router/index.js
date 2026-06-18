@@ -108,6 +108,12 @@ const routes = [
     component: () => import('../views/Badges.vue'),
   },
   {
+    path: '/shop',
+    name: 'Shop',
+    component: () => import('../views/Shop.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/user/me',
     name: 'UserProfile',
     component: () => import('../views/UserProfile.vue'),

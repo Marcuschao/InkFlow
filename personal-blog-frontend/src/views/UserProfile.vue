@@ -5,7 +5,12 @@
     <div v-else class="profile-layout">
       <n-card class="profile-panel ds-brutal-surface">
       <template #header>
-        <ProfileHeader :user="user" :badges="socialCard?.badges || []" :points="socialCard?.points">
+        <ProfileHeader
+          :user="user"
+          :badges="socialCard?.badges || []"
+          :points="socialCard?.points"
+          :equipped-items="socialCard?.equippedItems || []"
+        >
           <template #action />
         </ProfileHeader>
       </template>
@@ -18,6 +23,10 @@
 
           <div v-else-if="t.id === 'visitors'" class="tab-panel">
             <VisitorList :visitors="visitors" />
+          </div>
+
+          <div v-else-if="t.id === 'inventory'" class="tab-panel">
+            <UserInventoryPanel @changed="loadSocialCard" />
           </div>
 
           <div v-else-if="t.id === 'profile'" class="tab-panel">
@@ -88,7 +97,13 @@
             <n-empty v-else-if="!favorites.length" description="暂无收藏" />
             <n-grid v-else :cols="1" :y-gap="16">
               <n-gi v-for="a in favorites" :key="a.id">
-                <ArticleCard :article="a" :like-count="a.likeCount" :liked="a.liked" show-like />
+                <ArticleCard
+                  :article="a"
+                  :like-count="a.likeCount"
+                  :liked="a.liked"
+                  :equipped-items="socialCard?.equippedItems || []"
+                  show-like
+                />
               </n-gi>
             </n-grid>
             <Pagination v-if="favTotal > favSize" :total="favTotal" :page-size="favSize" :current-page="favPage" @changePage="loadFavorites" />
@@ -153,6 +168,7 @@ import ProfileHeader from '../components/profile/ProfileHeader.vue';
 import SignWidget from '../components/profile/SignWidget.vue';
 import InteractionTimeline from '../components/profile/InteractionTimeline.vue';
 import VisitorList from '../components/profile/VisitorList.vue';
+import UserInventoryPanel from '../components/profile/UserInventoryPanel.vue';
 import Pagination from '../components/Pagination.vue';
 import { fetchOAuthBindings, bindGithub, unbindGithub } from '../api/oauth';
 
@@ -168,6 +184,7 @@ const tabs = [
   { id: 'profile', label: '资料' },
   { id: 'landscape', label: '知识版图' },
   { id: 'favorites', label: '收藏' },
+  { id: 'inventory', label: '背包' },
   { id: 'visitors', label: '访客' },
   { id: 'following', label: '关注' },
   { id: 'followers', label: '粉丝' },

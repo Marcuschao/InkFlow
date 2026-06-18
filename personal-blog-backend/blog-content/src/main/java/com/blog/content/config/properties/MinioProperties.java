@@ -28,5 +28,6 @@ public class MinioProperties {
         private String logs = "blog-logs";
         private String reports = "blog-reports";
         private String backups = "blog-backups";
+        private String assets = "blog-assets";
     }
 }

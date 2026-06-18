@@ -18,6 +18,8 @@ import java.util.TimeZone;
         "com.blog.content.mapper",
         "com.blog.content.gamification.badge.mapper",
         "com.blog.content.gamification.points.mapper",
+        "com.blog.content.gamification.reward.mapper",
+        "com.blog.content.gamification.shop.mapper",
         "com.blog.content.profile.mapper"
 })
 @EnableScheduling

@@ -63,6 +63,15 @@ public class NotificationProducer {
                 .ifPresent(this::sendInbox);
     }
 
+    public void notifyReward(Long actorUserId, Article article, Integer points) {
+        inboxAssembler.assemble(NotificationType.REWARD, InboxNotificationRequest.builder()
+                .actorUserId(actorUserId)
+                .article(article)
+                .points(points)
+                .build())
+                .ifPresent(this::sendInbox);
+    }
+
     public void sendArticlePublished(Article article) {
         if (article == null || article.getId() == null) {
             return;
@@ -111,6 +120,7 @@ public class NotificationProducer {
             case FAVORITE -> NotificationRabbitProperties.RK_FAVORITE;
             case COMMENT -> NotificationRabbitProperties.RK_COMMENT;
             case FOLLOW -> NotificationRabbitProperties.RK_FOLLOW;
+            case REWARD -> NotificationRabbitProperties.RK_REWARD;
         };
     }
 

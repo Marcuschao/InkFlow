@@ -165,6 +165,11 @@ public class MinioStorageServiceImpl implements MinioStorageService {
         return properties.getBuckets().getBackups();
     }
 
+    @Override
+    public String bucketAssets() {
+        return properties.getBuckets().getAssets();
+    }
+
     private static void requireKey(String objectKey) {
         if (!StringUtils.hasText(objectKey)) {
             throw new ServiceException(400, "objectKey 不能为空");

@@ -14,4 +14,5 @@ public class InboxNotificationRequest {
     private final Long recipientUserId;
     private final Long articleId;
     private final String articleTitle;
+    private final Integer points;
 }

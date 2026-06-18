@@ -34,11 +34,16 @@ spring:
               predicates:
                 - Path=/api/user/{id:\d+}
                 - Method=GET
+            - id: blog-content-user-items
+              uri: lb://blog-content
+              order: -12
+              predicates:
+                - Path=/api/user/items,/api/user/items/**,/api/user/reward-history
             - id: blog-content-user-social
               uri: lb://blog-content
               order: -11
               predicates:
-                - Path=/api/user/feed,/api/user/me/favorites,/api/user/*/follow,/api/user/*/follow/status,/api/user/*/followers,/api/user/*/following,/api/user/*/social-card,/api/user/timeline,/api/user/points,/api/sign/**,/api/badges/**,/api/badges,/api/profile/**
+                - Path=/api/user/feed,/api/user/me/favorites,/api/user/*/follow,/api/user/*/follow/status,/api/user/*/followers,/api/user/*/following,/api/user/*/social-card,/api/user/timeline,/api/user/points,/api/user/items,/api/user/items/**,/api/user/reward-history,/api/sign/**,/api/badges/**,/api/badges,/api/profile/**
             - id: blog-auth-public-user
               uri: lb://blog-auth
               order: -8

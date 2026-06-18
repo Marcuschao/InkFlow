@@ -12,6 +12,14 @@
             <p class="badge-card-desc muted">{{ b.description }}</p>
             <n-tag v-if="b.earned" size="small" type="success">已获得</n-tag>
             <n-tag v-else size="small">未获得</n-tag>
+            <n-upload
+              v-if="authStore.isAdmin"
+              :show-file-list="false"
+              accept="image/*"
+              :custom-request="(options) => uploadIcon(b, options)"
+            >
+              <n-button size="tiny" :loading="uploadingId === b.id">上传图片</n-button>
+            </n-upload>
           </div>
         </n-card>
       </n-gi>
@@ -22,13 +30,19 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useHead } from '@vueuse/head';
-import { NCard, NGi, NGrid, NSkeleton, NTag } from 'naive-ui';
+import { NButton, NCard, NGi, NGrid, NSkeleton, NTag, NUpload } from 'naive-ui';
 import { getBadges } from '../api/social';
+import { uploadBadgeIcon } from '../api/upload';
+import { useAuthStore } from '../stores/auth';
+import { useToastStore } from '../stores/toast';
 
 useHead({ title: '徽章墙' });
 
 const loading = ref(true);
+const uploadingId = ref(null);
 const badges = ref([]);
+const authStore = useAuthStore();
+const toast = useToastStore();
 
 const gridCols = computed(() => (window.innerWidth < 768 ? 2 : 4));
 
@@ -42,6 +56,20 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+async function uploadIcon(badge, { file, onFinish, onError }) {
+  uploadingId.value = badge.id;
+  try {
+    const res = await uploadBadgeIcon(badge.id, file.file);
+    badge.iconUrl = res.data;
+    toast.push('上传成功', 'success');
+    onFinish();
+  } catch {
+    onError();
+  } finally {
+    uploadingId.value = null;
+  }
+}
 </script>
 
 <style scoped>
@@ -79,8 +107,10 @@ onMounted(async () => {
 }
 
 .badge-lg {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  display: block;
 }
 
 .badge-lg-fallback {

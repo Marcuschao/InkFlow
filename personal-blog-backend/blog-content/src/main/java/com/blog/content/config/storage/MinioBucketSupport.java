@@ -29,6 +29,7 @@ public class MinioBucketSupport {
         ensureBucket(buckets.getLogs(), false);
         ensureBucket(buckets.getReports(), false);
         ensureBucket(buckets.getBackups(), false);
+        ensureBucket(buckets.getAssets(), true);
     }
 
     public void ensureBucket(String bucket) {
@@ -65,7 +66,9 @@ public class MinioBucketSupport {
 
     private boolean isPublicReadBucket(String bucket) {
         MinioProperties.Buckets buckets = properties.getBuckets();
-        return bucket.equals(buckets.getAvatars()) || bucket.equals(buckets.getDiary());
+        return bucket.equals(buckets.getAvatars())
+                || bucket.equals(buckets.getDiary())
+                || bucket.equals(buckets.getAssets());
     }
 
     private void applyPublicReadPolicy(String bucket) throws Exception {

@@ -31,4 +31,6 @@ public interface MinioStorageService {
     String bucketReports();
 
     String bucketBackups();
+
+    String bucketAssets();
 }

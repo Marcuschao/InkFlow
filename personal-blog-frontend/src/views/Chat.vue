@@ -30,6 +30,7 @@ import {
   sendRecall,
 } from '../services/websocket';
 import { formatChatMessageTime } from '../utils/format';
+import { effectClass } from '../utils/itemEffects';
 
 const INITIAL_LIMIT = 50;
 const PAGE_SIZE = 30;
@@ -72,6 +73,14 @@ let stopStatusListener = () => {};
 
 const menuOptions = [{ label: '撤回', key: 'recall' }];
 const composerDisabled = computed(() => muteInfo.value.muted || sending.value);
+
+function equippedItemsOf(userId) {
+  return profileOf(userId).equippedItems || [];
+}
+
+function nicknameClassOf(userId) {
+  return effectClass(equippedItemsOf(userId), 'NICKNAME_COLOR');
+}
 
 function makeKey(msg) {
   return msg.id ?? msg.clientMsgId ?? `tmp-${Date.now()}`;
@@ -558,10 +567,11 @@ onUnmounted(() => {
                   :src="profileOf(item.userId).avatar"
                   :name="profileOf(item.userId).username"
                   :size="36"
+                  :equipped-items="equippedItemsOf(item.userId)"
                 />
                 <div class="bubble-wrap">
                   <div class="bubble-meta">
-                    <span class="name">{{ profileOf(item.userId).username }}</span>
+                    <span class="name" :class="nicknameClassOf(item.userId)">{{ profileOf(item.userId).username }}</span>
                     <n-tag v-if="item.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
                     <time class="time">{{ formatChatMessageTime(item.createTime) }}</time>
                   </div>
@@ -582,6 +592,7 @@ onUnmounted(() => {
                   :src="profileOf(item.userId).avatar"
                   :name="profileOf(item.userId).username"
                   :size="36"
+                  :equipped-items="equippedItemsOf(item.userId)"
                 />
               </div>
             </template>
@@ -622,10 +633,15 @@ onUnmounted(() => {
           <n-list v-if="onlineUsers.length" hoverable>
             <n-list-item v-for="user in onlineUsers" :key="user.userId">
               <template #prefix>
-                <UserAvatar :src="profileOf(user.userId).avatar" :name="profileOf(user.userId).username" :size="32" />
+                <UserAvatar
+                  :src="profileOf(user.userId).avatar"
+                  :name="profileOf(user.userId).username"
+                  :size="32"
+                  :equipped-items="equippedItemsOf(user.userId)"
+                />
               </template>
               <div class="online-name">
-                {{ profileOf(user.userId).username }}
+                <span :class="nicknameClassOf(user.userId)">{{ profileOf(user.userId).username }}</span>
                 <n-tag v-if="user.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
               </div>
             </n-list-item>
@@ -646,10 +662,15 @@ onUnmounted(() => {
         <n-list v-if="onlineUsers.length" hoverable>
           <n-list-item v-for="user in onlineUsers" :key="user.userId">
             <template #prefix>
-              <UserAvatar :src="profileOf(user.userId).avatar" :name="profileOf(user.userId).username" :size="32" />
+              <UserAvatar
+                :src="profileOf(user.userId).avatar"
+                :name="profileOf(user.userId).username"
+                :size="32"
+                :equipped-items="equippedItemsOf(user.userId)"
+              />
             </template>
             <div class="online-name">
-              {{ profileOf(user.userId).username }}
+              <span :class="nicknameClassOf(user.userId)">{{ profileOf(user.userId).username }}</span>
               <n-tag v-if="user.admin" size="small" type="warning" :bordered="false">管理员</n-tag>
             </div>
           </n-list-item>
@@ -759,6 +780,14 @@ onUnmounted(() => {
 .bubble-meta .name {
   font-weight: var(--weight-semibold);
   color: var(--color-text);
+}
+
+.item-name-gold {
+  color: var(--color-warn);
+}
+
+.item-name-pink {
+  color: var(--color-accent-pink);
 }
 
 .bubble {

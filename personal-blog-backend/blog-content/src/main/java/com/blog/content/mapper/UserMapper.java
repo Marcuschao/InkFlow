@@ -15,4 +15,7 @@ public interface UserMapper extends BaseMapper<User> {
 
     @Update("UPDATE user SET points = IFNULL(points, 0) + #{delta} WHERE id = #{userId}")
     int addPointsById(@Param("userId") Long userId, @Param("delta") int delta);
+
+    @Update("UPDATE user SET points = IFNULL(points, 0) - #{amount} WHERE id = #{userId} AND IFNULL(points, 0) >= #{amount}")
+    int deductPointsIfEnough(@Param("userId") Long userId, @Param("amount") int amount);
 }

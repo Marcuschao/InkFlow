@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import com.blog.content.gamification.shop.model.vo.EquippedItemVo;
 
 @Data
 @NoArgsConstructor
@@ -16,6 +18,7 @@ public class CommentPublicVo {
     private String author;
     private String nickname;
     private String avatar;
+    private List<EquippedItemVo> equippedItems;
     private String content;
     private LocalDateTime createTime;
 }

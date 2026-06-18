@@ -88,13 +88,13 @@ cp personal-blog-frontend/.env.production.example personal-blog-frontend/.env.pr
 
 ```yaml
 blog:
-  site-url: http://tdwqlc.top
+  site-url: http://domain.com
   site-base-path:          # 根路径部署留空
   oauth:
-    redirect-uri: http://tdwqlc.top/login/oauth2/code/github
-    frontend-callback-url: http://tdwqlc.top/oauth/callback
+    redirect-uri: http://domain.com/login/oauth2/code/github
+    frontend-callback-url: http://domain.com/oauth/callback
 minio:
-  public-base-url: http://tdwqlc.top/minio
+  public-base-url: http://domain.com/minio
 ```
 
 GitHub OAuth App 的 **Authorization callback URL** 必须与 `redirect-uri` 完全一致。
@@ -102,7 +102,7 @@ GitHub OAuth App 的 **Authorization callback URL** 必须与 `redirect-uri` 完
 数据库站点地址：
 
 ```sql
-UPDATE blog_site SET site_url = 'http://tdwqlc.top' WHERE id = 1;
+UPDATE blog_site SET site_url = 'http://domain.com' WHERE id = 1;
 ```
 
 ## 本地启动
@@ -145,7 +145,7 @@ npm run dev
 
 ## 生产部署
 
-线上入口：`http://tdwqlc.top`（80 端口，根路径部署）。
+线上入口：`http://domain.com`（80 端口，根路径部署）。
 
 ### 构建与发布
 

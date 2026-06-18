@@ -188,6 +188,7 @@ const STATIC_NAV_KEYS = [
   '/share',
   '/reading-history',
   '/chat',
+  '/shop',
 ];
 
 const navMenuActiveKey = computed(() => {
@@ -206,6 +207,7 @@ const MAIN_NAV_OPTIONS = [
   { label: '友链', key: '/links' },
   { label: '分享', key: '/share' },
   { label: '聊天室', key: '/chat' },
+  { label: '商城', key: '/shop' },
   { label: '阅读记录', key: '/reading-history' },
 ];
 
