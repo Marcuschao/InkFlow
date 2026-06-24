@@ -211,7 +211,7 @@
                 <a
                   :class="{ 'is-active': activeTocId === heading.id }"
                   :href="`#${heading.id}`"
-                  @click.prevent="scrollToHeading(heading.id)"
+                  @click.prevent="goToHeading(heading.id)"
                 >
                   {{ heading.text }}
                 </a>
@@ -226,7 +226,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted, onUnmounted, reactive, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useHead } from '@vueuse/head';
 import {
   NAlert,
@@ -263,6 +263,7 @@ import { fetchArticleRewards } from '../api/reward';
 import { effectClass } from '../utils/itemEffects';
 
 const route = useRoute();
+const router = useRouter();
 const articleStore = useArticleStore();
 const toastStore = useToastStore();
 const authStore = useAuthStore();
@@ -427,15 +428,33 @@ const handleHeadings = (extractedHeadings) => {
   });
 };
 
+const getScrollOffset = () => {
+  const styles = getComputedStyle(document.documentElement);
+  const navOffset = Number.parseFloat(styles.getPropertyValue('--layout-main-pad-top'));
+  const gap = Number.parseFloat(styles.getPropertyValue('--space-2'));
+  return (Number.isFinite(navOffset) ? navOffset : 0) + (Number.isFinite(gap) ? gap : 0);
+};
+
 const scrollToHeading = (id) => {
   activeTocId.value = id;
   const element = document.getElementById(id);
   if (element) {
-    element.scrollIntoView({
+    const top = element.getBoundingClientRect().top + window.scrollY - getScrollOffset();
+    window.scrollTo({
+      top: Math.max(0, top),
       behavior: 'smooth',
-      block: 'start',
     });
   }
+};
+
+const goToHeading = (id) => {
+  router.push({
+    name: route.name,
+    params: route.params,
+    query: route.query,
+    hash: `#${id}`,
+  }).catch(() => {});
+  scrollToHeading(id);
 };
 
 const formatCommentTime = (t) => {
@@ -560,7 +579,9 @@ watch(
     loading.value = true;
     await articleStore.fetchArticleDetail(String(newId), langParam);
     loading.value = false;
-    window.scrollTo(0, 0);
+    if (!route.hash) {
+      window.scrollTo(0, 0);
+    }
     if (articleStore.currentArticle) {
       recordVisit(articleStore.currentArticle);
       const rid = Number(newId);
@@ -601,6 +622,14 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => route.hash,
+  (hash) => {
+    if (!hash || !headings.value.length) return;
+    nextTick(() => scrollToHeading(hash.substring(1)));
+  }
 );
 
 onMounted(() => {
@@ -673,6 +702,10 @@ onUnmounted(() => {
   .sidebar {
     grid-area: sidebar;
     min-width: 0;
+  }
+
+  .article-grid--with-toc .sidebar {
+    width: 15.5rem;
   }
 }
 
@@ -828,6 +861,17 @@ onUnmounted(() => {
   box-shadow: var(--shadow-brutal);
   background: var(--color-surface);
   padding: var(--space-4);
+}
+
+@media (min-width: 1024px) {
+  .table-of-contents {
+    position: fixed;
+    top: calc(var(--layout-navbar-bottom) + var(--space-4));
+    width: 15.5rem;
+    max-height: calc(100vh - var(--layout-navbar-bottom) - var(--space-8));
+    overflow-y: auto;
+    z-index: 20;
+  }
 }
 
 .table-of-contents ul {

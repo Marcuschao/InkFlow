@@ -1,6 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
+function scrollOffsetTop() {
+  const styles = getComputedStyle(document.documentElement);
+  const navOffset = Number.parseFloat(styles.getPropertyValue('--layout-main-pad-top'));
+  const gap = Number.parseFloat(styles.getPropertyValue('--space-2'));
+  return (Number.isFinite(navOffset) ? navOffset : 0) + (Number.isFinite(gap) ? gap : 0);
+}
+
 const routes = [
   {
     path: '/',
@@ -340,7 +347,7 @@ const router = createRouter({
       return savedPosition;
     }
     if (to.hash) {
-      return { el: to.hash, behavior: 'smooth' };
+      return { el: to.hash, top: scrollOffsetTop(), behavior: 'smooth' };
     }
     if (to.path !== from.path) {
       return { top: 0, left: 0 };
@@ -379,6 +386,15 @@ router.beforeEach(async (to) => {
       return { name: 'Home' };
     }
   }
+});
+
+router.afterEach((to, from) => {
+  if (to.path === from.path || to.hash) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+  });
 });
 
 export default router;

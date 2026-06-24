@@ -32,23 +32,41 @@ const canParallax = () => {
   return true;
 };
 
-const extractHeadings = (htmlContent) => {
+const normalizeHeadingId = (text, index, used) => {
+  const base = String(text || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-|-$/g, '') || `heading-${index + 1}`;
+  let id = base;
+  let n = 2;
+  while (used.has(id)) {
+    id = `${base}-${n}`;
+    n += 1;
+  }
+  used.add(id);
+  return id;
+};
+
+const normalizeHeadings = (htmlContent) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlContent, 'text/html');
   const headingElements = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
   const headings = [];
+  const used = new Set();
 
-  headingElements.forEach((el) => {
+  headingElements.forEach((el, index) => {
     const level = parseInt(el.tagName.substring(1));
-    const text = el.textContent;
-    let id = el.id;
-    if (!id) {
-      id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      el.id = id;
-    }
+    const text = el.textContent || '';
+    const id = el.id && !used.has(el.id) ? el.id : normalizeHeadingId(text, index, used);
+    used.add(id);
+    el.id = id;
     headings.push({ id, level, text });
   });
-  return headings;
+  return {
+    html: doc.body.innerHTML,
+    headings,
+  };
 };
 
 const applyLazyAllImages = () => {
@@ -140,9 +158,10 @@ const renderMarkdown = async () => {
   });
 
   const html = marked.parse(props.markdown || '');
-  renderedMarkdown.value = html;
+  const normalized = normalizeHeadings(html);
+  renderedMarkdown.value = normalized.html;
   await nextTick();
-  emit('headings-extracted', extractHeadings(html));
+  emit('headings-extracted', normalized.headings);
   await nextTick();
   applyLazyAllImages();
   wrapImagesAndParallax();
@@ -209,6 +228,15 @@ onUnmounted(() => {
   margin-bottom: 0.35em;
   font-family: var(--font-ui);
   font-weight: 600;
+}
+
+.markdown-prose :deep(h1),
+.markdown-prose :deep(h2),
+.markdown-prose :deep(h3),
+.markdown-prose :deep(h4),
+.markdown-prose :deep(h5),
+.markdown-prose :deep(h6) {
+  scroll-margin-top: calc(var(--layout-main-pad-top) + var(--space-2));
 }
 
 .markdown-prose :deep(a) {

@@ -145,7 +145,7 @@
         </n-card>
 
         <ArticleAiSidebar
-          v-if="activeLang === 'zh' && !isAuthorMode"
+          v-if="activeLang === 'zh'"
           :title="article.title"
           :tags-hint="tagsInput"
           :get-context="getTextareaContext"
