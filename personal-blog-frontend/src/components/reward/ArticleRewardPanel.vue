@@ -28,20 +28,27 @@
     </button>
     <p v-else class="reward-empty">暂未收到打赏</p>
 
-    <n-modal v-model:show="showRewardModal" preset="card" title="选择打赏积分" class="reward-modal">
-      <p v-if="!loggedIn" class="reward-desc">登录后可打赏作者。</p>
-      <n-space v-else :size="12">
-        <n-button
+    <n-modal v-model:show="showRewardModal" preset="card" class="reward-modal">
+      <div class="reward-modal-head">
+        <span class="reward-modal-kicker">支持作者</span>
+        <h3>选择打赏积分</h3>
+        <p>你的支持会展示在文章支持者列表中。</p>
+      </div>
+      <p v-if="!loggedIn" class="reward-login-tip">登录后可打赏作者。</p>
+      <div v-else class="reward-level-grid">
+        <button
           v-for="points in levels"
           :key="points"
-          type="primary"
-          secondary
-          :loading="submitting && selectedPoints === points"
+          type="button"
+          class="reward-level"
+          :class="{ 'is-loading': submitting && selectedPoints === points }"
+          :disabled="submitting"
           @click="submit(points)"
         >
-          {{ points }} 积分
-        </n-button>
-      </n-space>
+          <span class="reward-level-points">{{ points }}</span>
+          <span class="reward-level-unit">积分</span>
+        </button>
+      </div>
     </n-modal>
 
     <n-modal v-model:show="showListModal" preset="card" title="打赏记录" class="reward-modal">
@@ -63,7 +70,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { NButton, NEmpty, NList, NListItem, NModal, NSpace } from 'naive-ui';
+import { NButton, NEmpty, NList, NListItem, NModal } from 'naive-ui';
 import UserAvatar from '../UserAvatar.vue';
 import { rewardArticle } from '../../api/reward';
 import { useToastStore } from '../../stores/toast';
@@ -95,8 +102,10 @@ async function submit(points) {
     toast.push('打赏成功', 'success');
     showRewardModal.value = false;
     emit('rewarded');
-  } catch {
-    /* request 已 toast */
+  } catch (err) {
+    if (String(err?.message || '').includes('不能给自己打赏')) {
+      showRewardModal.value = false;
+    }
   } finally {
     submitting.value = false;
     selectedPoints.value = null;
@@ -163,13 +172,124 @@ async function submit(points) {
 }
 
 .reward-modal {
-  max-width: 28rem;
+  width: min(520px, calc(100vw - var(--space-8)));
+  max-width: 520px;
+}
+
+.reward-modal :deep(.n-card__content) {
+  padding: var(--space-6);
+}
+
+.reward-modal-head {
+  margin-bottom: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.reward-modal-kicker {
+  display: inline-flex;
+  margin-bottom: var(--space-2);
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.reward-modal-head h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: 1.25;
+}
+
+.reward-modal-head p,
+.reward-login-tip {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.reward-level-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.reward-level {
+  display: flex;
+  min-height: 88px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.reward-level:hover:not(:disabled),
+.reward-level:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-primary-soft);
+  transform: translateY(-2px);
+}
+
+.reward-level:focus-visible {
+  outline: 2px solid var(--border-focus-input);
+  outline-offset: 2px;
+}
+
+.reward-level:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.reward-level.is-loading {
+  border-color: var(--color-accent);
+  background: var(--color-primary-soft);
+}
+
+.reward-level-points {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.25;
+}
+
+.reward-level-unit {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
 }
 
 @media (max-width: 767px) {
   .reward-main {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .reward-modal {
+    width: calc(100vw - var(--space-8));
+  }
+
+  .reward-modal :deep(.n-card__content) {
+    padding: var(--space-4);
+  }
+
+  .reward-modal-head {
+    padding: var(--space-4);
+  }
+
+  .reward-level-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

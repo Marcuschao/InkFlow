@@ -226,7 +226,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted, onUnmounted, reactive, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { useHead } from '@vueuse/head';
 import {
   NAlert,
@@ -263,7 +263,6 @@ import { fetchArticleRewards } from '../api/reward';
 import { effectClass } from '../utils/itemEffects';
 
 const route = useRoute();
-const router = useRouter();
 const articleStore = useArticleStore();
 const toastStore = useToastStore();
 const authStore = useAuthStore();
@@ -448,12 +447,8 @@ const scrollToHeading = (id) => {
 };
 
 const goToHeading = (id) => {
-  router.push({
-    name: route.name,
-    params: route.params,
-    query: route.query,
-    hash: `#${id}`,
-  }).catch(() => {});
+  const nextUrl = `${window.location.pathname}${window.location.search}#${encodeURIComponent(id)}`;
+  window.history.pushState(window.history.state, '', nextUrl);
   scrollToHeading(id);
 };
 

@@ -27,7 +27,7 @@ const toast = useToastStore();
   top: calc(var(--layout-navbar-bottom) + 0.75rem);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2000;
+  z-index: 12000;
   display: flex;
   flex-direction: column;
   align-items: center;
