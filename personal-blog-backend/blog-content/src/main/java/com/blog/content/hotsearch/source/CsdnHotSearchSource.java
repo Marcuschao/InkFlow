@@ -19,25 +19,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-@Order(10)  //优先级，值越小的优先级越高
-public class BaiduHotSearchSource implements HotSearchSource {
-    private static final Logger log = LoggerFactory.getLogger(BaiduHotSearchSource.class);
-    private static final String API_URL = "https://top.baidu.com/api/board?platform=pc&tab=realtime";
+@Order(30)
+public class CsdnHotSearchSource implements HotSearchSource {
+    private static final Logger log = LoggerFactory.getLogger(CsdnHotSearchSource.class);
+    private static final String API_URL = "https://api.02gk.com/api/csdnhot";
 
     private final RestTemplate restTemplate;
 
-    public BaiduHotSearchSource(@Qualifier("hotSearchRestTemplate") RestTemplate restTemplate) {
+    public CsdnHotSearchSource(@Qualifier("hotSearchRestTemplate") RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
     @Override
     public String getId() {
-        return "baidu";
+        return "csdn";
     }
 
     @Override
     public String getName() {
-        return "百度热搜";
+        return "CSDN热搜";
     }
 
     @Override
@@ -50,29 +50,28 @@ public class BaiduHotSearchSource implements HotSearchSource {
                     API_URL, HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class);
             JsonNode root = response.getBody();
             if (root == null) {
+                log.warn("[hot-search] csdn response body is null");
                 return fallback();
             }
-            JsonNode cards = root.path("data").path("cards");
-            if (!cards.isArray() || cards.isEmpty()) {
-                return fallback();
-            }
-            JsonNode content = cards.get(0).path("content");
-            if (!content.isArray() || content.isEmpty()) {
+            int code = root.path("code").asInt(-1);
+            JsonNode list = root.path("data");
+            if (code != 200 || !list.isArray() || list.isEmpty()) {
+                log.warn("[hot-search] csdn response invalid: code={}, hasData={}", code, list.isArray());
                 return fallback();
             }
             LocalDateTime now = LocalDateTime.now();
             List<HotItem> items = new ArrayList<>();
             int rank = 1;
-            for (JsonNode node : content) {
-                String title = text(node, "word", "query", "title");
+            for (JsonNode node : list) {
+                String title = text(node, "title", "articleTitle", "nickName");
                 if (!StringUtils.hasText(title)) {
                     continue;
                 }
-                String url = text(node, "rawUrl", "url", "link");
+                String url = text(node, "url", "articleUrl", "link");
                 if (!StringUtils.hasText(url)) {
-                    url = "https://www.baidu.com/s?wd=" + title;
+                    url = "https://so.csdn.net/so/search?q=" + title + "&t=all";
                 }
-                String heat = text(node, "hotScore", "hotTag", "desc");
+                String heat = text(node, "hot", "hotRankScore", "viewCount");
                 items.add(HotItem.builder()
                         .rank(rank++)
                         .title(title.trim())
@@ -83,7 +82,7 @@ public class BaiduHotSearchSource implements HotSearchSource {
             }
             return items.isEmpty() ? fallback() : items;
         } catch (Exception ex) {
-            log.warn("[hot-search] baidu fetch failed: {}", ex.toString());
+            log.warn("[hot-search] csdn fetch failed: {}", ex.toString());
             return fallback();
         }
     }
@@ -107,6 +106,7 @@ public class BaiduHotSearchSource implements HotSearchSource {
         return FALLBACK_ITEMS;
     }
 
+    @Override
     public boolean isFallbackData(List<HotItem> items) {
         return items == FALLBACK_ITEMS;
     }
@@ -114,11 +114,11 @@ public class BaiduHotSearchSource implements HotSearchSource {
     private static List<HotItem> buildFallback() {
         LocalDateTime now = LocalDateTime.now();
         return List.of(
-                HotItem.builder().rank(1).title("科技前沿动态").url("https://www.baidu.com/s?wd=科技前沿动态").heat("示例").updatedAt(now).build(),
-                HotItem.builder().rank(2).title("人工智能应用").url("https://www.baidu.com/s?wd=人工智能应用").heat("示例").updatedAt(now).build(),
-                HotItem.builder().rank(3).title("开源项目推荐").url("https://www.baidu.com/s?wd=开源项目推荐").heat("示例").updatedAt(now).build(),
-                HotItem.builder().rank(4).title("编程语言趋势").url("https://www.baidu.com/s?wd=编程语言趋势").heat("示例").updatedAt(now).build(),
-                HotItem.builder().rank(5).title("开发者工具").url("https://www.baidu.com/s?wd=开发者工具").heat("示例").updatedAt(now).build()
+                HotItem.builder().rank(1).title("Java技术实践").url("https://so.csdn.net/so/search?q=Java技术实践&t=all").heat("示例").updatedAt(now).build(),
+                HotItem.builder().rank(2).title("SpringBoot教程").url("https://so.csdn.net/so/search?q=SpringBoot教程&t=all").heat("示例").updatedAt(now).build(),
+                HotItem.builder().rank(3).title("前端框架对比").url("https://so.csdn.net/so/search?q=前端框架对比&t=all").heat("示例").updatedAt(now).build(),
+                HotItem.builder().rank(4).title("数据库优化").url("https://so.csdn.net/so/search?q=数据库优化&t=all").heat("示例").updatedAt(now).build(),
+                HotItem.builder().rank(5).title("云原生实践").url("https://so.csdn.net/so/search?q=云原生实践&t=all").heat("示例").updatedAt(now).build()
         );
     }
 }

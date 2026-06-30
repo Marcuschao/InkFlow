@@ -6,7 +6,6 @@ import com.blog.content.hotsearch.cache.HotSearchCacheService;
 import com.blog.content.hotsearch.model.HotItem;
 import com.blog.content.hotsearch.model.HotSearchListVo;
 import com.blog.content.hotsearch.model.HotSearchSourceVo;
-import com.blog.content.hotsearch.source.BaiduHotSearchSource;
 import com.blog.content.hotsearch.source.HotSearchSource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -82,7 +81,7 @@ public class HotSearchService {
 
     private HotSearchListVo loadAndCache(HotSearchSource source) {
         List<HotItem> items = source.fetchHotList();
-        boolean fallback = source instanceof BaiduHotSearchSource baidu && baidu.isFallbackData(items);
+        boolean fallback = source.isFallbackData(items);
         HotSearchListVo vo = HotSearchListVo.builder()
                 .source(source.getId())
                 .sourceName(source.getName())
