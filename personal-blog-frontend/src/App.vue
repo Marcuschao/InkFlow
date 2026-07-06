@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, watch, computed } from 'vue';
-import { RouterView } from 'vue-router';
+import { RouterView, useRoute } from 'vue-router';
 import {
   NConfigProvider,
   NMessageProvider,
@@ -11,6 +11,8 @@ import {
 import Navbar from './components/Navbar.vue';
 import OfflineBanner from './components/OfflineBanner.vue';
 import Footer from './components/Footer.vue';
+import AiFloatingButton from './components/ai/AiFloatingButton.vue';
+import AiChatWindow from './components/ai/AiChatWindow.vue';
 import AiChatbot from './components/AiChatbot.vue';
 import ScrollToTop from './components/ScrollToTop.vue';
 import ToastHost from './components/ToastHost.vue';
@@ -19,6 +21,8 @@ import { useSiteStore } from './stores/site';
 import { useAuthStore } from './stores/auth';
 import { useNotificationStore } from './stores/notification';
 import { useToastStore } from './stores/toast';
+import { useAiChatStore } from './stores/aiChat';
+import { useAiChatVisibility } from './composables/useAiChatVisibility';
 import { useTheme } from './composables/useTheme';
 import { darkThemeOverrides, lightThemeOverrides } from './theme/naiveTheme';
 import { mountClickRipple } from './composables/useClickRipple';
@@ -29,6 +33,9 @@ const siteStore = useSiteStore();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const toastStore = useToastStore();
+const aiChatStore = useAiChatStore();
+const route = useRoute();
+const { visible: aiChatVisible } = useAiChatVisibility();
 const { naiveTheme, isDark } = useTheme();
 const themeOverrides = computed(() => (isDark.value ? darkThemeOverrides : lightThemeOverrides));
 
@@ -64,6 +71,7 @@ function syncWebSocket(loggedIn) {
 
 onMounted(() => {
   siteStore.loadPublicConfig();
+  aiChatStore.hydrateFromBackend();
   stopRipple = mountClickRipple();
   if (authStore.isLoggedIn && !authStore.user) {
     authStore.fetchMe().catch(() => authStore.logout());
@@ -85,6 +93,17 @@ onMounted(() => {
 watch(
   () => authStore.isLoggedIn,
   (loggedIn) => syncWebSocket(loggedIn)
+);
+
+watch(aiChatVisible, (v) => {
+  if (!v) aiChatStore.closeWindow();
+});
+
+watch(
+  () => siteStore.chatbotVisibility,
+  () => {
+    if (!aiChatVisible.value) aiChatStore.closeWindow();
+  }
 );
 
 watch(
@@ -136,7 +155,13 @@ onUnmounted(() => {
           <MobileDock />
           <ScrollToTop />
           <ToastHost />
-          <AiChatbot />
+          <AiFloatingButton v-if="aiChatVisible && route.name !== 'ArticleDetail'" />
+          <AiChatWindow
+            v-if="aiChatVisible && route.name !== 'AiChat' && route.name !== 'ArticleDetail'"
+            :visible="aiChatStore.open"
+            :embedded="false"
+          />
+          <AiChatbot v-if="aiChatVisible && route.name === 'ArticleDetail'" />
         </div>
       </n-dialog-provider>
     </n-message-provider>

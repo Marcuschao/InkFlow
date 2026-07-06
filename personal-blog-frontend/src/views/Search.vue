@@ -25,6 +25,10 @@
           <n-tag size="small" type="primary" :bordered="false">{{ t.name }}</n-tag>
         </router-link>
       </n-space>
+      <div v-if="aiChatVisible && searched && keyword.trim() && hits.length" class="ai-search-prompt">
+        <span>没有找到满意答案？</span>
+        <n-button text type="primary" @click="askAiFromSearch">问问 AI</n-button>
+      </div>
       <n-alert v-if="listErr" type="error" class="state-err">{{ listErr }}</n-alert>
       <n-grid v-if="loading" :cols="1" :y-gap="12">
         <n-gi v-for="n in 5" :key="'s-' + n">
@@ -60,6 +64,11 @@ import { useRoute, useRouter } from 'vue-router';
 import { NAlert, NButton, NCard, NEmpty, NGi, NGrid, NInput, NSkeleton, NSpace, NTag } from 'naive-ui';
 import Pagination from '../components/Pagination.vue';
 import { searchArticles } from '../api/search';
+import { useAiChatStore } from '../stores/aiChat';
+import { useAiChatVisibility } from '../composables/useAiChatVisibility';
+
+const aiChatStore = useAiChatStore();
+const { visible: aiChatVisible } = useAiChatVisibility();
 
 const route = useRoute();
 const router = useRouter();
@@ -72,6 +81,14 @@ const pageSize = ref(10);
 const loading = ref(false);
 const searched = ref(false);
 const relatedTags = ref([]);
+const listErr = ref('');
+
+function askAiFromSearch() {
+  const q = keyword.value.trim();
+  if (!q) return;
+  aiChatStore.openWindow({ keyword: q });
+  aiChatStore.send(q);
+}
 
 function formatDate(t) {
   if (!t) return '';
@@ -144,6 +161,19 @@ watch(
 .search-bar-wrap :deep(.n-input) {
   flex: 1 1 240px;
   max-width: 420px;
+}
+
+.ai-search-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-brutal);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  font-size: var(--text-sm);
 }
 
 .related-tags {

@@ -134,7 +134,15 @@ function chatRequestBody(questionPayload) {
   const rawId = questionPayload?.articleId;
   const articleId =
     rawId != null && rawId !== '' && Number.isFinite(Number(rawId)) ? Number(rawId) : undefined;
-  return articleId != null ? { question, articleId } : { question };
+  const rawSession = questionPayload?.sessionId;
+  const sessionId =
+    rawSession != null && rawSession !== '' && Number.isFinite(Number(rawSession))
+      ? Number(rawSession)
+      : undefined;
+  const body = { question };
+  if (articleId != null) body.articleId = articleId;
+  if (sessionId != null) body.sessionId = sessionId;
+  return body;
 }
 
 export function agentChatFull(questionPayload) {
@@ -144,6 +152,37 @@ export function agentChatFull(questionPayload) {
     data: chatRequestBody(questionPayload),
     timeout: AGENT_TIMEOUT,
   }).then((res) => res.data);
+}
+
+export function agentChatRag(questionPayload) {
+  return agentChatFull(questionPayload);
+}
+
+export function listAiSessions(params) {
+  return request({
+    url: '/agent/sessions',
+    method: 'get',
+    params: params || {},
+    timeout: AGENT_TIMEOUT,
+  }).then((res) => res.data);
+}
+
+export function listAiSessionMessages(sessionId, params) {
+  return request({
+    url: `/agent/sessions/${sessionId}/messages`,
+    method: 'get',
+    params: params || {},
+    timeout: AGENT_TIMEOUT,
+  }).then((res) => res.data);
+}
+
+export function deleteAiSession(sessionId, params) {
+  return request({
+    url: `/agent/sessions/${sessionId}`,
+    method: 'delete',
+    params: params || {},
+    timeout: AGENT_TIMEOUT,
+  });
 }
 
 export function agentChat(questionPayload) {
@@ -160,7 +199,54 @@ function apiBase() {
   return base.endsWith('/') ? base.slice(0, -1) : base;
 }
 
-export async function agentChatStream(questionPayload, onDelta) {
+function parseSseData(raw) {
+  if (!raw || raw === '[DONE]') return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function dispatchSseEvent(eventName, data, handlers) {
+  const name = eventName || 'message';
+  if (name === 'delta' || name === 'message') {
+    const piece =
+      typeof data === 'string'
+        ? data
+        : data?.delta || data?.content || data?.text || data?.chunk || data?.answer || '';
+    if (piece && handlers.onDelta) handlers.onDelta(piece);
+    return piece;
+  }
+  if (name === 'sources' && handlers.onSources) {
+    const list = Array.isArray(data) ? data : data?.sources || [];
+    handlers.onSources(list);
+    return '';
+  }
+  if (name === 'session' && handlers.onSession) {
+    const sid = typeof data === 'number' ? data : data?.sessionId ?? data?.id ?? data;
+    if (sid != null) handlers.onSession(sid);
+    return '';
+  }
+  if (name === 'error' && handlers.onError) {
+    const msg = typeof data === 'string' ? data : data?.message || 'Chat failed';
+    handlers.onError(msg);
+    return '';
+  }
+  return '';
+}
+
+export async function agentChatStream(questionPayload, handlers = {}) {
+  const legacyOnDelta = typeof handlers === 'function' ? handlers : handlers.onDelta;
+  const h =
+    typeof handlers === 'function'
+      ? { onDelta: legacyOnDelta }
+      : {
+          onDelta: handlers.onDelta,
+          onSources: handlers.onSources,
+          onSession: handlers.onSession,
+          onError: handlers.onError,
+        };
   const authStore = useAuthStore();
   const body = chatRequestBody(questionPayload);
   const headers = {
@@ -170,30 +256,38 @@ export async function agentChatStream(questionPayload, onDelta) {
   if (authStore.token) {
     headers.Authorization = `Bearer ${authStore.token}`;
   }
-  const res = await fetch(`${apiBase()}/agent/chat`, {
+  const res = await fetch(`${apiBase()}/agent/chat/stream`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ ...body, stream: true }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(t || res.statusText || 'Chat failed');
+    const err = new Error(t || res.statusText || 'Chat failed');
+    if (h.onError) h.onError(err.message);
+    throw err;
   }
   const ctype = res.headers.get('content-type') || '';
   if (!ctype.includes('text/event-stream') || !res.body) {
     const json = await res.json().catch(() => null);
     if (json && typeof json.code === 'number' && json.code !== 200) {
-      throw new Error(json.message || 'Chat failed');
+      const msg = json.message || 'Chat failed';
+      if (h.onError) h.onError(msg);
+      throw new Error(msg);
     }
     const inner = json && json.data !== undefined ? json.data : json;
     const text = unwrapText(inner);
-    if (text) onDelta(text);
-    return text;
+    if (text && h.onDelta) h.onDelta(text);
+    if (inner?.sources && h.onSources) h.onSources(inner.sources);
+    if (inner?.sessionId != null && h.onSession) h.onSession(inner.sessionId);
+    return { answer: text, sources: inner?.sources || [], sessionId: inner?.sessionId ?? null };
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let full = '';
+  let sources = [];
+  let sessionId = null;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -201,32 +295,36 @@ export async function agentChatStream(questionPayload, onDelta) {
     const parts = buffer.split('\n\n');
     buffer = parts.pop() || '';
     for (const block of parts) {
+      if (!block.trim()) continue;
       const lines = block.split('\n');
+      let eventName = 'message';
+      const dataLines = [];
       for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        const raw = line.slice(5).trim();
-        if (!raw || raw === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(raw);
-          const piece =
-            typeof parsed === 'string'
-              ? parsed
-              : parsed.delta ||
-                parsed.content ||
-                parsed.text ||
-                parsed.chunk ||
-                parsed.answer ||
-                '';
-          if (piece) {
-            full += piece;
-            onDelta(piece);
-          }
-        } catch {
-          full += raw;
-          onDelta(raw);
+        if (line.startsWith('event:')) {
+          eventName = line.slice(6).trim();
+        } else if (line.startsWith('data:')) {
+          dataLines.push(line.slice(5).trim());
         }
       }
+      const raw = dataLines.join('\n');
+      const parsed = parseSseData(raw);
+      const piece = dispatchSseEvent(eventName, parsed, {
+        onDelta: (p) => {
+          full += p;
+          if (h.onDelta) h.onDelta(p);
+        },
+        onSources: (list) => {
+          sources = list;
+          if (h.onSources) h.onSources(list);
+        },
+        onSession: (sid) => {
+          sessionId = sid;
+          if (h.onSession) h.onSession(sid);
+        },
+        onError: h.onError,
+      });
+      if (eventName === 'delta' && piece) full += piece;
     }
   }
-  return full;
+  return { answer: full, sources, sessionId };
 }

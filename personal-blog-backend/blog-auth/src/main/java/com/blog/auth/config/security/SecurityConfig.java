@@ -62,6 +62,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/auth/**", "/api/captcha/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/user/{id:\\d+}").permitAll()
                 .requestMatchers("/api/user/me/**", "/api/user/profile", "/api/user/avatar").authenticated()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated());
         if (oauthUserService != null) {

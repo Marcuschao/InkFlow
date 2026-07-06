@@ -13,6 +13,8 @@ public class ChatRequest {
     private Long articleId;
     private List<ChatMessage> messages;
     private Boolean stream;
+    /** 可选：关联已有会话，启用 RAG 多轮对话与历史压缩 */
+    private Long sessionId;
 
     @Data
     public static class ChatMessage {

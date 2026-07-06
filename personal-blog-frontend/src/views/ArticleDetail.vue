@@ -93,6 +93,11 @@
                 @headings-extracted="handleHeadings"
               />
             </div>
+            <div v-if="articleStore.currentArticle && aiChatVisible" class="article-ask-ai">
+              <n-button type="primary" secondary @click="askAiAboutArticle">
+                对这篇文章有疑问？问 AI
+              </n-button>
+            </div>
             <ArticleRewardPanel
               v-if="articleIdNum"
               :article-id="articleIdNum"
@@ -258,6 +263,8 @@ import { usePageViewArticle } from '../composables/usePageView';
 import { useReadingHistory } from '../composables/useReadingHistory';
 import { useToastStore } from '../stores/toast';
 import { useAuthStore } from '../stores/auth';
+import { useArticleAiChatStore } from '../stores/articleAiChat';
+import { useAiChatVisibility } from '../composables/useAiChatVisibility';
 import { reportArticle } from '../api/article';
 import { fetchArticleRewards } from '../api/reward';
 import { effectClass } from '../utils/itemEffects';
@@ -266,6 +273,8 @@ const route = useRoute();
 const articleStore = useArticleStore();
 const toastStore = useToastStore();
 const authStore = useAuthStore();
+const aiChatStore = useArticleAiChatStore();
+const { visible: aiChatVisible } = useAiChatVisibility();
 const { recordVisit, updateProgress, getRecentArticleIds } = useReadingHistory();
 usePageViewArticle(() => articleStore.currentArticle?.id);
 
@@ -372,6 +381,13 @@ async function onReportArticle() {
   } catch (e) {
     toastStore.push(e?.message || '举报失败', 'error');
   }
+}
+
+function askAiAboutArticle() {
+  const title = articleStore.currentArticle?.title || '这篇文章';
+  aiChatStore.openChat({
+    draftQuestion: `关于《${title}》我想问：`,
+  });
 }
 
 watch(
@@ -807,6 +823,11 @@ onUnmounted(() => {
   border-radius: var(--radius-pill);
   background: var(--color-primary);
   vertical-align: middle;
+}
+
+.article-ask-ai {
+  margin: var(--space-6) 0 var(--space-4);
+  text-align: center;
 }
 
 .prose-shell {

@@ -51,6 +51,11 @@ const routes = [
     component: () => import('../views/Search.vue'),
   },
   {
+    path: '/ai-chat',
+    name: 'AiChat',
+    component: () => import('../views/AiChatPage.vue'),
+  },
+  {
     path: '/hot-search',
     name: 'HotSearch',
     component: () => import('../views/HotSearchPage.vue'),
@@ -260,6 +265,12 @@ const routes = [
     meta: { requiresAdmin: true },
   },
   {
+    path: '/admin/knowledge',
+    name: 'AdminKnowledge',
+    component: () => import('../views/Admin/AdminKnowledge.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
     path: '/admin/settings',
     name: 'AdminSiteSettings',
     component: () => import('../views/Admin/AdminSiteSettings.vue'),
@@ -275,6 +286,12 @@ const routes = [
     path: '/admin/comments',
     name: 'AdminComments',
     component: () => import('../views/Admin/AdminComments.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/users',
+    name: 'AdminUsers',
+    component: () => import('../views/Admin/AdminUsers.vue'),
     meta: { requiresAdmin: true },
   },
   {

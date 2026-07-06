@@ -1454,3 +1454,44 @@ body.nav-menu-scroll-lock {
     animation: spin 1.4s linear infinite;
   }
 }
+
+.ai-glass {
+  backdrop-filter: blur(var(--ai-glass-blur));
+  -webkit-backdrop-filter: blur(var(--ai-glass-blur));
+}
+
+@keyframes ai-fab-glow {
+  0%,
+  100% {
+    box-shadow: var(--shadow-brutal-lg), 0 0 0 0 rgba(212, 175, 55, 0.35);
+  }
+  50% {
+    box-shadow: var(--shadow-brutal-lg), 0 0 0 8px rgba(212, 175, 55, 0);
+  }
+}
+
+.ai-fab-glow {
+  animation: ai-fab-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes ai-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.ai-cursor-blink {
+  animation: ai-cursor-blink 0.8s step-end infinite;
+  color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab-glow,
+  .ai-cursor-blink {
+    animation: none;
+  }
+}

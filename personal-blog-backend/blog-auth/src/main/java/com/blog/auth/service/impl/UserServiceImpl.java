@@ -3,6 +3,8 @@ package com.blog.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.blog.auth.common.constant.UserRole;
 import com.blog.auth.common.exception.ServiceException;
 import com.blog.auth.common.util.IpRegionService;
@@ -14,6 +16,7 @@ import com.blog.auth.model.dto.auth.RegisterRequest;
 import com.blog.auth.model.dto.user.UpdateProfileRequest;
 import com.blog.auth.model.entity.User;
 import com.blog.auth.model.entity.UserProfile;
+import com.blog.auth.model.vo.user.AdminUserVo;
 import com.blog.auth.model.vo.user.PublicUserVo;
 import com.blog.auth.model.vo.user.UserProfileVo;
 import com.blog.auth.service.ChatProfileBroadcastService;
@@ -27,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -306,5 +310,56 @@ public class UserServiceImpl implements UserService {
                 profile != null ? countOrZero(profile.getFollowingCount()) : 0,
                 0
         );
+    }
+
+    @Override
+    public IPage<AdminUserVo> adminPage(int page, int size, String keyword, String role) {
+        Page<User> userPage = new Page<>(page, size);
+        LambdaQueryWrapper<User> qw = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(keyword)) {
+            String k = keyword.trim();
+            qw.and(w -> w.like(User::getUsername, k)
+                    .or().like(User::getEmail, k)
+                    .or().like(User::getNickname, k));
+        }
+        if (StringUtils.hasText(role)) {
+            qw.eq(User::getRole, role.trim());
+        }
+        qw.orderByDesc(User::getCreateTime);
+        userMapper.selectPage(userPage, qw);
+
+        List<Long> userIds = userPage.getRecords().stream().map(User::getId).toList();
+        Map<Long, UserProfile> profiles = mapProfilesByUserIds(userIds);
+
+        List<AdminUserVo> vos = new ArrayList<>();
+        for (User user : userPage.getRecords()) {
+            vos.add(toAdminUserVo(user, profiles.get(user.getId())));
+        }
+
+        Page<AdminUserVo> result = new Page<>(userPage.getCurrent(), userPage.getSize(), userPage.getTotal());
+        result.setRecords(vos);
+        return result;
+    }
+
+    private static AdminUserVo toAdminUserVo(User user, UserProfile profile) {
+        AdminUserVo vo = new AdminUserVo();
+        vo.setId(user.getId());
+        vo.setUsername(user.getUsername());
+        vo.setEmail(user.getEmail());
+        vo.setNickname(StringUtils.hasText(user.getNickname()) ? user.getNickname()
+                : (profile != null ? profile.getNickname() : null));
+        vo.setAvatar(profile != null && StringUtils.hasText(profile.getAvatar())
+                ? profile.getAvatar() : user.getAvatar());
+        vo.setRole(user.getRole());
+        vo.setPasswordLoginEnabled(user.getPasswordLoginEnabled());
+        vo.setRegisterIp(user.getRegisterIp());
+        vo.setRegisterRegion(user.getRegisterRegion());
+        vo.setCreateTime(user.getCreateTime());
+        if (profile != null) {
+            vo.setLastLoginIp(profile.getLastLoginIp());
+            vo.setLastLoginRegion(profile.getLastLoginRegion());
+            vo.setLastLoginTime(profile.getLastLoginTime());
+        }
+        return vo;
     }
 }

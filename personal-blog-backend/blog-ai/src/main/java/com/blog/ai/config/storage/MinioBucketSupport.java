@@ -30,6 +30,7 @@ public class MinioBucketSupport {
         ensureBucket(buckets.getLogs(), false);
         ensureBucket(buckets.getReports(), false);
         ensureBucket(buckets.getBackups(), false);
+        ensureBucket(buckets.getKnowledge(), false);
     }
 
     public void ensureBucket(String bucket) {

@@ -144,6 +144,11 @@
   --admin-thead-bg: #222222;
   --admin-header-gap: 8px;
   --mobile-dock-height: 3.5rem;
+
+  --ai-fab-size: 3.25rem;
+  --ai-window-w: 22rem;
+  --ai-window-h: 28rem;
+  --ai-glass-blur: 8px;
 }
 
 html:not(.dark) {

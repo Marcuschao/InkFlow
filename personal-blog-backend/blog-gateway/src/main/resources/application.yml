@@ -60,6 +60,11 @@ spring:
               order: -9
               predicates:
                 - Path=/oauth2/**,/login/oauth2/**
+            - id: blog-auth-admin
+              uri: lb://blog-auth
+              order: -6
+              predicates:
+                - Path=/api/admin/users/**
             - id: blog-ai-seo
               uri: lb://blog-ai
               predicates:
@@ -68,7 +73,7 @@ spring:
             - id: blog-ai-admin
               uri: lb://blog-ai
               predicates:
-                - Path=/api/admin/translations/**,/api/admin/freshness/**,/api/admin/reports/**,/api/admin/stats/**
+                - Path=/api/admin/translations/**,/api/admin/freshness/**,/api/admin/reports/**,/api/admin/stats/**,/api/admin/knowledge/**,/api/admin/rag/**
             - id: blog-ai-agent
               uri: lb://blog-ai
               predicates:

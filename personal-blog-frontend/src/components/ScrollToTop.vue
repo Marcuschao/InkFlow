@@ -3,7 +3,7 @@
     v-show="visible"
     type="button"
     class="scroll-top-btn ds-active-scale"
-    :class="{ 'scroll-top-btn--article': isArticlePage }"
+    :class="{ 'scroll-top-btn--with-fab': withFab }"
     aria-label="回到顶部"
     @click="scrollTop"
   >
@@ -12,14 +12,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { NIcon } from 'naive-ui';
 import { ChevronUpOutline } from '@vicons/ionicons5';
+import { useAiChatVisibility } from '../composables/useAiChatVisibility';
 
-const route = useRoute();
+const { visible: aiChatVisible } = useAiChatVisibility();
 const visible = ref(false);
-const isArticlePage = computed(() => route.name === 'ArticleDetail');
+const withFab = computed(() => aiChatVisible.value);
 
 function onScroll() {
   visible.value = (window.scrollY || 0) > (window.innerHeight || 600) * 0.85;
@@ -74,10 +74,6 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
   .scroll-top-btn {
     left: var(--space-4);
     right: auto;
-    bottom: var(--layout-scroll-top-bottom);
-  }
-
-  .scroll-top-btn--article {
     bottom: var(--layout-scroll-top-bottom-with-fab);
   }
 }
@@ -87,8 +83,8 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
     bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
   }
 
-  .scroll-top-btn--article {
-    bottom: calc(var(--space-4) + 3.25rem + var(--space-3) + env(safe-area-inset-bottom, 0px));
+  .scroll-top-btn--with-fab {
+    bottom: calc(var(--space-4) + var(--ai-fab-size) + var(--space-3) + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

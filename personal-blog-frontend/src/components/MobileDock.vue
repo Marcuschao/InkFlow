@@ -8,6 +8,13 @@
       <n-icon :component="ArchiveOutline" :size="20" />
       <span>归档</span>
     </router-link>
+    <router-link v-if="aiChatVisible" to="/ai-chat" class="dock-link">
+      <span class="dock-icon-wrap">
+        <n-icon :component="SparklesOutline" :size="20" />
+        <span v-if="aiChat.hasNew" class="dock-dot" />
+      </span>
+      <span>AI</span>
+    </router-link>
     <router-link to="/chat" class="dock-link">
       <n-icon :component="ChatbubbleOutline" :size="20" />
       <span>聊天</span>
@@ -39,10 +46,15 @@ import {
   ChatbubbleOutline,
   FlameOutline,
   PersonOutline,
+  SparklesOutline,
 } from '@vicons/ionicons5';
 import { useAuthStore } from '../stores/auth';
+import { useAiChatStore } from '../stores/aiChat';
+import { useAiChatVisibility } from '../composables/useAiChatVisibility';
 
 const authStore = useAuthStore();
+const aiChat = useAiChatStore();
+const { visible: aiChatVisible } = useAiChatVisibility();
 </script>
 
 <style scoped>
@@ -96,6 +108,21 @@ const authStore = useAuthStore();
 
   .dock-link.router-link-active::before {
     display: none;
+  }
+
+  .dock-icon-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .dock-dot {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-danger);
   }
 }
 </style>

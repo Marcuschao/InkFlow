@@ -12,6 +12,7 @@
           <router-link to="/admin/articles/review"><n-button size="small">文章审核</n-button></router-link>
           <router-link to="/admin/content-reports"><n-button size="small">内容举报</n-button></router-link>
           <router-link to="/admin/comments"><n-button size="small">评论审核</n-button></router-link>
+          <router-link to="/admin/users"><n-button size="small">用户管理</n-button></router-link>
           <router-link to="/admin/sensitive"><n-button size="small">敏感词</n-button></router-link>
           <router-link to="/admin/chat/messages"><n-button size="small">聊天管理</n-button></router-link>
           <router-link to="/admin/chat/online"><n-button size="small">在线监控</n-button></router-link>
@@ -26,6 +27,7 @@
           <router-link to="/admin/stream"><n-button size="small">消息监控</n-button></router-link>
           <router-link to="/admin/monitor"><n-button size="small">性能监控</n-button></router-link>
           <router-link to="/admin/new"><n-button size="small" type="primary">＋ 新建文章</n-button></router-link>
+          <router-link to="/admin/knowledge"><n-button size="small">知识库</n-button></router-link>
           <router-link to="/admin/ai-weekly"><n-button size="small">AI 周报</n-button></router-link>
         </n-space>
       </header>

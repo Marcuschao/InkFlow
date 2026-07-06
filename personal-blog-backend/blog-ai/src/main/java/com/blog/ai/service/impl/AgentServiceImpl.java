@@ -58,12 +58,14 @@ public class AgentServiceImpl implements AgentService {
     private final ArticleSearchTools articleSearchTools;
     private final Optional<ReportStorageService> reportStorageService;
     private final Optional<KnowledgeFeignClient> knowledgeFeignClient;
+    private final Optional<com.blog.ai.rag.RagChatOrchestrator> ragChatOrchestrator;
 
     public AgentServiceImpl(AiService aiService, ArticleMapper articleMapper, ObjectMapper objectMapper,
                             @Autowired(required = false) BlogChatAssistant blogChatAssistant,
                             ArticleSearchTools articleSearchTools,
                             @Autowired(required = false) ReportStorageService reportStorageService,
-                            @Autowired(required = false) KnowledgeFeignClient knowledgeFeignClient) {
+                            @Autowired(required = false) KnowledgeFeignClient knowledgeFeignClient,
+                            @Autowired(required = false) com.blog.ai.rag.RagChatOrchestrator ragChatOrchestrator) {
         this.aiService = aiService;
         this.articleMapper = articleMapper;
         this.objectMapper = objectMapper;
@@ -71,6 +73,7 @@ public class AgentServiceImpl implements AgentService {
         this.articleSearchTools = articleSearchTools;
         this.reportStorageService = Optional.ofNullable(reportStorageService);
         this.knowledgeFeignClient = Optional.ofNullable(knowledgeFeignClient);
+        this.ragChatOrchestrator = Optional.ofNullable(ragChatOrchestrator);
     }
 
     @Override
@@ -194,8 +197,12 @@ public class AgentServiceImpl implements AgentService {
         if (!StringUtils.hasText(q)) {
             throw new ServiceException(400, "问题不能为空");
         }
-        List<Article> articles = new ArrayList<>();
         Long scopedId = request.getArticleId();
+        if (scopedId == null && ragChatOrchestrator.isPresent()) {
+            Long userId = ragChatOrchestrator.get().currentUserId();
+            return ragChatOrchestrator.get().chat(q, request.getSessionId(), userId);
+        }
+        List<Article> articles = new ArrayList<>();
         if (scopedId != null) {
             Article cur = articleMapper.selectById(scopedId);
             if (cur != null && Integer.valueOf(1).equals(cur.getStatus())) {

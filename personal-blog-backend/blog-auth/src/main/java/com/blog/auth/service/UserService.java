@@ -4,6 +4,8 @@ import com.blog.auth.model.dto.auth.LoginResult;
 import com.blog.auth.model.dto.auth.RegisterRequest;
 import com.blog.auth.model.dto.user.UpdateProfileRequest;
 import com.blog.auth.model.entity.UserProfile;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.blog.auth.model.vo.user.AdminUserVo;
 import com.blog.auth.model.vo.user.PublicUserVo;
 import com.blog.auth.model.vo.user.UserProfileVo;
 
@@ -70,4 +72,6 @@ public interface UserService {
      * @return
      */
     Map<Long, UserProfile> mapProfilesByUserIds(Collection<Long> userIds);
+
+    IPage<AdminUserVo> adminPage(int page, int size, String keyword, String role);
 }

@@ -1,20 +1,32 @@
 package com.blog.ai.controller;
 
 import com.blog.ai.config.audit.Audit;
+import com.blog.ai.common.support.PageResult;
 import com.blog.ai.common.support.Result;
 import com.blog.ai.model.dto.agent.*;
+import com.blog.ai.rag.RagChatOrchestrator;
+import com.blog.ai.rag.dto.ChatMessageVo;
+import com.blog.ai.rag.dto.ChatSessionVo;
+import com.blog.ai.rag.session.ChatSessionService;
 import com.blog.ai.service.AgentService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/agent")
 public class AgentController {
 
     @Autowired
     private AgentService agentService;
+    @Autowired(required = false)
+    private ChatSessionService chatSessionService;
+    @Autowired(required = false)
+    private RagChatOrchestrator ragChatOrchestrator;
 
     @PostMapping("/outline")
     public Result<String> outline(@RequestBody OutlineRequest request) {
@@ -109,5 +121,103 @@ public class AgentController {
     public Result<List<RecommendArticleDto>> recommendHome(@RequestBody(required = false) RecommendHomeRequest request) {
         List<Long> ids = request != null ? request.getRecentArticleIds() : null;
         return Result.success(agentService.recommendHome(ids));
+    }
+
+    @GetMapping("/sessions")
+    public Result<PageResult<ChatSessionVo>> sessions(@RequestParam(defaultValue = "1") long page,
+                                                       @RequestParam(defaultValue = "20") long size,
+                                                       @RequestParam(required = false) List<Long> ids) {
+        if (chatSessionService == null) {
+            return Result.fail(503, "RAG 未启用");
+        }
+        Long userId = ragChatOrchestrator != null ? ragChatOrchestrator.currentUserId() : null;
+        if (userId != null && ids != null && !ids.isEmpty()) {
+            chatSessionService.bindSessionsToUser(ids, userId);
+        }
+        var p = userId != null
+                ? chatSessionService.pageSessions(userId, page, size)
+                : chatSessionService.pageSessionsByIds(ids, page, size);
+        var vos = p.getRecords().stream().map(s -> {
+            ChatSessionVo v = new ChatSessionVo();
+            v.setId(s.getId());
+            v.setUserId(s.getUserId());
+            v.setTitle(s.getTitle());
+            v.setCreateTime(s.getCreateTime());
+            v.setUpdateTime(s.getUpdateTime());
+            return v;
+        }).toList();
+        return Result.success(PageResult.build(vos, p.getTotal(), p.getSize(), p.getCurrent()));
+    }
+
+    @GetMapping("/sessions/{id}/messages")
+    public Result<List<ChatMessageVo>> messages(@PathVariable Long id,
+                                                @RequestParam(required = false) List<Long> ids) {
+        if (chatSessionService == null) {
+            return Result.fail(503, "RAG 未启用");
+        }
+        Long userId = ragChatOrchestrator != null ? ragChatOrchestrator.currentUserId() : null;
+        chatSessionService.assertSessionReadable(id, userId, ids);
+        var msgs = chatSessionService.listMessages(id);
+        return Result.success(msgs.stream().map(m -> {
+            ChatMessageVo v = new ChatMessageVo();
+            v.setId(m.getId());
+            v.setSessionId(m.getSessionId());
+            v.setRole(m.getRole());
+            v.setContent(m.getContent());
+            v.setCreateTime(m.getCreateTime());
+            v.setSources(m.getSourcesJson());
+            return v;
+        }).toList());
+    }
+
+    @DeleteMapping("/sessions/{id}")
+    public Result<Void> deleteSession(@PathVariable Long id,
+                                      @RequestParam(required = false) List<Long> ids) {
+        if (chatSessionService == null) {
+            return Result.fail(503, "RAG 未启用");
+        }
+        Long userId = ragChatOrchestrator != null ? ragChatOrchestrator.currentUserId() : null;
+        chatSessionService.assertSessionReadable(id, userId, ids);
+        chatSessionService.deleteSession(id);
+        return Result.success();
+    }
+
+    @Audit("AGENT_CHAT_STREAM")
+    @PostMapping("/chat/stream")
+    public SseEmitter chatStream(@RequestBody ChatRequest request) {
+        SseEmitter emitter = new SseEmitter(120_000L);
+        if (ragChatOrchestrator == null) {
+            try {
+                emitter.send(SseEmitter.event().name("error").data("RAG 未启用"));
+                emitter.complete();
+            } catch (Exception ignored) {
+            }
+            return emitter;
+        }
+        String question = request.resolveQuestion();
+        Long userId = ragChatOrchestrator.currentUserId();
+        new Thread(() -> {
+            try {
+                ChatResponse resp = ragChatOrchestrator.chat(question, request.getSessionId(), userId);
+                String answer = resp.getAnswer() == null ? "" : resp.getAnswer();
+                int chunkSize = 8;
+                for (int i = 0; i < answer.length(); i += chunkSize) {
+                    int end = Math.min(answer.length(), i + chunkSize);
+                    emitter.send(SseEmitter.event().name("delta").data(answer.substring(i, end)));
+                    Thread.sleep(20);
+                }
+                emitter.send(SseEmitter.event().name("sources").data(resp.getSources()));
+                emitter.send(SseEmitter.event().name("session").data(resp.getSessionId()));
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("[agent] chat stream failed", e);
+                try {
+                    emitter.send(SseEmitter.event().name("error").data(e.getMessage() != null ? e.getMessage() : "系统繁忙"));
+                    emitter.complete();
+                } catch (Exception ignored) {
+                }
+            }
+        }).start();
+        return emitter;
     }
 }

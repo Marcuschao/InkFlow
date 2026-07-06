@@ -1,9 +1,12 @@
 <template>
   <div class="tags-page ds-page">
     <div class="container">
-      <header class="ds-page-hero">
-        <h1 class="ds-page-title ds-page-title-md">知识星系</h1>
-        <p class="ds-page-sub">探索标签之间的关联网络</p>
+      <header class="ds-page-hero tags-page-hero">
+        <div>
+          <h1 class="ds-page-title ds-page-title-md">知识星系</h1>
+          <p class="ds-page-sub">探索标签之间的关联网络</p>
+        </div>
+        <n-button v-if="aiChatVisible" type="primary" @click="openAiGuide">AI 探索向导</n-button>
       </header>
 
       <n-tabs v-model:value="activeTab" type="segment" class="tags-tabs">
@@ -66,6 +69,11 @@ import { getKnowledgeGraph } from '../api/knowledge';
 import KnowledgeGraph from '../components/knowledge/KnowledgeGraph.vue';
 import TagDetailDrawer from '../components/knowledge/TagDetailDrawer.vue';
 import request from '../utils/request';
+import { useAiChatStore } from '../stores/aiChat';
+import { useAiChatVisibility } from '../composables/useAiChatVisibility';
+
+const aiChatStore = useAiChatStore();
+const { visible: aiChatVisible } = useAiChatVisibility();
 
 const articleStore = useArticleStore();
 const route = useRoute();
@@ -78,6 +86,7 @@ const drawerOpen = ref(false);
 const selectedTagId = ref(null);
 const pathGoal = ref('');
 const pathLoading = ref(false);
+const selectedNode = ref(null);
 
 const focusTagId = computed(() => {
   const f = route.query.focus;
@@ -97,6 +106,7 @@ async function loadGraph() {
 }
 
 function onNodeClick(node) {
+  selectedNode.value = node;
   if (node?.type === 'tag' && node.refId) {
     openTag(node.refId);
   }
@@ -113,6 +123,18 @@ function onNodeDblclick(node) {
 function openTag(tagId) {
   selectedTagId.value = Number(tagId);
   drawerOpen.value = true;
+}
+
+function openAiGuide() {
+  const label = selectedNode.value?.label;
+  if (label) {
+    aiChatStore.openWindow({
+      tagLabel: label,
+      draftQuestion: `关于「${label}」我想了解更多：`,
+    });
+  } else {
+    aiChatStore.openWindow();
+  }
 }
 
 async function generatePath() {
@@ -145,6 +167,14 @@ onMounted(() => {
 .tags-tabs {
   max-width: 960px;
   margin: 0 auto var(--space-8);
+}
+
+.tags-page-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .tags-tabs :deep(.n-tabs-nav) {

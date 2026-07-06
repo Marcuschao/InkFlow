@@ -32,71 +32,73 @@
             @update:value="onNavMenuUpdate"
           />
 
-          <div class="nav-search-wrap">
-            <SearchSuggest />
-          </div>
+          <div class="nav-actions" :class="{ 'nav-actions--logged-in': authStore.isLoggedIn }">
+            <div class="nav-search-wrap">
+              <SearchSuggest />
+            </div>
 
-          <button
-            type="button"
-            class="nav-theme-toggle"
-            :aria-label="isDark ? '切换亮色模式' : '切换暗色模式'"
-            @click="toggleDark()"
-          >
-            <n-icon :class="{ 'theme-icon--spin': true }" :component="isDark ? SunnyOutline : MoonOutline" :size="20" />
-          </button>
+            <button
+              type="button"
+              class="nav-theme-toggle"
+              :aria-label="isDark ? '切换亮色模式' : '切换暗色模式'"
+              @click="toggleDark()"
+            >
+              <n-icon :class="{ 'theme-icon--spin': true }" :component="isDark ? SunnyOutline : MoonOutline" :size="20" />
+            </button>
 
-          <router-link
-            v-if="authStore.isLoggedIn"
-            to="/write"
-            class="nav-write-btn"
-            @click="closeMenu"
-          >
-            写文章
-          </router-link>
-
-          <div v-if="authStore.isLoggedIn" class="nav-notif-wrap">
             <router-link
-              to="/notifications"
-              class="nav-bell"
-              aria-label="消息中心"
+              v-if="authStore.isLoggedIn"
+              to="/write"
+              class="nav-write-btn"
               @click="closeMenu"
             >
-              <n-badge dot :show="unreadCount > 0" :offset="[-2, 2]" processing>
-                <n-icon :component="NotificationsOutline" :size="20" />
-              </n-badge>
+              写文章
             </router-link>
-          </div>
 
-          <div v-if="authStore.isLoggedIn" class="nav-user-wrap">
-            <div class="nav-user-dropdown-wrap">
-              <n-dropdown
-                trigger="click"
-                placement="bottom-end"
-                :options="userDropdownOptions"
-                :show-arrow="false"
-                :z-index="1300"
-                :style="{ minWidth: '10rem' }"
-                @select="onUserDropdownSelect"
+            <div v-if="authStore.isLoggedIn" class="nav-notif-wrap">
+              <router-link
+                to="/notifications"
+                class="nav-bell"
+                aria-label="消息中心"
+                @click="closeMenu"
               >
-                <button
-                  type="button"
-                  class="nav-user-trigger"
-                  aria-haspopup="menu"
-                >
-                  <UserAvatar
-                    class="nav-avatar"
-                    :src="authStore.user?.avatar"
-                    :name="authStore.displayName || authStore.user?.username"
-                    :size="28"
-                  />
-                  <span class="nav-username-short">{{ authStore.displayName }}</span>
-                </button>
-              </n-dropdown>
+                <n-badge dot :show="unreadCount > 0" :offset="[-2, 2]" processing>
+                  <n-icon :component="NotificationsOutline" :size="20" />
+                </n-badge>
+              </router-link>
             </div>
-          </div>
 
-          <div v-if="authStore.isAdmin" class="nav-admin-li-desktop">
-            <router-link to="/admin" class="nav-admin" @click="closeMenu">管理</router-link>
+            <div v-if="authStore.isLoggedIn" class="nav-user-wrap">
+              <div class="nav-user-dropdown-wrap">
+                <n-dropdown
+                  trigger="click"
+                  placement="bottom-end"
+                  :options="userDropdownOptions"
+                  :show-arrow="false"
+                  :z-index="1300"
+                  :style="{ minWidth: '10rem' }"
+                  @select="onUserDropdownSelect"
+                >
+                  <button
+                    type="button"
+                    class="nav-user-trigger"
+                    aria-haspopup="menu"
+                  >
+                    <UserAvatar
+                      class="nav-avatar"
+                      :src="authStore.user?.avatar"
+                      :name="authStore.displayName || authStore.user?.username"
+                      :size="28"
+                    />
+                    <span class="nav-username-short">{{ authStore.displayName }}</span>
+                  </button>
+                </n-dropdown>
+              </div>
+            </div>
+
+            <div v-if="authStore.isAdmin" class="nav-admin-li-desktop">
+              <router-link to="/admin" class="nav-admin" @click="closeMenu">管理</router-link>
+            </div>
           </div>
 
         </div>
@@ -134,6 +136,7 @@ import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { useSiteStore } from '../stores/site';
 import { useTheme } from '../composables/useTheme';
+import { useAiChatVisibility } from '../composables/useAiChatVisibility';
 import UserAvatar from './UserAvatar.vue';
 import SearchSuggest from './SearchSuggest.vue';
 
@@ -143,6 +146,7 @@ const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const siteStore = useSiteStore();
 const { isDark, toggleDark } = useTheme();
+const { visible: aiChatVisible } = useAiChatVisibility();
 const isMenuOpen = ref(false);
 const isMobileNav = ref(
   typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
@@ -184,6 +188,7 @@ const STATIC_NAV_KEYS = [
   '/tags',
   '/hot-search',
   '/search',
+  '/ai-chat',
   '/links',
   '/share',
   '/reading-history',
@@ -203,6 +208,7 @@ const MAIN_NAV_OPTIONS = [
   { label: '首页', key: '/' },
   { label: '归档', key: '/archive' },
   { label: '知识星系', key: '/tags' },
+  { label: 'AI 问答', key: '/ai-chat' },
   { label: '热搜', key: '/hot-search' },
   { label: '友链', key: '/links' },
   { label: '分享', key: '/share' },
@@ -211,9 +217,17 @@ const MAIN_NAV_OPTIONS = [
   { label: '阅读记录', key: '/reading-history' },
 ];
 
+const LOGGED_IN_OVERFLOW_KEYS = ['/chat', '/shop', '/reading-history'];
+
 const navMenuOptions = computed(() => {
-  const base = [...MAIN_NAV_OPTIONS];
-  if (!authStore.isLoggedIn) {
+  let base = MAIN_NAV_OPTIONS.filter((opt) => opt.key !== '/ai-chat' || aiChatVisible.value);
+  if (authStore.isLoggedIn) {
+    const overflow = base.filter((opt) => LOGGED_IN_OVERFLOW_KEYS.includes(opt.key));
+    base = base.filter((opt) => !LOGGED_IN_OVERFLOW_KEYS.includes(opt.key));
+    if (overflow.length) {
+      base.push({ label: '更多', key: 'more', children: overflow });
+    }
+  } else {
     base.push({ label: '登录', key: '/login' });
     base.push({ label: '注册', key: '/register' });
   }
@@ -221,7 +235,7 @@ const navMenuOptions = computed(() => {
 });
 
 const mobileNavMenuOptions = computed(() => {
-  const base = [...MAIN_NAV_OPTIONS];
+  const base = MAIN_NAV_OPTIONS.filter((opt) => opt.key !== '/ai-chat' || aiChatVisible.value);
   if (authStore.isLoggedIn) {
     base.unshift({ label: '个人主页', key: '/user/me' });
   }
@@ -246,7 +260,7 @@ const userDropdownOptions = computed(() => {
 });
 
 function onNavMenuUpdate(key) {
-  if (typeof key !== 'string') return;
+  if (typeof key !== 'string' || key === 'more') return;
   router.push(key).catch(() => {});
   closeMenu();
 }
@@ -580,15 +594,28 @@ onUnmounted(() => {
   font-weight: var(--weight-semibold);
 }
 
+.nav-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
 .nav-search-wrap {
   flex: 0 1 200px;
   min-width: 140px;
-  margin: 0 var(--space-2);
+}
+
+.nav-actions--logged-in .nav-search-wrap {
+  flex: 0 1 160px;
+  min-width: 120px;
 }
 
 .nav-naive-menu--desktop {
   flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
 
 .nav-naive-menu--desktop :deep(.n-menu--horizontal) {
@@ -596,7 +623,7 @@ onUnmounted(() => {
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content) {
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   position: relative;
 }
 
@@ -720,11 +747,17 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
     overflow-y: auto;
   }
 
+  .nav-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    margin-left: 0;
+  }
+
   .nav-search-wrap {
     flex: none;
     width: 100%;
     min-width: 0;
-    margin: 0;
     padding: var(--space-3) var(--space-4);
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
@@ -808,6 +841,12 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
   white-space: nowrap;
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
+}
+
+@media (min-width: 1024px) {
+  .nav-actions--logged-in .nav-username-short {
+    display: none;
+  }
 }
 
 @media (max-width: 1023px) {
