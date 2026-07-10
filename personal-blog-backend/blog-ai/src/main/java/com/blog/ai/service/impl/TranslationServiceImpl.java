@@ -5,6 +5,7 @@ import com.blog.ai.model.dto.translation.TranslationJobDto;
 import com.blog.ai.model.entity.Article;
 import com.blog.ai.model.entity.ArticleTranslation;
 import com.blog.ai.common.exception.ServiceException;
+import com.blog.ai.gateway.AiTaskType;
 import com.blog.ai.llm.AiService;
 import com.blog.ai.mapper.ArticleMapper;
 import com.blog.ai.mapper.ArticleTranslationMapper;
@@ -97,7 +98,7 @@ public class TranslationServiceImpl implements TranslationService {
         String user = "标题：" + nz(article.getTitle())
                 + "\n摘要：" + nz(article.getSummary())
                 + "\n正文：\n" + body;
-        String raw = aiService.chat(sys, user);
+        String raw = aiService.chat(AiTaskType.TRANSLATE, sys, user);
         JsonNode node = parseJsonObject(raw);
         ArticleTranslation tr = new ArticleTranslation();
         tr.setArticleId(articleId);
@@ -132,7 +133,7 @@ public class TranslationServiceImpl implements TranslationService {
         String user = "标题：" + nz(tr.getTitle())
                 + "\n摘要：" + nz(tr.getSummary())
                 + "\n正文节选：\n" + trunc(tr.getContent(), 5000);
-        String raw = aiService.chat(sys, user);
+        String raw = aiService.chat(AiTaskType.SEO, sys, user);
         JsonNode node = parseJsonObject(raw);
         ArticleTranslation patch = new ArticleTranslation();
         patch.setId(tr.getId());

@@ -1,5 +1,6 @@
 package com.blog.ai.service.impl;
 
+import com.blog.ai.gateway.AiTaskType;
 import com.blog.ai.llm.AiService;
 import com.blog.ai.mapper.ArticleMapper;
 import com.blog.ai.model.entity.Article;
@@ -32,7 +33,7 @@ public class ArticleSeoServiceImpl implements ArticleSeoService {
         String user = "标题：" + nullToEmpty(request.getTitle())
                 + "\n摘要：" + nullToEmpty(request.getSummary())
                 + "\n正文节选：\n" + truncate(nullToEmpty(request.getContent()), 6000);
-        String raw = aiService.chat(sys, user);
+        String raw = aiService.chat(AiTaskType.SEO, sys, user);
         SeoGenerateResult result = parseSeo(raw);
         applySeo(articleId, result);
         return result;

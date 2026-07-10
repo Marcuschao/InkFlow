@@ -16,6 +16,7 @@ import com.blog.ai.agent.tools.ArticleSearchTools;
 import com.blog.ai.model.dto.agent.*;
 import com.blog.ai.model.entity.Article;
 import com.blog.ai.common.exception.ServiceException;
+import com.blog.ai.gateway.AiTaskType;
 import com.blog.ai.llm.AiService;
 import com.blog.ai.mapper.ArticleMapper;
 import com.blog.ai.service.AgentService;
@@ -85,7 +86,7 @@ public class AgentServiceImpl implements AgentService {
         String user = "文章标题：" + nullToEmpty(request.getTitle())
                 + "\n已有摘要：" + nullToEmpty(request.getSummary())
                 + "\n补充主题说明：" + nullToEmpty(request.getTopic());
-        return aiService.chat(sys, user);
+        return aiService.chat(AiTaskType.WRITING, sys, user);
     }
 
     @Override
@@ -100,7 +101,7 @@ public class AgentServiceImpl implements AgentService {
         String user = "标题：" + request.getTitle()
                 + "\n已有内容：\n" + request.getContext()
                 + "\n续写方向：" + nullToEmpty(request.getDirection());
-        return aiService.chat(sys, user);
+        return aiService.chat(AiTaskType.WRITING, sys, user);
     }
 
     @Override
@@ -109,7 +110,7 @@ public class AgentServiceImpl implements AgentService {
             throw new ServiceException(400, "文本不能为空");
         }
         String sys = "你是文字编辑。润色用户给出的文本，改正语病、优化表达，保留原意与 Markdown 结构，直接输出润色后的全文。";
-        return aiService.chat(sys, request.getText());
+        return aiService.chat(AiTaskType.WRITING, sys, request.getText());
     }
 
     @Override
@@ -123,7 +124,7 @@ public class AgentServiceImpl implements AgentService {
         String user = "文章标题：" + nullToEmpty(request.getTitle())
                 + "\n关键词与侧重点：" + nullToEmpty(request.getKeywords())
                 + "\n正文节选：\n" + truncate(nullToEmpty(request.getContent()), 8000);
-        return aiService.chat(sys, user);
+        return aiService.chat(AiTaskType.WRITING, sys, user);
     }
 
     @Override
@@ -161,7 +162,7 @@ public class AgentServiceImpl implements AgentService {
             user.append("文章标题：").append(request.getTitle()).append("\n\n");
         }
         user.append("待润色文本：\n").append(request.getSelectedText());
-        return aiService.chat(sys, user.toString());
+        return aiService.chat(AiTaskType.WRITING, sys, user.toString());
     }
 
     @Override
@@ -174,7 +175,7 @@ public class AgentServiceImpl implements AgentService {
         }
         String sys = "你是博客编辑。根据标题与正文生成简短中文摘要（1～3 句），不要标题前缀，不要加引号。";
         String user = "标题：" + request.getTitle() + "\n正文：\n" + truncate(request.getContent(), 8000);
-        return aiService.chat(sys, user);
+        return aiService.chat(AiTaskType.WRITING, sys, user);
     }
 
     @Override
@@ -187,7 +188,7 @@ public class AgentServiceImpl implements AgentService {
         }
         String sys = "你是博客编辑。根据标题与正文抽取 3～8 个简短中文标签，只输出 JSON 字符串数组，不要 markdown、不要其它说明。";
         String user = "标题：" + request.getTitle() + "\n正文：\n" + truncate(request.getContent(), 6000);
-        String raw = aiService.chat(sys, user);
+        String raw = aiService.chat(AiTaskType.TAG, sys, user);
         return parseStringList(raw);
     }
 
@@ -257,7 +258,7 @@ public class AgentServiceImpl implements AgentService {
                     .append(truncate(nullToEmpty(a.getContent()), chunk)).append("\n");
         }
         String user = "参考资料：\n" + ctx + "\n用户问题：" + q;
-        String answer = aiService.chat(sys, user);
+        String answer = aiService.chat(AiTaskType.AGENT, sys, user);
         ChatResponse res = new ChatResponse();
         res.setAnswer(answer);
         res.setSources(sources);
@@ -484,7 +485,7 @@ public class AgentServiceImpl implements AgentService {
         for (Article a : articles) {
             user.append("ID=").append(a.getId()).append(" 标题=").append(a.getTitle()).append("\n");
         }
-        return parseLearningPath(aiService.chat(sys, user.toString()), request.getGoal());
+        return parseLearningPath(aiService.chat(AiTaskType.WRITING, sys, user.toString()), request.getGoal());
     }
 
     @Override
@@ -649,7 +650,7 @@ public class AgentServiceImpl implements AgentService {
             user = user + "\n编排侧重点：" + request.getFocus().trim();
         }
 
-        String result = aiService.chat(sys, user);
+        String result = aiService.chat(AiTaskType.WRITING, sys, user);
         persistWeeklyReport(result, weekStart);
         return result;
     }

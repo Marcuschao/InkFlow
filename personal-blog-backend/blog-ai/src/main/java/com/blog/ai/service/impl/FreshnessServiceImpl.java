@@ -8,6 +8,7 @@ import com.blog.ai.model.dto.freshness.FreshnessAiDraftDto;
 import com.blog.ai.model.dto.freshness.FreshnessSummaryDto;
 import com.blog.ai.model.entity.Article;
 import com.blog.ai.common.exception.ServiceException;
+import com.blog.ai.gateway.AiTaskType;
 import com.blog.ai.llm.AiService;
 import com.blog.ai.mapper.ArticleMapper;
 import com.blog.ai.service.FreshnessService;
@@ -77,7 +78,7 @@ public class FreshnessServiceImpl implements FreshnessService {
         String user = "标题：" + nullToEmpty(article.getTitle())
                 + "\n摘要：" + nullToEmpty(article.getSummary())
                 + "\n正文：\n" + body;
-        String refreshed = aiService.chat(sys, user);
+        String refreshed = aiService.chat(AiTaskType.FRESHNESS, sys, user);
         if (reportStorageService != null && StringUtils.hasText(refreshed)) {
             try {
                 reportStorageService.saveFreshnessReport(articleId, article.getTitle(), refreshed);

@@ -1,0 +1,95 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  cloud:
+    inetutils:
+      preferred-networks:
+        - 172.18
+    nacos:
+      discovery:
+        ip: 120.48.48.31
+        port: 8082
+        fail-fast: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://120.48.48.31:3306/blog_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    username: internal_app
+    password: 'Internal_App_Secret_Key_456!'
+    hikari:
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      leak-detection-threshold: 60000
+  data:
+    redis:
+      host: 120.48.48.31
+      port: 6379
+      password: CZSREh8AFbADkcDB
+      database: 0
+      timeout: 3000ms
+  rabbitmq:
+    host: 120.48.48.31
+    port: 5672
+    username: Xk9Lm4Qr
+    password: KMr7tcWg3XNDA9yL
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        default-requeue-rejected: false
+  mail:
+    host: smtp.163.com
+    port: 465
+    protocol: smtps
+    username: lc3250918521@163.com
+    password: CWgkabvpRffmsr8N
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+  security:
+    jwt:
+      secret: MyUltraSecureJWTSecretForProductionEnvironment2026!@#
+      expiration: 43200
+      remember-me-expiration: 604800
+
+blog:
+  site-url: http://tdwqlc.top
+  site-base-path:
+  oauth:
+    enabled: true
+    client-id: Ov23li6yvB7a7iL9nUop
+    client-secret: ecce0a5b2ad023c5d145fbade26b23cf900076f1
+    redirect-uri: http://tdwqlc.top/login/oauth2/code/github
+    frontend-callback-url: http://tdwqlc.top/oauth/callback
+  notify-mail-enabled: true
+  notify-from: lc3250918521@163.com
+
+minio:
+  enabled: true
+  endpoint: http://120.48.48.31:9000
+  access-key: minioadmin_8aK3xTqP9v
+  secret-key: f7Lp2MqR9wXz5VbN1cA3eG6jH4kY8tS0uD2mP6oR3w
+  public-base-url: http://tdwqlc.top/minio
+  buckets:
+    chat: blog-chat
+    avatars: blog-avatars
+    diary: blog-diary
+    versions: blog-versions
+    logs: blog-logs
+    reports: blog-reports
+    backups: blog-backups
+
+logging:
+  level:
+    root: WARN
+    com.blog.auth: INFO

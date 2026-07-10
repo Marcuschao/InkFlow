@@ -23,6 +23,7 @@
           <router-link to="/admin/reports/freshness"><n-button size="small">保鲜报告</n-button></router-link>
           <router-link to="/admin/backup"><n-button size="small">数据库备份</n-button></router-link>
           <router-link to="/admin/dashboard"><n-button size="small">数据看板</n-button></router-link>
+          <router-link to="/admin/ai-dashboard"><n-button size="small">AI 监控</n-button></router-link>
           <router-link to="/admin/push"><n-button size="small">推送管理</n-button></router-link>
           <router-link to="/admin/stream"><n-button size="small">消息监控</n-button></router-link>
           <router-link to="/admin/monitor"><n-button size="small">性能监控</n-button></router-link>

@@ -18,5 +18,16 @@ public class AiCallLog {
     private Long durationMs;
     private String username;
     private String clientIp;
+    private Long userId;
+    private String taskType;
+    private String provider;
+    private String model;
+    private Integer inputTokens;
+    private Integer outputTokens;
+    private Double cost;
+    private Long latencyMs;
+    private String status;
+    private String errorMsg;
+    private String promptHash;
     private LocalDateTime createdAt;
 }

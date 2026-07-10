@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.blog.ai.common.exception.ServiceException;
 import com.blog.ai.config.properties.RagProperties;
+import com.blog.ai.gateway.AiTaskType;
 import com.blog.ai.llm.AiService;
 import com.blog.ai.mapper.ChatMessageMapper;
 import com.blog.ai.mapper.ChatSessionMapper;
@@ -175,7 +176,7 @@ public class ChatSessionService {
         String sys = "你是对话历史压缩助手。将以下多轮对话压缩为简短中文摘要，保留关键信息与用户意图，不要包含当前最新问题。";
         String user = "对话历史：\n" + sb;
         try {
-            return aiService.chat(sys, user);
+            return aiService.chat(AiTaskType.RAG, sys, user);
         } catch (Exception e) {
             log.warn("[rag] compress history failed: {}", e.getMessage());
             return null;

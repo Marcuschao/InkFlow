@@ -235,6 +235,24 @@ const routes = [
     meta: { requiresAdmin: true },
   },
   {
+    path: '/admin/ai-dashboard',
+    name: 'AdminAiDashboard',
+    component: () => import('../views/Admin/AdminAiDashboard.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/ai/models',
+    name: 'AdminAiModels',
+    component: () => import('../views/Admin/AdminAiModels.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/admin/ai/quota',
+    name: 'AdminAiQuota',
+    component: () => import('../views/Admin/AdminAiQuota.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
     path: '/admin/dashboard',
     name: 'AdminAnalytics',
     component: () => import('../views/Admin/StatsDashboard.vue'),

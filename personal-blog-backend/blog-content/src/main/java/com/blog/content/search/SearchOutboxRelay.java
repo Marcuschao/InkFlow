@@ -43,6 +43,7 @@ public class SearchOutboxRelay {
         if (!flushScheduled.compareAndSet(false, true)) {
             return;
         }
+        // 注册一个事务同步器，在事务提交后执行 flushPending() 方法
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {

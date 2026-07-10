@@ -10,12 +10,19 @@ spring:
     max-in-memory-size: 10MB
   cloud:
     nacos:
+      server-addr: 120.48.48.31:8848
+      username: nacos
+      password: 'Nc0s!X8vL#2@qP5^rT7'
       discovery:
         fail-fast: false
         register-enabled: true
         heart-beat-interval: 5000
         heart-beat-timeout: 15000
         ip-delete-timeout: 30000
+      config:
+        file-extension: yaml
+        group: DEFAULT_GROUP
+        refresh-enabled: true
     gateway:
       server:
         webflux:
@@ -73,7 +80,7 @@ spring:
             - id: blog-ai-admin
               uri: lb://blog-ai
               predicates:
-                - Path=/api/admin/translations/**,/api/admin/freshness/**,/api/admin/reports/**,/api/admin/stats/**,/api/admin/knowledge/**,/api/admin/rag/**
+                - Path=/api/admin/translations/**,/api/admin/freshness/**,/api/admin/reports/**,/api/admin/stats/**,/api/admin/knowledge/**,/api/admin/rag/**,/api/admin/ai/**
             - id: blog-ai-agent
               uri: lb://blog-ai
               predicates:
@@ -91,6 +98,10 @@ spring:
               order: 100
               predicates:
                 - Path=/api/**
+  config:
+    import:
+      - optional:nacos:blog-gateway.yaml
+      - optional:nacos:blog-gateway-${spring.profiles.active}.yaml
 
 management:
   server:
@@ -98,4 +109,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics,prometheus
+        include: health,metrics,prometheus,refresh
