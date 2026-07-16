@@ -48,18 +48,36 @@ public class RabbitMQConfig {
         return new TopicExchange(exchange, true, false);
     }
 
+    /**
+     * 创建搜索同步交换机
+     *
+     * @param searchProperties
+     * @return
+     */
     @Bean
     @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
     public TopicExchange searchExchange(SearchProperties searchProperties) {
         return new TopicExchange(searchProperties.getExchange(), true, false);
     }
 
+    /**
+     * 创建搜索同步队列
+     *
+     * @param searchProperties
+     * @return
+     */
     @Bean
     @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
     public Queue searchSyncQueue(SearchProperties searchProperties) {
         return durableQueue(searchProperties.getQueue());
     }
 
+    /**
+     * 创建搜索同步队列的死信队列
+     *
+     * @param searchProperties
+     * @return
+     */
     @Bean
     @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
     @ConditionalOnProperty(name = "blog.notification.dead-letter-enabled", havingValue = "true")
@@ -67,6 +85,14 @@ public class RabbitMQConfig {
         return QueueBuilder.durable(searchProperties.getQueue() + ".dlq").build();
     }
 
+    /**
+     * 绑定搜索同步队列
+     *
+     * @param searchSyncQueue
+     * @param searchExchange
+     * @param searchProperties
+     * @return
+     */
     @Bean
     @ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
     public Binding bindSearchSync(Queue searchSyncQueue, TopicExchange searchExchange, SearchProperties searchProperties) {

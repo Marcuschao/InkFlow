@@ -44,3 +44,5 @@ deploy/jars/*.jar
 **/application-local.yaml
 **/application-prod.yml
 **/application-prod.yaml
+**/application.yml
+**/application.yaml

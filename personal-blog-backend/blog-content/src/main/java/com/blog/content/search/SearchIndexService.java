@@ -41,6 +41,7 @@ public class SearchIndexService {
             meilisearchClient.deleteDocument(articleId);
             return;
         }
+        // 防止消息乱序导致的索引覆盖问题，如果消息中的更新时间早于数据库中的更新时间，则不进行索引更新
         if (messageUpdatedAt != null && article.getUpdateTime() != null
                 && article.getUpdateTime().isBefore(messageUpdatedAt)) {
             return;

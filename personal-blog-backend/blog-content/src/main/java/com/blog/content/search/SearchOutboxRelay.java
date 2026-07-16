@@ -36,10 +36,12 @@ public class SearchOutboxRelay {
     }
 
     public void scheduleFlushAfterCommit() {
+        // 如果当前没有事务活动，直接执行 flushPending() 方法
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             flushPending();
             return;
         }
+        // 确保在同一个事务中只注册一次
         if (!flushScheduled.compareAndSet(false, true)) {
             return;
         }

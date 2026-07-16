@@ -5,6 +5,8 @@ personal-blog-backend/**/application-local.yml
 personal-blog-backend/**/application-local.yaml
 personal-blog-backend/**/application-prod.yml
 personal-blog-backend/**/application-prod.yaml
+personal-blog-backend/**/application.yml
+personal-blog-backend/**/application.yaml
 personal-blog-backend/src/main/resources/blog_db.sql
 personal-blog-backend/scripts/*
 !personal-blog-backend/scripts/init-config.sh
