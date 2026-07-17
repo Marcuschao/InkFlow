@@ -1,6 +1,7 @@
 package com.blog.ai.service;
 
 import com.blog.ai.common.support.PageResult;
+import com.blog.ai.model.dto.ai.AiModelCreateRequest;
 import com.blog.ai.model.dto.ai.AiModelHealthDto;
 import com.blog.ai.model.dto.ai.AiModelUsageDto;
 import com.blog.ai.model.dto.ai.AiQuotaDto;
@@ -30,6 +31,10 @@ public interface AdminAiService {
     List<Map<String, Object>> listModels();
 
     void updateModelEnabled(Long id, boolean enabled);
+
+    AiModelConfig addModel(AiModelCreateRequest req);
+
+    void deleteModel(Long id);
 
     List<AiModelHealthDto> modelHealth();
 

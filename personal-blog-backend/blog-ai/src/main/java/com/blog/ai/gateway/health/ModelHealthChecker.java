@@ -56,6 +56,9 @@ public class ModelHealthChecker {
     @Scheduled(initialDelayString = "${blog.ai.gateway.health-check-initial-delay-ms:60000}",
             fixedDelayString = "${blog.ai.gateway.health-check-interval-ms:30000}")
     public void scheduledCheck() {
+        if (!gatewayProperties.isHealthCheckEnabled()) {
+            return;
+        }
         for (GatewayProperties.ProviderDef def : modelProviderConfig.listEnabledProviders()) {
             if (!StringUtils.hasText(def.getApiKey())) {
                 continue;
@@ -70,6 +73,9 @@ public class ModelHealthChecker {
 
     @Scheduled(fixedDelayString = "${blog.ai.gateway.half-open-interval-ms:60000}")
     public void halfOpenProbe() {
+        if (!gatewayProperties.isHealthCheckEnabled()) {
+            return;
+        }
         for (GatewayProperties.ProviderDef def : modelProviderConfig.listEnabledProviders()) {
             ProviderHealthState state = getState(def.getId());
             if (state.getStatus() != ProviderHealthState.Status.UNHEALTHY) {

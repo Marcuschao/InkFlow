@@ -18,5 +18,9 @@ public class AiModelConfig {
     private Integer priority;
     private Integer maxConcurrency;
     private Long timeoutMs;
+    private String name;
+    private String apiKey;
+    private String baseUrl;
+    private String models;
     private LocalDateTime updatedAt;
 }

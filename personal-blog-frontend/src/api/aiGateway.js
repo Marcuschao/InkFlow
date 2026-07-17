@@ -51,3 +51,11 @@ export function addAiWhitelist(data) {
 export function removeAiWhitelist(id) {
   return request({ url: `/admin/ai/quota/whitelist/${id}`, method: 'delete' });
 }
+
+export function createAiModel(data) {
+  return request({ url: '/admin/ai/models', method: 'post', data }).then(res => res.data);
+}
+
+export function deleteAiModel(id) {
+  return request({ url: `/admin/ai/models/${id}`, method: 'delete' });
+}

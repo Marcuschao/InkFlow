@@ -27,15 +27,18 @@ public class ModelProviderConfig {
     private final String fallbackBaseUrl;
     private final String fallbackModel;
 
+    private final AiApiKeyCipher apiKeyCipher;
     private volatile Map<String, GatewayProperties.ProviderDef> providerMap = new ConcurrentHashMap<>();
 
     public ModelProviderConfig(GatewayProperties gatewayProperties,
                                AiModelConfigMapper aiModelConfigMapper,
+                               AiApiKeyCipher apiKeyCipher,
                                @Value("${spring.ai.openai.api-key:}") String fallbackApiKey,
                                @Value("${spring.ai.openai.base-url:https://api.openai.com}") String fallbackBaseUrl,
                                @Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}") String fallbackModel) {
         this.gatewayProperties = gatewayProperties;
         this.aiModelConfigMapper = aiModelConfigMapper;
+        this.apiKeyCipher = apiKeyCipher;
         this.fallbackApiKey = fallbackApiKey;
         this.fallbackBaseUrl = fallbackBaseUrl;
         this.fallbackModel = fallbackModel;
@@ -92,7 +95,34 @@ public class ModelProviderConfig {
             for (AiModelConfig row : rows) {
                 GatewayProperties.ProviderDef def = map.get(row.getProviderId());
                 if (def == null) {
-                    continue;
+                    if (!StringUtils.hasText(row.getApiKey())
+                            || !StringUtils.hasText(row.getBaseUrl())
+                            || !StringUtils.hasText(row.getModels())) {
+                        continue;
+                    }
+                    def = new GatewayProperties.ProviderDef();
+                    def.setId(row.getProviderId());
+                    def.setName(StringUtils.hasText(row.getName()) ? row.getName() : row.getProviderId());
+                    def.setApiKey(apiKeyCipher.decrypt(row.getApiKey()));
+                    def.setBaseUrl(row.getBaseUrl());
+                    def.setModels(List.of(row.getModels().split(",")));
+                    def.setPriority(row.getPriority() != null ? row.getPriority() : 1);
+                    def.setMaxConcurrency(row.getMaxConcurrency() != null ? row.getMaxConcurrency() : 10);
+                    def.setTimeoutMs(row.getTimeoutMs() != null ? row.getTimeoutMs() : 5000L);
+                    map.put(row.getProviderId(), def);
+                } else {
+                    if (StringUtils.hasText(row.getApiKey())) {
+                        def.setApiKey(apiKeyCipher.decrypt(row.getApiKey()));
+                    }
+                    if (StringUtils.hasText(row.getBaseUrl())) {
+                        def.setBaseUrl(row.getBaseUrl());
+                    }
+                    if (StringUtils.hasText(row.getModels())) {
+                        def.setModels(List.of(row.getModels().split(",")));
+                    }
+                    if (StringUtils.hasText(row.getName())) {
+                        def.setName(row.getName());
+                    }
                 }
                 if (row.getEnabled() != null) {
                     def.setEnabled(row.getEnabled() == 1);

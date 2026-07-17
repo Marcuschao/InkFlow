@@ -2,6 +2,7 @@ package com.blog.ai.controller;
 
 import com.blog.ai.common.support.PageResult;
 import com.blog.ai.common.support.Result;
+import com.blog.ai.model.dto.ai.AiModelCreateRequest;
 import com.blog.ai.model.dto.ai.AiModelHealthDto;
 import com.blog.ai.model.dto.ai.AiModelUsageDto;
 import com.blog.ai.model.dto.ai.AiQuotaDto;
@@ -10,8 +11,10 @@ import com.blog.ai.model.dto.ai.AiStatsTrendDto;
 import com.blog.ai.model.dto.ai.AiUserUsageDto;
 import com.blog.ai.model.entity.AiCallLog;
 import com.blog.ai.model.entity.AiGuardRule;
+import com.blog.ai.model.entity.AiModelConfig;
 import com.blog.ai.model.entity.AiQuotaWhitelist;
 import com.blog.ai.service.AdminAiService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,6 +73,17 @@ public class AdminAiController {
     @PutMapping("/models/{id}/enabled")
     public Result<Void> updateModelEnabled(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
         adminAiService.updateModelEnabled(id, Boolean.TRUE.equals(body.get("enabled")));
+        return Result.success(null);
+    }
+
+    @PostMapping("/models")
+    public Result<AiModelConfig> addModel(@Valid @RequestBody AiModelCreateRequest req) {
+        return Result.success(adminAiService.addModel(req));
+    }
+
+    @DeleteMapping("/models/{id}")
+    public Result<Void> deleteModel(@PathVariable Long id) {
+        adminAiService.deleteModel(id);
         return Result.success(null);
     }
 

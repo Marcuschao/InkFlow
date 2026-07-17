@@ -14,6 +14,8 @@ public class GatewayProperties {
 
     private boolean enabled = true;
     private long defaultTimeoutMs = 5000;
+    private boolean healthCheckEnabled = false;
+    private String apiKeyCipherSecret;
     private long healthCheckIntervalMs = 30000;
     private long halfOpenIntervalMs = 60000;
     private int failureThreshold = 3;

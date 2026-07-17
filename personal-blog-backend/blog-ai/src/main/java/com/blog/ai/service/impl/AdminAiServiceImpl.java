@@ -2,7 +2,9 @@ package com.blog.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.blog.ai.common.exception.ServiceException;
 import com.blog.ai.common.support.PageResult;
+import com.blog.ai.gateway.config.AiApiKeyCipher;
 import com.blog.ai.gateway.config.GatewayProperties;
 import com.blog.ai.gateway.config.ModelProviderConfig;
 import com.blog.ai.gateway.guard.PromptGuard;
@@ -14,6 +16,7 @@ import com.blog.ai.mapper.AiCallLogMapper;
 import com.blog.ai.mapper.AiGuardRuleMapper;
 import com.blog.ai.mapper.AiModelConfigMapper;
 import com.blog.ai.mapper.AiQuotaWhitelistMapper;
+import com.blog.ai.model.dto.ai.AiModelCreateRequest;
 import com.blog.ai.model.dto.ai.AiModelHealthDto;
 import com.blog.ai.model.dto.ai.AiModelUsageDto;
 import com.blog.ai.model.dto.ai.AiQuotaDto;
@@ -50,6 +53,7 @@ public class AdminAiServiceImpl implements AdminAiService {
     private final GatewayProperties gatewayProperties;
     private final ModelRouter modelRouter;
     private final PromptGuard promptGuard;
+    private final AiApiKeyCipher apiKeyCipher;
 
     public AdminAiServiceImpl(AiCallLogMapper aiCallLogMapper,
                               AiModelConfigMapper aiModelConfigMapper,
@@ -60,7 +64,8 @@ public class AdminAiServiceImpl implements AdminAiService {
                               ModelProviderConfig modelProviderConfig,
                               GatewayProperties gatewayProperties,
                               ModelRouter modelRouter,
-                              PromptGuard promptGuard) {
+                              PromptGuard promptGuard,
+                              AiApiKeyCipher apiKeyCipher) {
         this.aiCallLogMapper = aiCallLogMapper;
         this.aiModelConfigMapper = aiModelConfigMapper;
         this.whitelistMapper = whitelistMapper;
@@ -71,6 +76,7 @@ public class AdminAiServiceImpl implements AdminAiService {
         this.gatewayProperties = gatewayProperties;
         this.modelRouter = modelRouter;
         this.promptGuard = promptGuard;
+        this.apiKeyCipher = apiKeyCipher;
     }
 
     @Override
@@ -202,6 +208,41 @@ public class AdminAiServiceImpl implements AdminAiService {
         }
         row.setEnabled(enabled ? 1 : 0);
         aiModelConfigMapper.updateById(row);
+        modelProviderConfig.reload();
+    }
+
+    @Override
+    public AiModelConfig addModel(AiModelCreateRequest req) {
+        AiModelConfig existing = aiModelConfigMapper.selectOne(
+                new LambdaQueryWrapper<AiModelConfig>().eq(AiModelConfig::getProviderId, req.getProviderId()));
+        if (existing != null) {
+            throw new ServiceException("providerId已存在: " + req.getProviderId());
+        }
+        AiModelConfig row = new AiModelConfig();
+        row.setProviderId(req.getProviderId());
+        row.setName(req.getName());
+        row.setApiKey(apiKeyCipher.encrypt(req.getApiKey()));
+        row.setBaseUrl(req.getBaseUrl());
+        String modelsStr = req.getModels();
+        row.setModels(modelsStr);
+        row.setModel(modelsStr.split(",")[0].trim());
+        row.setPriority(req.getPriority() != null ? req.getPriority() : 1);
+        row.setMaxConcurrency(req.getMaxConcurrency() != null ? req.getMaxConcurrency() : 10);
+        row.setTimeoutMs(req.getTimeoutMs() != null ? req.getTimeoutMs() : 5000L);
+        row.setEnabled(req.getEnabled() == null || req.getEnabled() ? 1 : 0);
+        row.setUpdatedAt(LocalDateTime.now());
+        aiModelConfigMapper.insert(row);
+        modelProviderConfig.reload();
+        return row;
+    }
+
+    @Override
+    public void deleteModel(Long id) {
+        AiModelConfig row = aiModelConfigMapper.selectById(id);
+        if (row == null) {
+            return;
+        }
+        aiModelConfigMapper.deleteById(id);
         modelProviderConfig.reload();
     }
 
