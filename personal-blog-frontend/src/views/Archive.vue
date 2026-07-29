@@ -118,4 +118,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.archive-page :deep(.n-timeline-item-content) {
+  padding-bottom: var(--space-5);
+}
+
+.archive-page :deep(.n-timeline-item-timeline) {
+  --n-color: var(--color-accent) !important;
+}
+
+.archive-page :deep(.n-list) {
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.archive-page :deep(.n-list-item) {
+  min-height: 58px;
+  transition: background var(--transition-fast), padding-left var(--transition-fast);
+}
+
+.archive-page :deep(.n-list-item:hover) {
+  background: var(--surface-primary-tint);
+  padding-left: calc(var(--space-4) + 3px);
+}
+
+.archive-page :deep(.n-timeline-item-title) {
+  color: var(--color-text);
+  font-weight: var(--weight-bold);
+}
 </style>

@@ -1,14 +1,16 @@
 import { createApp } from 'vue';
 import { createHead } from '@vueuse/head';
 import { createPinia } from 'pinia';
+import ElementPlus from 'element-plus';
+import zhCn from 'element-plus/es/locale/lang/zh-cn';
+import 'element-plus/dist/index.css';
 import { registerSW } from 'virtual:pwa-register';
-import Particles from '@tsparticles/vue3';
-import { loadSlim } from '@tsparticles/slim';
 import App from './App.vue';
 import router from './router';
 import 'vfonts/Lato.css';
 import 'vfonts/FiraCode.css';
 import './assets/styles/global.css';
+import './assets/styles/element-theme.css';
 import { stripTrailingSlashInBrowserUrl } from './utils/url';
 
 if ('scrollRestoration' in history) {
@@ -22,11 +24,7 @@ const head = createHead();
 app.use(pinia);
 app.use(router);
 app.use(head);
-app.use(Particles, {
-  init: async (engine) => {
-    await loadSlim(engine);
-  },
-});
+app.use(ElementPlus, { locale: zhCn });
 
 router.isReady().then(() => {
   stripTrailingSlashInBrowserUrl();

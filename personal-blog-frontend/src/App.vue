@@ -17,6 +17,7 @@ import AiChatbot from './components/AiChatbot.vue';
 import ScrollToTop from './components/ScrollToTop.vue';
 import ToastHost from './components/ToastHost.vue';
 import MobileDock from './components/MobileDock.vue';
+import AdminShell from './components/AdminShell.vue';
 import { useSiteStore } from './stores/site';
 import { useAuthStore } from './stores/auth';
 import { useNotificationStore } from './stores/notification';
@@ -38,6 +39,15 @@ const route = useRoute();
 const { visible: aiChatVisible } = useAiChatVisibility();
 const { naiveTheme, isDark } = useTheme();
 const themeOverrides = computed(() => (isDark.value ? darkThemeOverrides : lightThemeOverrides));
+
+function resetRouteScroll() {
+  if (route.hash) return;
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  });
+}
 
 let stopRipple = () => {};
 let stopNotifListener = () => {};
@@ -146,9 +156,18 @@ onUnmounted(() => {
           <OfflineBanner />
           <main class="main-content">
             <RouterView v-slot="{ Component, route }">
-              <Transition name="page-fade" mode="out-in">
-                <component :is="Component" v-if="Component" :key="route.path" />
-              </Transition>
+              <template v-if="route.meta.requiresAdmin">
+                <AdminShell>
+                  <Transition name="page-fade" mode="out-in" @after-enter="resetRouteScroll">
+                    <component :is="Component" v-if="Component" :key="route.fullPath" />
+                  </Transition>
+                </AdminShell>
+              </template>
+              <template v-else>
+                <Transition name="page-fade" mode="out-in" @after-enter="resetRouteScroll">
+                  <component :is="Component" v-if="Component" :key="route.fullPath" />
+                </Transition>
+              </template>
             </RouterView>
           </main>
           <Footer />

@@ -1,5 +1,5 @@
 <template>
-  <div class="home-page ds-page">
+  <div ref="homeRoot" class="home-page ds-page">
     <div class="container home-layout">
       <div class="home-main">
         <div class="home-hero-banner">
@@ -188,9 +188,12 @@ import { agentRecommendHome } from '../api/agent';
 import { fetchFeed } from '../api/interaction';
 import { useSiteStore } from '../stores/site';
 import { useReadingHistory } from '../composables/useReadingHistory';
+import { useGsapEntrance } from '../composables/useGsapEntrance';
 
 usePageViewHome();
 const articleStore = useArticleStore();
+const homeRoot = ref(null);
+useGsapEntrance(homeRoot, '.card-enter, .home-hero-banner, .ds-stat-row');
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
@@ -356,7 +359,7 @@ watch(
 <style scoped>
 .home-layout {
   display: grid;
-  gap: var(--space-8);
+  gap: clamp(24px, 3vw, 40px);
   align-items: start;
 }
 
@@ -387,6 +390,9 @@ watch(
 
 .home-hero-banner {
   position: relative;
+  padding: clamp(20px, 3vw, 34px) 0;
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .home-hero-content {
@@ -406,7 +412,7 @@ watch(
 
 .home-hero-title {
   margin: 0;
-  font-size: var(--text-display-xl);
+  font-size: clamp(2rem, 4vw, 3.25rem);
   font-weight: var(--weight-black);
   letter-spacing: -0.04em;
   line-height: 1.1;
@@ -426,7 +432,7 @@ watch(
 .home-aside {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
   position: sticky;
   top: calc(var(--layout-navbar-bottom) + var(--space-4));
 }
@@ -438,7 +444,7 @@ watch(
 .aside-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   padding: 1.15rem 1.05rem 1.25rem;
 }
@@ -542,7 +548,7 @@ watch(
 .home-hot-section {
   margin-top: var(--space-12);
   padding-top: var(--space-8);
-  border-top: var(--border-brutal);
+  border-top: 1px solid var(--color-border);
 }
 
 .home-hot-head {
@@ -594,7 +600,13 @@ watch(
 
 @media (min-width: 1024px) {
   .home-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  }
+}
+
+@media (min-width: 768px) {
+  .home-article-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 

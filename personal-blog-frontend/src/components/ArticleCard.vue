@@ -99,9 +99,10 @@ const formatDate = (dateString) => {
   height: 100%;
   overflow: hidden;
   background: var(--color-surface) !important;
-  border: var(--border-brutal) !important;
-  border-radius: var(--radius-brutal-card) !important;
-  box-shadow: var(--shadow-brutal-lg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
 }
 
 .item-card-starry {
@@ -114,9 +115,9 @@ const formatDate = (dateString) => {
 
 .cover-wrap {
   margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) var(--space-4);
-  height: 180px;
+  height: 200px;
   overflow: hidden;
-  border: var(--border-brutal);
+  border: 0;
   border-radius: var(--radius-md);
 }
 
@@ -125,6 +126,11 @@ const formatDate = (dateString) => {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.45s var(--ease-out-soft), opacity 0.3s ease;
+}
+
+.article-card-link:hover .cover-img {
+  transform: scale(1.035);
 }
 
 .cover-placeholder {
@@ -150,9 +156,9 @@ const formatDate = (dateString) => {
 }
 
 .article-card :deep(.n-tag) {
-  border: var(--border-brutal) !important;
-  font-weight: var(--weight-bold) !important;
-  border-radius: var(--radius-pill) !important;
+  border: 1px solid var(--color-border) !important;
+  font-weight: var(--weight-medium) !important;
+  border-radius: var(--radius-sm) !important;
 }
 
 .reason {

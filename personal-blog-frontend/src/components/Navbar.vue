@@ -6,7 +6,10 @@
   >
     <nav class="nav-inner" aria-label="主导航">
       <div class="container nav-row">
-        <router-link to="/" class="logo" @click="closeMenu">{{ siteStore.siteTitle }}</router-link>
+        <router-link to="/" class="logo" @click="closeMenu">
+          <img :src="brandIcon" alt="" width="30" height="30" />
+          <span>{{ siteStore.siteTitle }}</span>
+        </router-link>
         <div id="primary-nav" class="nav-links" :class="{ open: isMenuOpen }">
           <div v-if="!authStore.isLoggedIn && isMobileNav && isMenuOpen" class="nav-auth-actions">
             <router-link to="/login" class="nav-auth-btn nav-auth-btn--primary" @click="closeMenu">登录</router-link>
@@ -96,7 +99,7 @@
               </div>
             </div>
 
-            <div v-if="authStore.isAdmin" class="nav-admin-li-desktop">
+            <div v-if="authStore.isAdmin && !route.path.startsWith('/admin')" class="nav-admin-li-desktop">
               <router-link to="/admin" class="nav-admin" @click="closeMenu">管理</router-link>
             </div>
           </div>
@@ -141,6 +144,7 @@ import UserAvatar from './UserAvatar.vue';
 import SearchSuggest from './SearchSuggest.vue';
 
 const route = useRoute();
+const brandIcon = `${import.meta.env.BASE_URL}favicon.svg`;
 const router = useRouter();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
@@ -450,7 +454,7 @@ onUnmounted(() => {
 }
 
 .navbar.scrolled .nav-inner {
-  box-shadow: var(--shadow-nav);
+  box-shadow: var(--shadow-nav), var(--shadow-sm);
 }
 
 .nav-inner {
@@ -458,8 +462,9 @@ onUnmounted(() => {
   min-height: var(--nav-height);
   display: flex;
   align-items: center;
-  background: var(--color-surface);
-  border-bottom: var(--border-brutal);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(14px);
   box-shadow: none;
   transition: box-shadow var(--transition-fast);
 }
@@ -484,6 +489,9 @@ onUnmounted(() => {
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-ui);
   font-weight: var(--weight-black);
   font-size: var(--text-lg);
@@ -491,6 +499,13 @@ onUnmounted(() => {
   text-decoration: none;
   color: var(--color-text);
   transition: color var(--transition-fast);
+}
+
+.logo img {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
 }
 
 .logo:hover {
@@ -519,12 +534,12 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
-  background: var(--color-accent);
+  background: var(--color-primary);
   color: var(--color-on-primary);
-  border: var(--border-brutal);
+  border: 1px solid transparent;
   box-shadow: var(--shadow-brutal-sm);
   text-decoration: none;
   white-space: nowrap;
@@ -546,10 +561,10 @@ onUnmounted(() => {
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
-  border: var(--border-brutal);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-brutal-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: none;
   color: var(--color-text);
   cursor: pointer;
   transition:
@@ -558,8 +573,9 @@ onUnmounted(() => {
 }
 
 .nav-theme-toggle:hover {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  transform: translateY(-1px);
+  background: var(--surface-primary-tint);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-theme-toggle:active {
@@ -628,14 +644,24 @@ onUnmounted(() => {
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content::after) {
-  display: none;
+  display: block;
+  content: '';
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: 2px;
+  height: 2px;
+  background: var(--color-primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--transition-fast);
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
-  background: var(--color-text) !important;
-  color: var(--color-surface) !important;
-  border-radius: var(--radius-pill) !important;
-  font-weight: var(--weight-bold) !important;
+  background: transparent !important;
+  color: var(--color-primary) !important;
+  border-radius: 0 !important;
+  font-weight: var(--weight-semibold) !important;
 }
 
 html:not(.dark) .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
@@ -644,8 +670,8 @@ html:not(.dark) .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
 }
 
 html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
-  background: rgba(212, 175, 55, 0.18) !important;
-  color: var(--color-text) !important;
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content:hover) {
@@ -654,7 +680,11 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content:hover::after),
 .nav-naive-menu--desktop :deep(.n-menu-item-content--selected::after) {
-  transform: none;
+  display: block;
+  height: 2px;
+  bottom: 2px;
+  background: var(--color-primary);
+  transform: scaleX(1);
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content-header) {

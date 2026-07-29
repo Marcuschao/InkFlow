@@ -1,205 +1,35 @@
-const fontFamily =
-  '"Inter", "DM Sans", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif';
-
-const brutalBorder = '2px solid';
-const brutalShadow = '4px 4px 0 #000';
-const brutalShadowLg = '5px 5px 0 #000';
+const fontFamily = 'Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif';
 
 const shared = {
-  Button: {
-    borderRadiusMedium: '10px',
-    borderRadiusSmall: '8px',
-    heightMedium: '40px',
-    fontWeight: '700',
-  },
-  Card: {
-    borderRadius: '20px',
-    paddingMedium: '20px',
-  },
-  Input: {
-    borderRadius: '10px',
-  },
-  Tag: {
-    borderRadius: '999px',
-  },
-  Tabs: {
-    tabBorderRadius: '999px',
-    tabFontWeightActive: '700',
-    tabColorSegment: '#E8C547',
-    tabTextColorActiveSegment: '#000000',
-    tabTextColorSegment: '#52525B',
-    tabTextColorHoverSegment: '#000000',
-    colorSegment: '#FFFFFF',
-  },
-  Pagination: {
-    itemBorderRadius: '10px',
-  },
-  DataTable: {
-    borderRadius: '20px',
-    thFontWeight: '700',
-  },
-  Modal: {
-    borderRadius: '20px',
-  },
-};
-
-export const darkThemeOverrides = {
-  ...shared,
-  common: {
-    primaryColor: '#D4AF37',
-    primaryColorHover: '#E8C547',
-    primaryColorPressed: '#C4A030',
-    primaryColorSuppl: '#D4AF37',
-    borderRadius: '10px',
-    fontFamily,
-    textColor1: '#FAFAFA',
-    textColor2: '#A1A1AA',
-    textColor3: '#71717A',
-    borderColor: 'rgba(255,255,255,0.85)',
-    dividerColor: 'rgba(255,255,255,0.85)',
-    boxShadow1: '4px 4px 0 rgba(255,255,255,0.12)',
-    boxShadow2: '5px 5px 0 rgba(255,255,255,0.12)',
-    bodyColor: '#121212',
-    cardColor: '#1A1A1A',
-    hoverColor: 'rgba(255, 214, 0, 0.12)',
-    inputColor: '#1A1A1A',
-    popoverColor: '#1A1A1A',
-    modalColor: '#1A1A1A',
-  },
-  Button: {
-    ...shared.Button,
-    textColorPrimary: '#000000',
-    textColorHoverPrimary: '#000000',
-    textColorPressedPrimary: '#000000',
-    textColorFocusPrimary: '#000000',
-    borderPrimary: '2px solid rgba(255,255,255,0.85)',
-    borderHoverPrimary: '2px solid rgba(255,255,255,0.85)',
-    borderPressedPrimary: '2px solid rgba(255,255,255,0.85)',
-    borderFocusPrimary: '2px solid rgba(255,255,255,0.85)',
-    colorPrimary: '#D4AF37',
-    colorHoverPrimary: '#E8C547',
-    colorPressedPrimary: '#C4A030',
-    colorFocusPrimary: '#D4AF37',
-  },
-  Menu: {
-    itemColorActive: '#FFD600',
-    itemColorActiveHover: '#FFE033',
-    itemTextColorActive: '#000000',
-    itemTextColorActiveHover: '#000000',
-    borderRadius: '999px',
-  },
-  Input: {
-    borderRadius: '10px',
-    boxShadowFocus: '0 0 0 2px #FFD600',
-    color: '#1A1A1A',
-    colorFocus: '#1A1A1A',
-    border: '2px solid rgba(255,255,255,0.85)',
-    borderHover: '2px solid rgba(255,255,255,0.85)',
-    borderFocus: '2px solid #FFD600',
-  },
-  Card: {
-    borderRadius: '20px',
-    paddingMedium: '20px',
-    color: '#1A1A1A',
-    colorModal: '#1A1A1A',
-    borderColor: 'rgba(255,255,255,0.85)',
-  },
-  Tag: {
-    borderRadius: '999px',
-    colorBordered: 'rgba(255,255,255,0.85)',
-  },
-  DataTable: {
-    borderRadius: '20px',
-    thFontWeight: '700',
-    thColor: '#222222',
-    tdColor: 'transparent',
-    tdColorHover: 'rgba(255, 214, 0, 0.12)',
-    borderColor: 'rgba(255,255,255,0.85)',
-  },
-  Badge: {
-    color: '#FFD600',
-  },
-  Switch: {
-    railColorActive: '#FFD600',
-  },
-  Tabs: {
-    ...shared.Tabs,
-    tabColorSegment: '#E8C547',
-    tabTextColorActiveSegment: '#000000',
-    tabTextColorSegment: '#A1A1AA',
-    tabTextColorHoverSegment: '#FAFAFA',
-    colorSegment: '#1A1A1A',
-  },
+  common: { primaryColor:'#d96343', primaryColorHover:'#bc4f33', primaryColorPressed:'#a8432b', primaryColorSuppl:'#d96343', borderRadius:'10px', fontFamily },
+  Button: { borderRadiusMedium:'8px', borderRadiusSmall:'6px', heightMedium:'38px', heightSmall:'32px', fontWeight:'600' },
+  Card: { borderRadius:'10px', paddingMedium:'20px' },
+  Input: { borderRadius:'8px', heightMedium:'40px' },
+  Tag: { borderRadius:'5px' },
+  Tabs: { tabBorderRadius:'6px', tabFontWeightActive:'600' },
+  Pagination: { itemBorderRadius:'6px' },
+  DataTable: { borderRadius:'8px', thFontWeight:'600' },
+  Modal: { borderRadius:'10px' },
 };
 
 export const lightThemeOverrides = {
   ...shared,
-  common: {
-    primaryColor: '#E8C547',
-    primaryColorHover: '#D4AF37',
-    primaryColorPressed: '#C4A030',
-    primaryColorSuppl: '#E8C547',
-    borderRadius: '10px',
-    fontFamily,
-    textColor1: '#000000',
-    textColor2: '#52525B',
-    textColor3: '#71717A',
-    borderColor: '#000000',
-    dividerColor: '#000000',
-    boxShadow1: brutalShadow,
-    boxShadow2: brutalShadowLg,
-    bodyColor: '#FFFFFF',
-    cardColor: '#FFFFFF',
-    hoverColor: 'rgba(255, 214, 0, 0.2)',
-  },
-  Button: {
-    ...shared.Button,
-    textColorPrimary: '#000000',
-    textColorHoverPrimary: '#000000',
-    textColorPressedPrimary: '#000000',
-    textColorFocusPrimary: '#000000',
-    borderPrimary: '2px solid #000000',
-    borderHoverPrimary: '2px solid #000000',
-    borderPressedPrimary: '2px solid #000000',
-    borderFocusPrimary: '2px solid #000000',
-    colorPrimary: '#E8C547',
-    colorHoverPrimary: '#D4AF37',
-    colorPressedPrimary: '#C4A030',
-    colorFocusPrimary: '#E8C547',
-  },
-  Menu: {
-    itemColorActive: '#000000',
-    itemColorActiveHover: '#000000',
-    itemTextColorActive: '#FFFFFF',
-    itemTextColorActiveHover: '#FFFFFF',
-    borderRadius: '999px',
-  },
-  Input: {
-    borderRadius: '10px',
-    boxShadowFocus: '0 0 0 2px #FFD600',
-    border: '2px solid #000000',
-    borderHover: '2px solid #000000',
-    borderFocus: '2px solid #FFD600',
-  },
-  Card: {
-    borderRadius: '20px',
-    paddingMedium: '20px',
-    boxShadow: brutalShadowLg,
-    borderColor: '#000000',
-  },
-  Tag: {
-    borderRadius: '999px',
-    colorBordered: '#000000',
-  },
-  DataTable: {
-    borderRadius: '20px',
-    thFontWeight: '700',
-    thColor: '#F4F4F5',
-    borderColor: '#000000',
-  },
-  Badge: {
-    color: '#EF4444',
-  },
+  common:{...shared.common,textColor1:'#24211f',textColor2:'#4f4a46',textColor3:'#6f6a65',borderColor:'#e5e0da',dividerColor:'#ece7e1',bodyColor:'#f7f5f2',cardColor:'#ffffff',hoverColor:'#fbede8',inputColor:'#ffffff',popoverColor:'#ffffff',modalColor:'#ffffff',boxShadow1:'0 8px 24px rgba(55,45,38,.08)',boxShadow2:'0 18px 48px rgba(55,45,38,.14)'},
+  Button:{...shared.Button,textColorPrimary:'#fff',colorPrimary:'#d96343',colorHoverPrimary:'#bc4f33',colorPressedPrimary:'#a8432b',borderPrimary:'1px solid #d96343',borderHoverPrimary:'1px solid #bc4f33'},
+  Menu:{itemColorActive:'#fbede8',itemColorActiveHover:'#f7d8cd',itemTextColorActive:'#bc4f33',itemTextColorActiveHover:'#bc4f33',borderRadius:'8px'},
+  Input:{...shared.Input,border:'1px solid #e5e0da',borderHover:'1px solid #b9b0a8',borderFocus:'1px solid #d96343',boxShadowFocus:'0 0 0 3px rgba(217,99,67,.14)'},
+  DataTable:{...shared.DataTable,thColor:'#f5f2ee',tdColor:'#fff',tdColorHover:'#fbede8',borderColor:'#e5e0da'},
+  Tabs:{...shared.Tabs,tabColorSegment:'#fff',colorSegment:'#f1ede8',tabTextColorActiveSegment:'#bc4f33'},
+};
+
+export const darkThemeOverrides = {
+  ...shared,
+  common:{...shared.common,primaryColor:'#e47b5d',primaryColorHover:'#f08e71',primaryColorPressed:'#c96245',textColor1:'#f3ece5',textColor2:'#d8d1ca',textColor3:'#aaa29a',borderColor:'#3b3530',dividerColor:'#332e2a',bodyColor:'#151311',cardColor:'#211d1a',hoverColor:'#302a25',inputColor:'#25211e',popoverColor:'#25211e',modalColor:'#25211e',boxShadow1:'0 8px 24px rgba(0,0,0,.28)',boxShadow2:'0 18px 48px rgba(0,0,0,.38)'},
+  Button:{...shared.Button,textColorPrimary:'#fff',colorPrimary:'#e47b5d',colorHoverPrimary:'#f08e71',colorPressedPrimary:'#c96245',borderPrimary:'1px solid #e47b5d'},
+  Menu:{itemColorActive:'rgba(228,123,93,.14)',itemTextColorActive:'#f29a7f',borderRadius:'8px'},
+  Input:{...shared.Input,border:'1px solid #3b3530',borderHover:'1px solid #5a5049',borderFocus:'1px solid #e47b5d',boxShadowFocus:'0 0 0 3px rgba(228,123,93,.14)'},
+  DataTable:{...shared.DataTable,thColor:'#2b2521',tdColor:'#211d1a',tdColorHover:'#352923',borderColor:'#3b3530'},
+  Tabs:{...shared.Tabs,tabColorSegment:'#2b2521',colorSegment:'#1b1816',tabTextColorActiveSegment:'#f08e71'},
 };
 
 export const themeOverrides = lightThemeOverrides;

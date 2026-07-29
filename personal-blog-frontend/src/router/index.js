@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+
 function scrollOffsetTop() {
   const styles = getComputedStyle(document.documentElement);
   const navOffset = Number.parseFloat(styles.getPropertyValue('--layout-main-pad-top'));
@@ -12,7 +16,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../views/Home.vue'),
+    component: () => import('../views/MagazineHome.vue'),
   },
   {
     path: '/article/:id',
@@ -391,6 +395,24 @@ const router = createRouter({
   },
 });
 
+let pendingScrollResets = [];
+function forceScrollTop() {
+  pendingScrollResets.forEach((timer) => clearTimeout(timer));
+  pendingScrollResets = [];
+  const reset = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+  reset();
+  requestAnimationFrame(() => {
+    reset();
+    pendingScrollResets.push(setTimeout(reset, 80));
+    pendingScrollResets.push(setTimeout(reset, 260));
+    pendingScrollResets.push(setTimeout(reset, 600));
+  });
+}
+
 router.beforeEach(async (to) => {
   if (to.fullPath.length > 1 && to.fullPath.endsWith('/')) {
     return {
@@ -425,11 +447,7 @@ router.beforeEach(async (to) => {
 
 router.afterEach((to, from) => {
   if (to.path === from.path || to.hash) return;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    });
-  });
+  forceScrollTop();
 });
 
 export default router;

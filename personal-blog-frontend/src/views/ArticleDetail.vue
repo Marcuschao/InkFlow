@@ -1,6 +1,7 @@
 <template>
   <div class="article-detail-page ds-page">
     <div
+      v-show="readProgress > 0"
       class="read-progress-bar"
       :style="{ transform: `scaleX(${readProgress})` }"
       aria-hidden="true"
@@ -312,6 +313,10 @@ function updateReadProgressBar() {
 }
 
 function onReadingScroll() {
+  if (!progressEnabled.value) {
+    readProgress.value = 0;
+    return;
+  }
   updateReadProgressBar();
   const id = Number(route.params.id);
   if (!Number.isFinite(id) || !articleStore.currentArticle) return;
@@ -325,6 +330,7 @@ function onReadingScroll() {
 
 const articleMainRef = ref(null);
 const readProgress = ref(0);
+const progressEnabled = ref(false);
 const headings = ref([]);
 const loading = ref(false);
 const activeTocId = ref('');
@@ -349,6 +355,15 @@ const loginRedirect = computed(() => ({
   path: '/login',
   query: { redirect: route.fullPath },
 }));
+
+function resetArticleScroll() {
+  progressEnabled.value = false;
+  readProgress.value = 0;
+  if (route.hash) return;
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
 
 const articleIdNum = computed(() => {
   const id = Number(route.params.id);
@@ -575,9 +590,16 @@ function normalizeRecommendItem(raw, idx) {
   };
 }
 
+function enableProgressFromUserInput() {
+  progressEnabled.value = true;
+}
+
 watch(
   () => ({ id: route.params.id, lang: route.query.lang }),
   async ({ id: newId, lang }) => {
+    progressEnabled.value = false;
+    readProgress.value = 0;
+    resetArticleScroll();
     headings.value = [];
     activeTocId.value = '';
     recommendArticles.value = [];
@@ -590,9 +612,7 @@ watch(
     loading.value = true;
     await articleStore.fetchArticleDetail(String(newId), langParam);
     loading.value = false;
-    if (!route.hash) {
-      window.scrollTo(0, 0);
-    }
+    resetArticleScroll();
     if (articleStore.currentArticle) {
       recordVisit(articleStore.currentArticle);
       const rid = Number(newId);
@@ -628,7 +648,10 @@ watch(
       if (Number.isFinite(rid)) {
         await loadRewards(rid);
         await loadComments(rid);
-        nextTick(() => updateReadProgressBar());
+        nextTick(() => {
+          resetArticleScroll();
+          updateReadProgressBar();
+        });
       }
     }
   },
@@ -645,12 +668,20 @@ watch(
 
 onMounted(() => {
   window.addEventListener('scroll', onReadingScroll, { passive: true });
+  window.addEventListener('wheel', enableProgressFromUserInput, { passive: true });
+  window.addEventListener('touchstart', enableProgressFromUserInput, { passive: true });
+  window.addEventListener('pointerdown', enableProgressFromUserInput, { passive: true });
+  window.addEventListener('keydown', enableProgressFromUserInput, { passive: true });
   nextTick(() => updateReadProgressBar());
 });
 
 onUnmounted(() => {
   teardownObserver();
   window.removeEventListener('scroll', onReadingScroll);
+  window.removeEventListener('wheel', enableProgressFromUserInput);
+  window.removeEventListener('touchstart', enableProgressFromUserInput);
+  window.removeEventListener('pointerdown', enableProgressFromUserInput);
+  window.removeEventListener('keydown', enableProgressFromUserInput);
   if (scrollTimer) clearTimeout(scrollTimer);
 });
 </script>
@@ -673,6 +704,10 @@ onUnmounted(() => {
   grid-template-columns: 1fr;
   gap: var(--space-8);
   align-items: start;
+}
+
+.article-detail-page {
+  overflow-anchor: none;
 }
 
 .article-main-stack {

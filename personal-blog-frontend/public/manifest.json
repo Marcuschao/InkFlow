@@ -3,8 +3,8 @@
   "short_name": "InkFlow",
   "description": "个人博客与技术笔记",
   "display": "standalone",
-  "theme_color": "#F8F7F2",
-  "background_color": "#F8F7F2",
+  "theme_color": "#F7F5F2",
+  "background_color": "#F7F5F2",
   "start_url": "/",
   "scope": "/",
   "icons": [
