@@ -5,10 +5,10 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/github.css';
+import 'highlight.js/styles/github-dark.css';
 import { copyTextToClipboard } from '../utils/clipboard';
 
 const props = defineProps({
@@ -22,15 +22,6 @@ const emit = defineEmits(['headings-extracted']);
 
 const renderedMarkdown = ref('');
 const rootEl = ref(null);
-
-let rafScroll = 0;
-
-const canParallax = () => {
-  if (typeof window === 'undefined') return false;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-  if (window.matchMedia('(max-width: 767px)').matches) return false;
-  return true;
-};
 
 const normalizeHeadingId = (text, index, used) => {
   const base = String(text || '')
@@ -83,9 +74,19 @@ const attachCodeCopyButtons = () => {
   const root = rootEl.value;
   if (!root) return;
   root.querySelectorAll('pre').forEach((pre) => {
-    if (pre.querySelector('.code-copy-btn')) return;
     const code = pre.querySelector('code');
     if (!code) return;
+    pre.classList.add('terminal-code');
+
+    let shell = pre.parentElement;
+    if (!shell?.classList.contains('terminal-shell')) {
+      shell = document.createElement('div');
+      shell.className = 'terminal-shell';
+      pre.parentNode.insertBefore(shell, pre);
+      shell.appendChild(pre);
+    }
+    if (shell.querySelector('.code-copy-btn')) return;
+
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'code-copy-btn';
@@ -97,51 +98,8 @@ const attachCodeCopyButtons = () => {
         btn.textContent = '复制';
       }, 1600);
     });
-    pre.style.position = 'relative';
-    pre.insertBefore(btn, pre.firstChild);
+    shell.appendChild(btn);
   });
-};
-
-const wrapImagesAndParallax = () => {
-  const root = rootEl.value;
-  if (!root || !canParallax()) return;
-
-  root.querySelectorAll('img:not([data-parallax-wrap])').forEach((img) => {
-    img.setAttribute('data-parallax-wrap', '1');
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    const wrap = document.createElement('span');
-    wrap.className = 'img-parallax-wrap';
-    img.parentNode.insertBefore(wrap, img);
-    wrap.appendChild(img);
-  });
-};
-
-const onScrollParallax = () => {
-  if (!canParallax() || !rootEl.value) return;
-  cancelAnimationFrame(rafScroll);
-  rafScroll = requestAnimationFrame(() => {
-    const wraps = rootEl.value.querySelectorAll('.img-parallax-wrap');
-    const vh = window.innerHeight || 1;
-    wraps.forEach((wrap) => {
-      const img = wrap.querySelector('img');
-      if (!img) return;
-      const rect = wrap.getBoundingClientRect();
-      const centerDelta = rect.top + rect.height / 2 - vh / 2;
-      const move = -(centerDelta / vh) * 10;
-      img.style.transform = `translate3d(0, ${Math.max(-14, Math.min(14, move))}px, 0)`;
-    });
-  });
-};
-
-const bindScroll = () => {
-  window.addEventListener('scroll', onScrollParallax, { passive: true });
-  window.addEventListener('resize', onScrollParallax, { passive: true });
-};
-
-const unbindScroll = () => {
-  window.removeEventListener('scroll', onScrollParallax);
-  window.removeEventListener('resize', onScrollParallax);
 };
 
 const renderMarkdown = async () => {
@@ -164,61 +122,69 @@ const renderMarkdown = async () => {
   emit('headings-extracted', normalized.headings);
   await nextTick();
   applyLazyAllImages();
-  wrapImagesAndParallax();
   attachCodeCopyButtons();
-  onScrollParallax();
 };
 
 watch(() => props.markdown, renderMarkdown, { immediate: true });
-
-onMounted(() => {
-  bindScroll();
-});
-
-onUnmounted(() => {
-  cancelAnimationFrame(rafScroll);
-  unbindScroll();
-});
 </script>
 
 <style scoped>
 .markdown-prose {
-  font-size: 1.05rem;
-  line-height: 1.78;
-  color: var(--color-text);
+  font-family: var(--font-prose);
+  font-size: 1.08rem;
+  font-weight: 400;
+  line-height: 1.96;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
 }
 
 .markdown-prose :deep(p) {
-  margin-bottom: 1.1em;
+  margin-bottom: 1.35em;
 }
 
 .markdown-prose :deep(h1) {
   margin-top: 0;
   margin-bottom: 0.65em;
-  font-family: var(--font-ui);
+  font-family: var(--font-display);
   font-size: 1.65em;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.22;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.3;
+  color: var(--color-text);
 }
 
 .markdown-prose :deep(h2) {
+  position: relative;
   margin-top: 1.65em;
   margin-bottom: 0.55em;
-  font-family: var(--font-ui);
-  font-size: 1.32em;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 1.48em;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.4;
+  color: var(--color-text);
   padding-bottom: 0.35em;
   border-bottom: 1px solid var(--color-border);
+}
+
+.markdown-prose :deep(h2::after) {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 40px;
+  height: 2px;
+  background: var(--color-accent);
 }
 
 .markdown-prose :deep(h3) {
   margin-top: 1.35em;
   margin-bottom: 0.45em;
-  font-family: var(--font-ui);
+  font-family: var(--font-display);
   font-size: 1.12em;
-  font-weight: 650;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-text);
 }
 
 .markdown-prose :deep(h4),
@@ -226,8 +192,10 @@ onUnmounted(() => {
 .markdown-prose :deep(h6) {
   margin-top: 1.2em;
   margin-bottom: 0.35em;
-  font-family: var(--font-ui);
+  font-family: var(--font-display);
   font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-text);
 }
 
 .markdown-prose :deep(h1),
@@ -249,15 +217,42 @@ onUnmounted(() => {
   opacity: 0.85;
 }
 
-.markdown-prose :deep(pre) {
+.markdown-prose :deep(.terminal-shell) {
   position: relative;
-  background: var(--color-surface-raised) !important;
-  padding: 1.1em 1.15em;
-  border-radius: var(--radius-md);
+  background: #171722 !important;
+  border-radius: 6px;
+  margin: 1.6em 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 30px rgba(31, 25, 21, 0.18);
+  color: #e7e5ee;
+  overflow: hidden;
+}
+
+.markdown-prose :deep(.terminal-shell::before) {
+  content: '';
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff5f57;
+  box-shadow: 19px 0 #febc2e, 38px 0 #28c840;
+}
+
+.markdown-prose :deep(.terminal-shell pre) {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 2.9rem 1.25rem 1.2rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent !important;
   overflow-x: auto;
-  margin: 1.15em 0;
-  border: var(--border-brutal);
-  box-shadow: var(--shadow-brutal-sm);
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .markdown-prose :deep(code) {
@@ -278,6 +273,8 @@ onUnmounted(() => {
 .markdown-prose :deep(pre code) {
   padding: 0 !important;
   background: transparent !important;
+  color: #e7e5ee !important;
+  line-height: 1.65;
 }
 
 .markdown-prose :deep(blockquote) {
@@ -327,21 +324,27 @@ onUnmounted(() => {
 }
 
 .markdown-prose :deep(li) {
-  margin-bottom: 0.35em;
+  margin-bottom: 0.48em;
+  padding-left: 0.25em;
+}
+
+.markdown-prose :deep(li::marker) {
+  color: var(--color-accent);
+  font-size: 0.72em;
 }
 
 .markdown-prose :deep(.code-copy-btn) {
   position: absolute;
-  top: 0.45rem;
-  right: 0.45rem;
+  top: 0.65rem;
+  right: 0.75rem;
   z-index: 2;
   font-size: 0.72rem;
   font-weight: 650;
   padding: 0.2rem 0.45rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #aaa8b4;
   cursor: pointer;
 }
 
@@ -355,21 +358,17 @@ onUnmounted(() => {
   height: auto;
   display: block;
   border-radius: var(--radius-md);
-  transition: transform 0.08s linear;
   touch-action: pinch-zoom;
 }
 
-.markdown-prose :deep(.img-parallax-wrap) {
-  display: block;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  margin: 1.25em 0;
-  box-shadow: var(--shadow-md);
-}
+@media (max-width: 767px) {
+  .markdown-prose {
+    font-size: 1rem;
+    line-height: 1.9;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .markdown-prose :deep(img) {
-    transition: none;
+  .markdown-prose :deep(h2) {
+    font-size: 1.38em;
   }
 }
 </style>

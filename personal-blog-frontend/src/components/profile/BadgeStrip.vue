@@ -29,14 +29,15 @@ const visible = computed(() => props.badges.slice(0, props.max));
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
-  margin-top: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 .badge-item {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
+  min-height: 1.75rem;
+  padding: 3px var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   text-decoration: none;
@@ -51,8 +52,9 @@ const visible = computed(() => props.badges.slice(0, props.max));
 }
 
 .badge-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .badge-fallback {
@@ -71,6 +73,13 @@ const visible = computed(() => props.badges.slice(0, props.max));
 .badge-empty {
   font-size: var(--text-xs);
   text-decoration: none;
+}
+
+.badge-name {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .muted {

@@ -40,15 +40,6 @@ const { visible: aiChatVisible } = useAiChatVisibility();
 const { naiveTheme, isDark } = useTheme();
 const themeOverrides = computed(() => (isDark.value ? darkThemeOverrides : lightThemeOverrides));
 
-function resetRouteScroll() {
-  if (route.hash) return;
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  });
-}
-
 let stopRipple = () => {};
 let stopNotifListener = () => {};
 let presenceTimer = null;
@@ -158,13 +149,13 @@ onUnmounted(() => {
             <RouterView v-slot="{ Component, route }">
               <template v-if="route.meta.requiresAdmin">
                 <AdminShell>
-                  <Transition name="page-fade" mode="out-in" @after-enter="resetRouteScroll">
+                  <Transition name="page-fade" mode="out-in">
                     <component :is="Component" v-if="Component" :key="route.fullPath" />
                   </Transition>
                 </AdminShell>
               </template>
               <template v-else>
-                <Transition name="page-fade" mode="out-in" @after-enter="resetRouteScroll">
+                <Transition name="page-fade" mode="out-in">
                   <component :is="Component" v-if="Component" :key="route.fullPath" />
                 </Transition>
               </template>

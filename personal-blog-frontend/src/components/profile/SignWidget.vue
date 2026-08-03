@@ -1,40 +1,56 @@
 <template>
   <div class="sign-widget">
-    <div class="sign-ring" :class="{ signed: status?.signedToday }">
-      <svg class="sign-ring-svg" viewBox="0 0 72 72" aria-hidden="true">
-        <circle class="sign-ring-track" cx="36" cy="36" r="30" />
-        <circle
-          class="sign-ring-progress"
-          cx="36"
-          cy="36"
-          r="30"
-          :stroke-dasharray="ringCircumference"
-          :stroke-dashoffset="ringOffset"
-        />
-      </svg>
-      <span class="sign-ring-inner">
-        <span class="sign-ring-num">{{ status?.streakDays ?? 0 }}</span>
-        <span class="sign-ring-unit">天</span>
-      </span>
+    <div class="sign-widget-head">
+      <p class="sign-widget-kicker">每日记录</p>
+      <CalendarCheck :size="18" :stroke-width="1.8" aria-hidden="true" />
     </div>
 
-    <p class="sign-widget-label">每日签到</p>
+    <div class="sign-widget-main">
+      <div class="sign-ring" :class="{ signed: status?.signedToday }">
+        <svg class="sign-ring-svg" viewBox="0 0 72 72" aria-hidden="true">
+          <circle class="sign-ring-track" cx="36" cy="36" r="30" />
+          <circle
+            class="sign-ring-progress"
+            cx="36"
+            cy="36"
+            r="30"
+            :stroke-dasharray="ringCircumference"
+            :stroke-dashoffset="ringOffset"
+          />
+        </svg>
+        <span class="sign-ring-inner">
+          <span class="sign-ring-num">{{ status?.streakDays ?? 0 }}</span>
+          <span class="sign-ring-unit">连续天数</span>
+        </span>
+      </div>
+
+      <div class="sign-widget-copy">
+        <p class="sign-widget-title">{{ status?.signedToday ? '今天已完成签到' : '留下今天的足迹' }}</p>
+        <p v-if="status?.nextBonusDays > 0" class="sign-widget-bonus">
+          再签 {{ status.nextBonusDays }} 天可得 {{ status.nextBonusPoints }} 积分
+        </p>
+        <p v-else class="sign-widget-bonus">累计签到 {{ status?.totalDays ?? 0 }} 天</p>
+      </div>
+    </div>
 
     <n-button
       v-if="status && !status.signedToday"
       class="sign-widget-btn"
-      size="tiny"
+      size="small"
       type="primary"
       :loading="signing"
       @click="doSign"
     >
       +5 积分
     </n-button>
-    <n-tag v-else-if="status" size="small" type="success">已签</n-tag>
+    <n-tag v-else-if="status" class="sign-widget-status" size="small" type="success">今日已签</n-tag>
 
     <n-popover trigger="click" placement="left" :width="280">
       <template #trigger>
-        <button type="button" class="sign-detail-link">明细</button>
+        <button type="button" class="sign-detail-link">
+          查看签到明细
+          <ChevronRight :size="14" aria-hidden="true" />
+        </button>
       </template>
       <div class="sign-popover">
         <p class="sign-popover-meta muted">
@@ -52,6 +68,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { NButton, NPopover, NTag } from 'naive-ui';
+import { CalendarCheck, ChevronRight } from 'lucide-vue-next';
 import { signIn, getSignStatus } from '../../api/social';
 import { useToastStore } from '../../stores/toast';
 import SignCalendar from './SignCalendar.vue';
@@ -105,14 +122,37 @@ defineExpose({ reload: loadStatus });
 .sign-widget {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  align-items: stretch;
+  gap: var(--space-4);
+  padding: var(--space-5);
   border: var(--border-brutal);
   border-radius: var(--radius-brutal-card);
   background: var(--color-surface);
-  box-shadow: var(--shadow-brutal);
-  width: 7.5rem;
+  box-shadow: none;
+  width: 100%;
+}
+
+.sign-widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-primary);
+}
+
+.sign-widget-kicker {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.sign-widget-main {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
 }
 
 .sign-ring {
@@ -167,19 +207,36 @@ defineExpose({ reload: loadStatus });
   margin-top: var(--space-1);
 }
 
-.sign-widget-label {
+.sign-widget-title {
   margin: 0;
-  font-size: var(--text-xs);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.45;
+}
+
+.sign-widget-bonus {
+  margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
 }
 
 .sign-widget-btn {
   width: 100%;
 }
 
+.sign-widget-status {
+  align-self: flex-start;
+}
+
 .sign-detail-link {
   border: none;
   background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   padding: 0;
   font-size: var(--text-xs);
   color: var(--color-primary);
@@ -203,33 +260,26 @@ defineExpose({ reload: loadStatus });
 
 @media (max-width: 767px) {
   .sign-widget {
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: auto;
-    max-width: 100%;
-    padding: var(--space-2) var(--space-3);
+    width: 100%;
+    padding: var(--space-4);
     gap: var(--space-3);
-    align-items: center;
+  }
+
+  .sign-widget-main {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
   }
 
   .sign-ring {
-    width: 3rem;
-    height: 3rem;
+    width: 3.5rem;
+    height: 3.5rem;
   }
 
   .sign-ring-num {
-    font-size: var(--text-base);
+    font-size: var(--text-lg);
   }
 
-  .sign-widget-label {
-    flex: 1;
-    min-width: 4rem;
-    text-align: left;
-    font-size: var(--text-sm);
-  }
-
-  .sign-detail-link {
-    margin-left: auto;
+  .sign-ring-unit {
+    font-size: 10px;
   }
 }
 </style>

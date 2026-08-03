@@ -93,7 +93,7 @@ async function onFavorite() {
 
 <style scoped>
 .action-bar {
-  margin: var(--space-4) 0;
+  margin: 0;
 }
 
 .pulse {
@@ -104,5 +104,9 @@ async function onFavorite() {
   0% { transform: scale(1); }
   40% { transform: scale(1.12); }
   100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
 }
 </style>

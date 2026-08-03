@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap');
 @import './tokens.css';
 
 *,
@@ -77,13 +77,16 @@ main.main-content {
 
 body {
   font-family: var(--font-ui);
-  line-height: 1.65;
+  line-height: 1.7;
   letter-spacing: 0;
   color: var(--color-text);
   background-color: var(--color-page);
+  background-image: linear-gradient(rgba(120, 90, 60, 0.018) 1px, transparent 1px);
+  background-size: 100% 5px;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-anchor: none;
 }
 
@@ -123,16 +126,29 @@ body::before {
 a { text-underline-offset: 3px; }
 
 .article-detail-page .article-title {
-  max-width: 18ch;
+  max-width: 22ch;
   font-family: var(--font-display);
-  font-size: clamp(36px, 6vw, 72px) !important;
+  font-size: clamp(32px, 3.3vw, 46px) !important;
   font-weight: 600 !important;
-  line-height: 1.08 !important;
+  line-height: 1.14 !important;
   letter-spacing: 0 !important;
+  font-synthesis: none;
+}
+
+@media (max-width: 640px) {
+  .article-detail-page .article-title {
+    font-size: clamp(28px, 8vw, 36px) !important;
+    line-height: 1.18 !important;
+  }
 }
 
 .article-detail-page .prose-shell {
   max-width: 72ch;
+}
+
+.article-detail-page .markdown-prose {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
 .article-detail-page .article-content,
@@ -143,7 +159,8 @@ a { text-underline-offset: 3px; }
 }
 
 .n-card {
-  border-radius: var(--radius-lg) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
   transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
 }
 
@@ -187,7 +204,7 @@ html.dark ::-moz-selection {
 }
 
 .ds-page {
-  padding: var(--space-10) 0 var(--space-14);
+  padding: clamp(42px, 7vw, 86px) 0 96px;
 }
 
 .ds-page-hero {
@@ -199,7 +216,8 @@ html.dark ::-moz-selection {
 .ds-page-title {
   margin: 0;
   font-size: var(--text-display-sm);
-  font-weight: var(--weight-semibold);
+  font-family: var(--font-display);
+  font-weight: 600;
   letter-spacing: 0;
   color: var(--color-text);
 }
@@ -220,7 +238,7 @@ html.dark ::-moz-selection {
 
 .ds-page-sub {
   margin: var(--space-3) 0 0;
-  font-size: var(--text-md);
+  font: 16px/1.7 var(--font-prose);
   color: var(--color-text-muted);
 }
 
@@ -235,8 +253,25 @@ html.dark ::-moz-selection {
 .ds-glass {
   background: var(--color-surface);
   border: var(--border-brutal);
-  border-radius: var(--radius-brutal-card);
-  box-shadow: var(--shadow-brutal);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.ds-page .n-card,
+.ds-page .n-list,
+.ds-page .n-data-table,
+.ds-page .n-timeline {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ds-page .n-card {
+  border: 1px solid var(--color-border) !important;
+}
+
+.ds-page .n-button {
+  border-radius: 2px;
+  font-family: var(--font-ui);
 }
 
 @supports not (backdrop-filter: blur(1px)) {

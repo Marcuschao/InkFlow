@@ -1,12 +1,12 @@
 <template>
   <span class="user-avatar-wrap" :class="avatarFrameClass">
-    <n-avatar v-if="resolvedSrc" round :size="size" :src="resolvedSrc" />
+    <n-avatar v-if="resolvedSrc && !imageFailed" round :size="size" :src="resolvedSrc" @error="imageFailed = true" />
     <n-avatar v-else round :size="size">{{ initial }}</n-avatar>
   </span>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { NAvatar } from 'naive-ui';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { effectClass } from '../utils/itemEffects';
@@ -19,6 +19,8 @@ const props = defineProps({
 });
 
 const resolvedSrc = computed(() => resolveMediaUrl(props.src));
+const imageFailed = ref(false);
+watch(resolvedSrc, () => { imageFailed.value = false; });
 const initial = computed(() => {
   const text = String(props.name || '?').trim();
   return text.slice(0, 1) || '?';

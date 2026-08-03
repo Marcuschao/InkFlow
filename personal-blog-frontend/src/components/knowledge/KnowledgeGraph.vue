@@ -2,24 +2,31 @@
   <div class="kg-graph-wrap">
     <div v-if="isMobile" class="kg-mobile-list">
       <n-input v-model:value="filter" placeholder="搜索标签…" clearable class="kg-filter" />
-      <n-space vertical :size="8">
-        <n-tag
+      <div class="kg-relations">
+        <button
           v-for="node in filteredNodes"
           :key="node.id"
-          type="primary"
-          checkable
+          type="button"
+          class="kg-relation"
           @click="emit('node-click', node)"
           @dblclick="emit('node-dblclick', node)"
-        >{{ node.label }} ({{ node.articleCount || 0 }})</n-tag>
-      </n-space>
+        >
+          <span class="kg-relation-type">{{ nodeTypeLabel(node.type) }}</span>
+          <span class="kg-relation-name">{{ node.label }}</span>
+          <span v-if="node.articleCount" class="kg-relation-count">{{ node.articleCount }}</span>
+        </button>
+      </div>
     </div>
-    <div v-else ref="containerRef" class="kg-canvas" />
+    <template v-else>
+      <p class="kg-hover-label" aria-live="polite">{{ hoveredLabel || '悬停节点查看完整名称' }}</p>
+      <div ref="containerRef" class="kg-canvas" />
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
-import { NInput, NSpace, NTag } from 'naive-ui';
+import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue';
+import { NInput } from 'naive-ui';
 import { useTheme } from '../../composables/useTheme';
 
 const props = defineProps({
@@ -32,6 +39,7 @@ const { isDark } = useTheme();
 
 const containerRef = ref(null);
 const filter = ref('');
+const hoveredLabel = ref('');
 const isMobile = ref(false);
 let graph = null;
 
@@ -69,6 +77,10 @@ const filteredNodes = computed(() => {
   return nodes.filter((n) => (n.label || '').toLowerCase().includes(q)).slice(0, 100);
 });
 
+function nodeTypeLabel(type) {
+  return { article: '文章', tag: '标签', author: '作者' }[type] || '关联';
+}
+
 function syncMobile() {
   isMobile.value = window.matchMedia('(max-width: 767px)').matches;
 }
@@ -78,13 +90,22 @@ function nodeSize(node) {
   return 24 + Math.round(w * 28);
 }
 
+function truncateLabel(label, type) {
+  const text = String(label || '未命名');
+  const limit = type === 'article' ? 18 : type === 'author' ? 8 : 10;
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+
 function toG6Data(data, dark) {
   const palette = graphPalette(dark);
-  let nodes = (data?.nodes || []).map((n) => ({
+  let nodes = [...(data?.nodes || [])]
+    .sort((a, b) => Number(b.weight || b.articleCount || 0) - Number(a.weight || a.articleCount || 0))
+    .slice(0, 12)
+    .map((n) => ({
     id: n.id,
-    data: { ...n },
+    data: { ...n, fullLabel: n.label },
     style: {
-      labelText: n.label,
+      labelText: truncateLabel(n.label, n.type),
       size: nodeSize(n),
       fill: palette.nodeFill[n.type] || palette.nodeFill.tag,
       stroke: palette.nodeStroke,
@@ -92,9 +113,6 @@ function toG6Data(data, dark) {
       shadowBlur: 0,
     },
   }));
-  if (nodes.length > 100) {
-    nodes = [...nodes].sort((a, b) => (b.data.weight || 0) - (a.data.weight || 0)).slice(0, 100);
-  }
   const ids = new Set(nodes.map((n) => n.id));
   const edges = (data?.edges || [])
     .filter((e) => ids.has(e.source) && ids.has(e.target))
@@ -120,7 +138,7 @@ async function renderGraph() {
     graph = null;
   }
   const width = containerRef.value.clientWidth || 800;
-  const height = Math.max(420, Math.min(640, width * 0.65));
+  const height = Math.max(340, Math.min(400, width * 0.48));
   const palette = graphPalette(isDark.value);
   graph = new Graph({
     container: containerRef.value,
@@ -130,7 +148,9 @@ async function renderGraph() {
     layout: {
       type: 'd3-force',
       preventOverlap: true,
-      link: { distance: 80 },
+      link: { distance: 118, strength: 0.7 },
+      manyBody: { strength: -420 },
+      collide: { radius: 56, strength: 0.9 },
     },
     node: {
       style: {
@@ -156,6 +176,13 @@ async function renderGraph() {
     const model = evt.target?.id ? graph.getNodeData(evt.target.id) : null;
     if (model?.data) emit('node-dblclick', model.data);
   });
+  graph.on('node:pointerenter', (evt) => {
+    const model = evt.target?.id ? graph.getNodeData(evt.target.id) : null;
+    hoveredLabel.value = model?.data?.fullLabel || model?.data?.label || '';
+  });
+  graph.on('node:pointerleave', () => {
+    hoveredLabel.value = '';
+  });
 }
 
 watch(
@@ -168,6 +195,16 @@ watch(
 
 watch(isDark, () => {
   if (!isMobile.value) renderGraph();
+});
+
+watch(isMobile, async (mobile) => {
+  if (mobile) {
+    graph?.destroy();
+    graph = null;
+    return;
+  }
+  await nextTick();
+  renderGraph();
 });
 
 onMounted(() => {
@@ -189,18 +226,62 @@ onUnmounted(() => {
 
 .kg-canvas {
   width: 100%;
-  min-height: 420px;
-  border-radius: var(--radius-brutal-card);
-  background: var(--color-surface);
-  border: var(--border-brutal);
-  box-shadow: var(--shadow-brutal-lg);
+  min-height: 340px;
+  background: transparent;
+  border: 0;
+  overflow: hidden;
 }
 
 .kg-mobile-list {
-  padding: var(--space-2);
+  padding: 0;
 }
 
 .kg-filter {
   margin-bottom: var(--space-3);
+}
+
+.kg-hover-label {
+  min-height: 24px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 11px/1.5 var(--font-mono);
+  letter-spacing: .04em;
+}
+
+.kg-relations {
+  border-top: 1px solid var(--color-border);
+}
+
+.kg-relation {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.kg-relation-type,
+.kg-relation-count {
+  color: var(--color-text-soft);
+  font: 10px var(--font-mono);
+}
+
+.kg-relation-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 15px/1.4 var(--font-prose);
+}
+
+.kg-relation:hover .kg-relation-name {
+  color: var(--color-accent-text, var(--color-accent));
 }
 </style>

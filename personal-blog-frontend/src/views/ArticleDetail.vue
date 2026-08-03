@@ -13,6 +13,7 @@
       <template v-else>
         <div ref="articleMainRef" class="article-main-stack">
           <article v-if="articleStore.currentArticle" class="article-content">
+            <p class="article-kicker">§ ESSAY</p>
             <n-space class="lang-bar" :size="8">
               <router-link
                 class="lang-pill"
@@ -39,22 +40,29 @@
               当前为译文 · {{ (articleStore.currentArticle.viewingLocale || '').toUpperCase() }}
             </p>
             <h1 class="article-title">{{ articleStore.currentArticle.title }}</h1>
+            <p v-if="articleStore.currentArticle.summary" class="article-summary">
+              {{ articleStore.currentArticle.summary }}
+            </p>
             <n-space class="article-meta" align="center" :size="12">
               <span class="meta-date">
                 {{ formatDate(articleStore.currentArticle.createTime || articleStore.currentArticle.createdAt) }}
               </span>
-              <n-space v-if="articleStore.currentArticle.tags && articleStore.currentArticle.tags.length" :size="6">
-                <n-tag
-                  v-for="tag in articleStore.currentArticle.tags"
-                  :key="tag.id"
-                  size="small"
-                  :bordered="false"
-                  type="primary"
-                >{{ tag.name }}</n-tag>
-              </n-space>
+              <span aria-hidden="true">·</span>
+              <span>{{ readingMinutes }} 分钟阅读</span>
             </n-space>
-            <div v-if="articleStore.currentArticle.authorId" class="author-row">
-              <router-link :to="`/user/${articleStore.currentArticle.authorId}`" class="author-link">
+            <div v-if="articleStore.currentArticle.tags?.length" class="article-tags" aria-label="文章标签">
+              <router-link
+                v-for="tag in articleStore.currentArticle.tags"
+                :key="tag.id"
+                :to="{ path: '/', query: { tag: tag.id } }"
+              >#{{ tag.name }}</router-link>
+            </div>
+            <div class="article-toolbar">
+              <router-link
+                v-if="articleStore.currentArticle.authorId"
+                :to="`/user/${articleStore.currentArticle.authorId}`"
+                class="author-link"
+              >
                 <UserAvatar
                   :src="articleStore.currentArticle.authorAvatar"
                   :name="articleStore.currentArticle.authorNickname || '作者'"
@@ -62,22 +70,25 @@
                 />
                 <span class="author-name">{{ articleStore.currentArticle.authorNickname || '作者' }}</span>
               </router-link>
-              <FollowButton
-                :user-id="articleStore.currentArticle.authorId"
-                :following="authorFollowing"
-                @update:following="authorFollowing = $event"
-              />
+              <div class="article-toolbar-actions">
+                <FollowButton
+                  v-if="articleStore.currentArticle.authorId"
+                  :user-id="articleStore.currentArticle.authorId"
+                  :following="authorFollowing"
+                  @update:following="authorFollowing = $event"
+                />
+                <ArticleActionBar
+                  v-if="articleIdNum"
+                  :article-id="articleIdNum"
+                  :liked="liked"
+                  :favorited="favorited"
+                  :like-count="likeCount"
+                  @update:liked="liked = $event"
+                  @update:favorited="favorited = $event"
+                  @update:like-count="likeCount = $event"
+                />
+              </div>
             </div>
-            <ArticleActionBar
-              v-if="articleIdNum"
-              :article-id="articleIdNum"
-              :liked="liked"
-              :favorited="favorited"
-              :like-count="likeCount"
-              @update:liked="liked = $event"
-              @update:favorited="favorited = $event"
-              @update:like-count="likeCount = $event"
-            />
             <n-button
               v-if="authStore.isLoggedIn && articleIdNum"
               class="report-btn"
@@ -117,25 +128,25 @@
             class="ai-recommend-section"
             aria-label="延伸阅读"
           >
+            <p class="section-kicker">§ FURTHER READING</p>
             <h2 class="ai-recommend-title">延伸阅读</h2>
-            <n-grid v-if="recommendLoading" :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-              <n-gi v-for="n in 3" :key="'rec-sk-' + n" span="24 m:8">
-                <n-card><n-skeleton height="80px" /></n-card>
-              </n-gi>
-            </n-grid>
+            <div v-if="recommendLoading" class="recommend-list">
+              <n-skeleton v-for="n in 3" :key="'rec-sk-' + n" height="72px" />
+            </div>
             <n-alert
               v-else-if="recommendError"
               :type="recommendError === loginHintText ? 'warning' : 'error'"
               class="recommend-alert"
             >{{ recommendError }}</n-alert>
-            <n-grid v-else-if="recommendArticles.length" :cols="1" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-              <n-gi v-for="item in recommendArticles" :key="item.id" span="24 m:8">
-                <ArticleCard
+            <div v-else-if="recommendArticles.length" class="recommend-list">
+                <EditorialArticleCard
+                  v-for="(item, index) in recommendArticles"
+                  :key="item.id"
                   :article="item"
-                  :reason="item.reason"
+                  mode="compact"
+                  :number="String(index + 1).padStart(2, '0')"
                 />
-              </n-gi>
-            </n-grid>
+            </div>
             <n-empty v-else description="暂无推荐" />
           </section>
 
@@ -144,10 +155,11 @@
           </section>
 
           <section v-if="articleStore.currentArticle" class="comments-section" aria-label="评论">
+            <p class="section-kicker">§ DISCUSSION</p>
             <h2 class="comments-title">评论</h2>
             <n-skeleton v-if="commentsLoading" height="100px" />
             <template v-else>
-              <n-list v-if="commentsFlat.length" hoverable>
+              <n-list v-if="commentsFlat.length">
                 <n-list-item
                   v-for="c in commentsFlat"
                   :key="c.id"
@@ -206,7 +218,8 @@
           </section>
         </div>
         <aside class="sidebar" aria-label="目录">
-          <n-card v-if="headings.length" class="table-of-contents" title="目录">
+          <nav v-if="headings.length" class="table-of-contents" aria-label="文章目录">
+            <p class="toc-label"><span>§</span> CONTENTS</p>
             <ul>
               <li
                 v-for="heading in headings"
@@ -223,7 +236,7 @@
                 </a>
               </li>
             </ul>
-          </n-card>
+          </nav>
         </aside>
       </template>
     </div>
@@ -237,20 +250,16 @@ import { useHead } from '@vueuse/head';
 import {
   NAlert,
   NButton,
-  NCard,
   NEmpty,
-  NGi,
-  NGrid,
   NInput,
   NList,
   NListItem,
   NSkeleton,
   NSpace,
-  NTag,
 } from 'naive-ui';
 import { useArticleStore } from '../stores/article';
 import MarkdownRenderer from '../components/MarkdownRenderer.vue';
-import ArticleCard from '../components/ArticleCard.vue';
+import EditorialArticleCard from '../components/EditorialArticleCard.vue';
 import ArticleDetailSkeleton from '../components/skeleton/ArticleDetailSkeleton.vue';
 import KnowledgeGraphCard from '../components/knowledge/KnowledgeGraphCard.vue';
 import ArticleActionBar from '../components/ArticleActionBar.vue';
@@ -371,6 +380,14 @@ const articleIdNum = computed(() => {
 });
 
 const hasToc = computed(() => headings.value.length > 0);
+const readingMinutes = computed(() => {
+  const content = String(articleStore.currentArticle?.content || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*_`\[\]()~-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return Math.max(1, Math.ceil(content.length / 500));
+});
 
 function syncInteractionFromArticle(a) {
   if (!a) return;
@@ -708,6 +725,7 @@ onUnmounted(() => {
 
 .article-detail-page {
   overflow-anchor: none;
+  padding-top: clamp(28px, 3vw, 40px);
 }
 
 .article-main-stack {
@@ -748,6 +766,9 @@ onUnmounted(() => {
   .sidebar {
     grid-area: sidebar;
     min-width: 0;
+    position: sticky;
+    top: calc(var(--nav-height) + 24px);
+    align-self: start;
   }
 
   .article-grid--with-toc .sidebar {
@@ -757,15 +778,27 @@ onUnmounted(() => {
 
 .article-content {
   margin: 0;
-  background: var(--color-surface);
-  padding: var(--space-8);
-  border-radius: var(--radius-brutal-card);
-  border: var(--border-brutal);
-  box-shadow: var(--shadow-brutal-lg);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.article-kicker {
+  margin: 0 0 var(--space-4);
+  color: var(--color-accent-text, var(--color-accent));
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: .18em;
 }
 
 .lang-bar {
+  display: inline-flex;
+  gap: 0 !important;
   margin-bottom: var(--space-3);
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
 }
 
 .lang-pill {
@@ -773,26 +806,26 @@ onUnmounted(() => {
   font-weight: var(--weight-bold);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  border: var(--border-brutal);
-  box-shadow: var(--shadow-brutal-sm);
+  border: 0;
+  box-shadow: none;
   color: var(--color-text);
   text-decoration: none;
-  background: var(--color-surface);
+  background: transparent;
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast);
 }
 
 .lang-pill:hover {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  transform: none;
+  background: var(--surface-primary-tint);
 }
 
 .lang-pill.lang-on {
   border-color: var(--color-border);
   color: var(--color-on-primary);
   background: var(--color-accent);
-  box-shadow: var(--shadow-brutal-sm);
+  box-shadow: none;
 }
 
 .trans-hint {
@@ -803,32 +836,71 @@ onUnmounted(() => {
 }
 
 .article-title {
-  font-family: var(--font-ui);
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
-  font-weight: var(--weight-black);
-  letter-spacing: -0.04em;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--color-text);
   margin: 0 0 var(--space-4);
   word-break: break-word;
   line-height: 1.25;
 }
 
+.article-summary {
+  max-width: 64ch;
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-muted);
+  font: italic 17px/1.75 var(--font-prose);
+}
+
 .article-meta {
   margin-bottom: var(--space-4);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border);
-  font-size: var(--text-sm);
+  font: 11px var(--font-mono);
+  letter-spacing: .08em;
   color: var(--color-text-muted);
 }
 
-.author-row {
+.article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: -2px 0 var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.article-tags a {
+  color: var(--color-accent-text, var(--color-accent));
+  font: 11px var(--font-mono);
+  text-decoration: none;
+}
+
+.article-tags a:hover {
+  text-decoration: underline;
+}
+
+.article-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--color-border);
+}
+
+.article-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.article-toolbar :deep(.action-bar) {
+  margin: 0;
 }
 
 .author-link {
@@ -870,33 +942,37 @@ onUnmounted(() => {
   margin: 0;
 }
 
+@media (max-width: 600px) {
+  .article-detail-page {
+    padding-top: var(--space-5);
+  }
+
+  .article-toolbar {
+    align-items: flex-start;
+  }
+
+  .article-toolbar-actions {
+    width: 100%;
+  }
+}
+
 .prose-shell :deep(.markdown-prose) {
   font-family: var(--font-prose);
-  line-height: 1.8;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 2;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
 }
 
 .prose-shell :deep(.markdown-prose p) {
-  margin-bottom: 1.2em;
+  margin-bottom: 1.35em;
 }
 
 .prose-shell :deep(.markdown-prose img) {
   max-width: 100%;
-  border-radius: var(--radius-md);
+  border-radius: 2px;
   cursor: zoom-in;
-}
-
-.prose-shell :deep(.markdown-prose pre) {
-  position: relative;
-  background: var(--color-surface-raised);
-  border: var(--border-brutal);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-brutal-sm);
-  padding: var(--space-4);
-  overflow-x: auto;
-}
-
-.prose-shell :deep(.markdown-prose pre)::before {
-  display: none;
 }
 
 .prose-shell :deep(.markdown-prose code) {
@@ -905,23 +981,34 @@ onUnmounted(() => {
 }
 
 .table-of-contents {
-  position: sticky;
-  top: calc(var(--layout-navbar-bottom) + var(--space-4));
-  border: var(--border-brutal);
-  border-radius: var(--radius-brutal-card);
-  box-shadow: var(--shadow-brutal);
-  background: var(--color-surface);
-  padding: var(--space-4);
+  position: static;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0 0 0 var(--space-4);
+}
+
+.toc-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  color: var(--color-text);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: .18em;
+}
+
+.toc-label span {
+  color: var(--color-accent);
 }
 
 @media (min-width: 1024px) {
   .table-of-contents {
-    position: fixed;
-    top: calc(var(--layout-navbar-bottom) + var(--space-4));
-    width: 15.5rem;
-    max-height: calc(100vh - var(--layout-navbar-bottom) - var(--space-8));
+    width: 100%;
+    max-height: calc(100vh - var(--nav-height) - 48px);
     overflow-y: auto;
-    z-index: 20;
   }
 }
 
@@ -941,7 +1028,7 @@ onUnmounted(() => {
   text-decoration: none;
   display: block;
   padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   font-size: var(--text-sm);
   line-height: 1.35;
   transition: color var(--transition-fast), background var(--transition-fast);
@@ -962,15 +1049,15 @@ onUnmounted(() => {
 
 .table-of-contents a:hover {
   color: var(--color-primary);
-  background: var(--color-primary-soft);
+  background: transparent;
 }
 
 .table-of-contents a.is-active {
   color: var(--color-primary);
   font-weight: var(--weight-semibold);
-  background: var(--color-primary-soft);
-  border-left: 2px solid var(--color-primary);
-  padding-left: calc(var(--space-3) - 2px);
+  background: transparent;
+  border-left: 0;
+  padding-left: var(--space-3);
 }
 
 .table-of-contents a.is-active::before {
@@ -989,19 +1076,36 @@ onUnmounted(() => {
   padding-left: var(--space-6);
 }
 
-.ai-recommend-section {
-  background: var(--color-surface);
-  padding: var(--space-6);
-  border-radius: var(--radius-brutal-card);
-  border: var(--border-brutal);
-  box-shadow: var(--shadow-brutal-lg);
+.ai-recommend-section,
+.kg-section,
+.comments-section {
+  padding: var(--space-8) 0 0;
+  border-top: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.section-kicker {
+  margin: 0 0 9px;
+  color: var(--color-accent-text, var(--color-accent));
+  font: 10px/1 var(--font-mono);
+  letter-spacing: .16em;
 }
 
 .ai-recommend-title {
-  margin: 0 0 var(--space-4);
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+  margin: 0 0 var(--space-5);
+  font: 600 clamp(24px, 3vw, 32px)/1.2 var(--font-display);
+  letter-spacing: 0;
   color: var(--color-text);
+}
+
+.recommend-list {
+  border-top: 1px solid var(--color-border);
+}
+
+.recommend-list :deep(.editorial-card:last-child) {
+  border-bottom: 0;
 }
 
 .recommend-alert {
@@ -1033,28 +1137,21 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.comments-section {
-  background: var(--color-surface);
-  border: var(--border-brutal);
-  padding: var(--space-6);
-  border-radius: var(--radius-brutal-card);
-  box-shadow: var(--shadow-brutal-lg);
-}
-
 .comments-title {
-  margin: 0 0 var(--space-4);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
+  margin: 0 0 var(--space-5);
+  color: var(--color-text);
+  font: 600 clamp(24px, 3vw, 32px)/1.2 var(--font-display);
+  letter-spacing: 0;
 }
 
 .comment-row {
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--space-3);
-  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
-  border-bottom: none;
-  border-left: 2px solid var(--color-border-strong);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+  border-left: 0;
 }
 
 .comments-section :deep(.n-list) {
@@ -1063,7 +1160,7 @@ onUnmounted(() => {
 
 .comments-section :deep(.n-list-item) {
   padding: 0;
-  margin-bottom: var(--space-3);
+  margin: 0;
 }
 
 .comment-body-wrap {
@@ -1110,10 +1207,10 @@ onUnmounted(() => {
 .comment-login-hint {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-4) 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .comment-login-hint a {

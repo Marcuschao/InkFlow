@@ -2,20 +2,24 @@
   <div class="profile-page ds-page container">
     <UserProfileSkeleton v-if="loading" />
     <n-empty v-else-if="!user" description="无法加载资料" />
-    <div v-else class="profile-layout">
-      <n-card class="profile-panel ds-brutal-surface">
-      <template #header>
-        <ProfileHeader
-          :user="user"
-          :badges="socialCard?.badges || []"
-          :points="socialCard?.points"
-          :equipped-items="socialCard?.equippedItems || []"
-        >
-          <template #action />
-        </ProfileHeader>
-      </template>
+    <div v-else class="profile-shell">
+      <ProfileHeader
+        :user="user"
+        :badges="socialCard?.badges || []"
+        :points="socialCard?.points"
+        :equipped-items="socialCard?.equippedItems || []"
+      >
+        <template #action>
+          <n-button class="profile-edit-button" secondary @click="setTab('profile')">
+            <template #icon><PencilLine :size="16" /></template>
+            编辑资料
+          </n-button>
+        </template>
+      </ProfileHeader>
 
-      <n-tabs type="line" :value="tab" @update:value="setTab">
+      <div class="profile-content-grid">
+        <section class="profile-main" aria-label="个人主页内容">
+          <n-tabs class="profile-tabs" type="line" :value="tab" @update:value="setTab">
         <n-tab-pane v-for="t in tabs" :key="t.id" :name="t.id" :tab="t.label">
           <div v-if="t.id === 'activity'" class="tab-panel">
             <InteractionTimeline :items="timelineItems" />
@@ -29,41 +33,52 @@
             <UserInventoryPanel @changed="loadSocialCard" />
           </div>
 
-          <div v-else-if="t.id === 'profile'" class="tab-panel">
-            <p class="extra muted">
-              <span v-if="user.registerRegion">注册地区：{{ user.registerRegion }}</span>
-              <span v-if="user.region" class="ml">展示地区：{{ user.region }}</span>
-            </p>
+          <div v-else-if="t.id === 'profile'" class="tab-panel profile-settings">
+            <div class="section-heading">
+              <p class="section-kicker">账户设置</p>
+              <h2>编辑个人资料</h2>
+              <p>这些信息会展示在你的公开创作者档案中。</p>
+            </div>
             <n-form class="profile-form" @submit.prevent="save">
-              <n-form-item label="昵称">
-                <n-input v-model:value="nickname" maxlength="50" />
-              </n-form-item>
+              <div class="profile-form-grid">
+                <n-form-item label="昵称">
+                  <n-input v-model:value="nickname" maxlength="50" />
+                </n-form-item>
+                <n-form-item label="性别">
+                  <n-radio-group v-model:value="gender">
+                    <n-space>
+                      <n-radio :value="0">未知</n-radio>
+                      <n-radio :value="1">男</n-radio>
+                      <n-radio :value="2">女</n-radio>
+                    </n-space>
+                  </n-radio-group>
+                </n-form-item>
+              </div>
               <n-form-item label="头像">
-                <n-space align="center">
+                <div class="avatar-field">
                   <n-upload
                     :show-file-list="false"
                     accept="image/*"
                     :disabled="avatarUploading"
                     :custom-request="onAvatarUpload"
                   >
-                    <n-button size="small" :loading="avatarUploading">上传头像</n-button>
+                    <n-button :loading="avatarUploading">上传头像</n-button>
                   </n-upload>
-                  <n-input v-model:value="avatar" maxlength="512" placeholder="或粘贴图片地址" style="flex: 1" />
-                </n-space>
+                  <n-input v-model:value="avatar" maxlength="512" placeholder="或粘贴图片地址" />
+                </div>
               </n-form-item>
-              <n-form-item label="性别">
-                <n-radio-group v-model:value="gender">
-                  <n-space>
-                    <n-radio :value="0">未知</n-radio>
-                    <n-radio :value="1">男</n-radio>
-                    <n-radio :value="2">女</n-radio>
-                  </n-space>
-                </n-radio-group>
-              </n-form-item>
-              <n-form-item label="简介">
+              <n-form-item class="bio-field" label="个人说明">
                 <n-input v-model:value="bio" type="textarea" maxlength="500" :rows="4" />
               </n-form-item>
-              <n-button type="primary" attr-type="submit" :loading="saving">{{ saving ? '保存中…' : '保存' }}</n-button>
+              <div class="profile-form-footer">
+                <p v-if="user.registerRegion || user.region" class="profile-region muted">
+                  <span v-if="user.registerRegion">注册于 {{ user.registerRegion }}</span>
+                  <span v-if="user.region">当前展示 {{ user.region }}</span>
+                </p>
+                <n-button type="primary" attr-type="submit" :loading="saving">
+                  {{ saving ? '保存中…' : '保存更改' }}
+                </n-button>
+              </div>
             </n-form>
             <div class="oauth-section">
               <h2 class="oauth-heading">第三方账号</h2>
@@ -125,9 +140,34 @@
             </n-list>
           </div>
         </n-tab-pane>
-      </n-tabs>
-    </n-card>
-      <SignWidget class="profile-sign-side" />
+          </n-tabs>
+        </section>
+
+        <aside class="profile-aside" aria-label="个人概况">
+          <SignWidget />
+          <section class="profile-facts">
+            <p class="profile-facts-kicker">账户概况</p>
+            <dl>
+              <div v-if="user.email">
+                <dt>邮箱</dt>
+                <dd>{{ user.email }}</dd>
+              </div>
+              <div v-if="user.region">
+                <dt>地区</dt>
+                <dd>{{ user.region }}</dd>
+              </div>
+              <div>
+                <dt>粉丝</dt>
+                <dd>{{ user.followerCount ?? 0 }}</dd>
+              </div>
+              <div>
+                <dt>关注</dt>
+                <dd>{{ user.followingCount ?? 0 }}</dd>
+              </div>
+            </dl>
+          </section>
+        </aside>
+      </div>
     </div>
   </div>
 </template>
@@ -137,7 +177,6 @@ import { ref, watch, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   NButton,
-  NCard,
   NEmpty,
   NForm,
   NFormItem,
@@ -153,6 +192,7 @@ import {
   NTabs,
   NUpload,
 } from 'naive-ui';
+import { PencilLine } from 'lucide-vue-next';
 import { fetchMe, fetchPublicUser, updateProfile, uploadAvatar } from '../api/user';
 import { fetchMyFavorites, fetchFollowers, fetchFollowing } from '../api/interaction';
 import { getSocialCard, getTimeline, getVisitors } from '../api/social';
@@ -161,7 +201,6 @@ import { useChatUserProfiles } from '../composables/useChatUserProfiles';
 import { useToastStore } from '../stores/toast';
 import ArticleCard from '../components/ArticleCard.vue';
 import UserLandscapePanel from '../components/knowledge/UserLandscapePanel.vue';
-import UserAvatar from '../components/UserAvatar.vue';
 import UserProfileSkeleton from '../components/skeleton/UserProfileSkeleton.vue';
 import UserListItem from '../components/UserListItem.vue';
 import ProfileHeader from '../components/profile/ProfileHeader.vue';
@@ -430,92 +469,165 @@ async function save() {
 
 <style scoped>
 .profile-page {
-  padding-bottom: var(--space-16);
+  max-width: 74rem;
+  padding-right: var(--container-pad-x);
+  padding-left: var(--container-pad-x);
 }
 
-.profile-layout {
-  display: flex;
-  gap: var(--space-4);
-  align-items: flex-start;
-  max-width: 48rem;
+.profile-shell {
+  width: 100%;
   margin: 0 auto;
 }
 
-.profile-sign-side {
-  flex-shrink: 0;
-  position: sticky;
-  top: var(--space-6);
+.profile-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16.25rem;
+  gap: var(--space-8);
+  align-items: start;
+  margin-top: var(--space-8);
+  animation: content-enter 0.52s 0.08s var(--ease-out-soft) both;
 }
 
-.user-head {
-  display: flex;
-  align-items: center;
+.profile-main {
+  min-width: 0;
+}
+
+.profile-aside {
+  position: sticky;
+  top: calc(var(--layout-navbar-bottom) + var(--space-6));
+  display: grid;
   gap: var(--space-4);
 }
 
-.user-head-main {
-  flex: 1;
-  min-width: 0;
+.profile-edit-button {
+  white-space: nowrap;
 }
 
-.profile-skel,
-.list-skel {
-  height: 8rem;
-  border-radius: var(--radius-lg);
+.profile-tabs :deep(.n-tabs-nav) {
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
-.profile-panel {
-  flex: 1;
-  min-width: 0;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  background: var(--color-surface) !important;
-  border: 1px solid var(--color-border) !important;
+.profile-tabs :deep(.n-tabs-nav-scroll-content) {
+  min-width: max-content;
 }
 
-.profile-panel :deep(.n-tabs-tab--active) {
+.profile-tabs :deep(.n-tabs-tab) {
+  padding: 0 var(--space-3) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.profile-tabs :deep(.n-tabs-tab:first-child) {
+  padding-left: 0;
+}
+
+.profile-tabs :deep(.n-tabs-tab--active) {
   color: var(--color-primary) !important;
 }
 
-.profile-panel :deep(.n-tabs-bar) {
-  background: var(--color-text) !important;
-  height: 1px !important;
+.profile-tabs :deep(.n-tabs-bar) {
+  height: 2px !important;
+  background: var(--color-primary) !important;
 }
 
-.profile-title {
+.profile-tabs :deep(.n-tab-pane) {
+  padding-top: var(--space-6);
+}
+
+.tab-panel {
+  min-height: 20rem;
+}
+
+.profile-facts {
+  padding: var(--space-5);
+  border-top: 2px solid var(--color-text);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.profile-facts-kicker,
+.section-kicker {
   margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.profile-facts dl {
+  margin: var(--space-4) 0 0;
+}
+
+.profile-facts dl > div {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.profile-facts dl > div:last-child {
+  border-bottom: 0;
+}
+
+.profile-facts dt {
+  color: var(--color-text-soft);
+}
+
+.profile-facts dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.section-heading {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.section-heading h2 {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
 }
 
-.counts span + span {
-  margin-left: var(--space-4);
+.section-heading > p:last-child {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
-.profile-tabs {
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-5);
+}
+
+.avatar-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.profile-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.profile-region {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: var(--space-6) 0;
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--space-2);
-}
-
-.tab-btn {
-  border: none;
-  background: none;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  border-radius: var(--radius-sm);
-}
-
-.tab-btn.active {
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
+  gap: var(--space-3);
+  margin: 0;
 }
 
 .muted {
@@ -523,105 +635,10 @@ async function save() {
   font-size: var(--text-sm);
 }
 
-.extra {
-  margin: 0 0 var(--space-6);
-}
-
-.ml {
-  margin-left: var(--space-4);
-}
-
-.fg {
-  margin-bottom: var(--space-5);
-}
-
-.fg-select {
-  width: 100%;
-}
-
-.empty-hint {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  text-align: center;
-  padding: var(--space-8) 0;
-}
-
-.card-grid {
-  display: grid;
-  gap: var(--space-4);
-}
-
-@media (max-width: 767px) {
-  .profile-layout {
-    flex-direction: column;
-  }
-
-  .profile-sign-side {
-    position: static;
-    order: -1;
-    align-self: stretch;
-  }
-
-  .profile-page {
-    padding: var(--space-4) var(--space-4)
-      calc(var(--space-12) + var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px));
-    box-sizing: border-box;
-  }
-
-  .profile-page > .n-skeleton,
-  .profile-page > .n-empty {
-    padding: var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .profile-panel :deep(.n-card-header) {
-    padding: var(--space-4) !important;
-  }
-
-  .profile-panel :deep(.n-card__content) {
-    padding: 0 var(--space-4) var(--space-4) !important;
-  }
-
-  .profile-panel :deep(.n-tabs-tab) {
-    padding: var(--space-3) var(--space-2);
-  }
-
-  .tab-panel {
-    padding-top: var(--space-3);
-  }
-
-  .profile-panel :deep(.n-list) {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: var(--surface-muted);
-  }
-
-  .profile-panel :deep(.n-list .n-list-item) {
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .profile-panel :deep(.n-list .n-list-item .n-list-item__prefix) {
-    margin-right: var(--space-3);
-  }
-
-  .profile-title,
-  .user-head-name {
-    font-size: var(--text-lg);
-  }
-
-  .profile-form :deep(.n-form-item) {
-    margin-bottom: var(--space-4);
-  }
-}
-
 .oauth-section {
   margin-top: var(--space-8);
   padding-top: var(--space-6);
-  border-top: var(--border-brutal);
+  border-top: 1px solid var(--color-border-strong);
 }
 
 .oauth-heading {
@@ -634,5 +651,89 @@ async function save() {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+@keyframes content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1023px) {
+  .profile-content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-aside {
+    position: static;
+    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .profile-page {
+    padding: var(--space-4) var(--space-4)
+      calc(var(--space-12) + var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .profile-content-grid {
+    gap: var(--space-6);
+    margin-top: var(--space-6);
+  }
+
+  .profile-aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-facts {
+    display: none;
+  }
+
+  .profile-edit-button {
+    width: 100%;
+  }
+
+  .profile-tabs :deep(.n-tabs-nav-scroll-wrapper) {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .profile-tabs :deep(.n-tabs-nav-scroll-wrapper::-webkit-scrollbar) {
+    display: none;
+  }
+
+  .profile-tabs :deep(.n-tabs-tab) {
+    padding-right: var(--space-3);
+    padding-left: var(--space-3);
+  }
+
+  .profile-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .avatar-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-form-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-form-footer :deep(.n-button) {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-content-grid {
+    animation: none;
+  }
 }
 </style>

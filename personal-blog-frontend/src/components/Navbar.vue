@@ -16,15 +16,29 @@
             <router-link to="/register" class="nav-auth-btn nav-auth-btn--outline" @click="closeMenu">注册</router-link>
           </div>
 
-          <n-menu
-            v-if="!isMobileNav"
-            class="nav-naive-menu nav-naive-menu--desktop"
-            mode="horizontal"
-            :options="navMenuOptions"
-            :value="navMenuActiveKey"
-            accordion
-            @update:value="onNavMenuUpdate"
-          />
+          <div v-if="!isMobileNav" class="nav-primary-group">
+            <n-menu
+              class="nav-naive-menu nav-naive-menu--desktop"
+              mode="horizontal"
+              :options="navMenuOptions"
+              :value="navMenuActiveKey"
+              accordion
+              @update:value="onNavMenuUpdate"
+            />
+            <n-dropdown
+              v-if="overflowNavOptions.length"
+              trigger="click"
+              placement="bottom-start"
+              :options="overflowNavOptions"
+              :show-arrow="false"
+              @select="onNavMenuUpdate"
+            >
+              <button type="button" class="nav-more-trigger" aria-label="更多导航">
+                <n-icon :component="EllipsisHorizontalOutline" :size="17" />
+                <span>更多</span>
+              </button>
+            </n-dropdown>
+          </div>
           <n-menu
             v-else
             class="nav-naive-menu nav-naive-menu--mobile"
@@ -36,8 +50,19 @@
           />
 
           <div class="nav-actions" :class="{ 'nav-actions--logged-in': authStore.isLoggedIn }">
-            <div class="nav-search-wrap">
-              <SearchSuggest />
+            <div class="nav-search-shell" :class="{ 'is-expanded': isSearchExpanded }">
+              <button
+                type="button"
+                class="nav-search-compact-toggle"
+                aria-label="展开文章搜索"
+                :aria-expanded="isSearchExpanded"
+                @click="isSearchExpanded = !isSearchExpanded"
+              >
+                <n-icon :component="SearchOutline" :size="19" />
+              </button>
+              <div class="nav-search-wrap">
+                <SearchSuggest />
+              </div>
             </div>
 
             <button
@@ -55,7 +80,8 @@
               class="nav-write-btn"
               @click="closeMenu"
             >
-              写文章
+              <n-icon :component="CreateOutline" :size="16" />
+              <span>写文章</span>
             </router-link>
 
             <div v-if="authStore.isLoggedIn" class="nav-notif-wrap">
@@ -131,10 +157,29 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { h, ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { NMenu, NBadge, NDropdown, NIcon } from 'naive-ui';
-import { NotificationsOutline, MenuOutline, CloseOutline, SunnyOutline, MoonOutline } from '@vicons/ionicons5';
+import {
+  ArchiveOutline,
+  BagHandleOutline,
+  ChatbubblesOutline,
+  CloseOutline,
+  CreateOutline,
+  EllipsisHorizontalOutline,
+  FlameOutline,
+  HomeOutline,
+  LinkOutline,
+  MenuOutline,
+  MoonOutline,
+  NotificationsOutline,
+  PricetagsOutline,
+  SearchOutline,
+  ShareSocialOutline,
+  SparklesOutline,
+  SunnyOutline,
+  TimeOutline,
+} from '@vicons/ionicons5';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { useSiteStore } from '../stores/site';
@@ -157,6 +202,7 @@ const isMobileNav = ref(
 );
 const isScrolled = ref(false);
 const hideNav = ref(false);
+const isSearchExpanded = ref(false);
 const navbarRef = ref(null);
 let lastY = 0;
 let navResizeObserver = null;
@@ -208,35 +254,38 @@ const navMenuActiveKey = computed(() => {
   return null;
 });
 
+const menuIcon = (component) => () => h(NIcon, { component, size: 15 });
+
 const MAIN_NAV_OPTIONS = [
-  { label: '首页', key: '/' },
-  { label: '归档', key: '/archive' },
-  { label: '知识星系', key: '/tags' },
-  { label: 'AI 问答', key: '/ai-chat' },
-  { label: '热搜', key: '/hot-search' },
-  { label: '友链', key: '/links' },
-  { label: '分享', key: '/share' },
-  { label: '聊天室', key: '/chat' },
-  { label: '商城', key: '/shop' },
-  { label: '阅读记录', key: '/reading-history' },
+  { label: '首页', key: '/', icon: menuIcon(HomeOutline) },
+  { label: '归档', key: '/archive', icon: menuIcon(ArchiveOutline) },
+  { label: '知识星系', key: '/tags', icon: menuIcon(PricetagsOutline) },
+  { label: 'AI 问答', key: '/ai-chat', icon: menuIcon(SparklesOutline) },
+  { label: '聊天室', key: '/chat', icon: menuIcon(ChatbubblesOutline) },
+  { label: '热搜', key: '/hot-search', icon: menuIcon(FlameOutline) },
+  { label: '友链', key: '/links', icon: menuIcon(LinkOutline) },
+  { label: '分享', key: '/share', icon: menuIcon(ShareSocialOutline) },
+  { label: '商城', key: '/shop', icon: menuIcon(BagHandleOutline) },
+  { label: '阅读记录', key: '/reading-history', icon: menuIcon(TimeOutline) },
 ];
 
-const LOGGED_IN_OVERFLOW_KEYS = ['/chat', '/shop', '/reading-history'];
+const LOGGED_IN_OVERFLOW_KEYS = ['/links', '/share', '/shop', '/reading-history'];
 
 const navMenuOptions = computed(() => {
   let base = MAIN_NAV_OPTIONS.filter((opt) => opt.key !== '/ai-chat' || aiChatVisible.value);
-  if (authStore.isLoggedIn) {
-    const overflow = base.filter((opt) => LOGGED_IN_OVERFLOW_KEYS.includes(opt.key));
-    base = base.filter((opt) => !LOGGED_IN_OVERFLOW_KEYS.includes(opt.key));
-    if (overflow.length) {
-      base.push({ label: '更多', key: 'more', children: overflow });
-    }
-  } else {
+  base = base.filter((opt) => !LOGGED_IN_OVERFLOW_KEYS.includes(opt.key));
+  if (!authStore.isLoggedIn) {
     base.push({ label: '登录', key: '/login' });
     base.push({ label: '注册', key: '/register' });
   }
   return base;
 });
+
+const overflowNavOptions = computed(() =>
+  MAIN_NAV_OPTIONS.filter(
+    (opt) => LOGGED_IN_OVERFLOW_KEYS.includes(opt.key) && (opt.key !== '/ai-chat' || aiChatVisible.value)
+  )
+);
 
 const mobileNavMenuOptions = computed(() => {
   const base = MAIN_NAV_OPTIONS.filter((opt) => opt.key !== '/ai-chat' || aiChatVisible.value);
@@ -314,12 +363,12 @@ const onScroll = () => {
   const delta = y - lastY;
   if (y <= 96) {
     hideNav.value = false;
-  } else if (delta > 10) {
+  } else if (delta > 16) {
     hideNav.value = true;
-  } else if (delta < -10) {
+  } else if (delta < -16) {
     hideNav.value = false;
   }
-  if (Math.abs(delta) >= 10) {
+  if (Math.abs(delta) >= 16) {
     lastY = y;
   }
 };
@@ -373,6 +422,7 @@ watch(
     if (path.startsWith('/admin')) {
       hideNav.value = false;
     }
+    isSearchExpanded.value = false;
     closeMenu();
     forceUnlockBodyScroll();
   }
@@ -462,9 +512,9 @@ onUnmounted(() => {
   min-height: var(--nav-height);
   display: flex;
   align-items: center;
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  background: color-mix(in srgb, var(--color-page) 96%, transparent);
   border-bottom: 1px solid var(--color-border);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(10px);
   box-shadow: none;
   transition: box-shadow var(--transition-fast);
 }
@@ -482,9 +532,19 @@ onUnmounted(() => {
 }
 
 @media (min-width: 1024px) {
+  .nav-row.container {
+    max-width: 1520px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
   .nav-links {
     flex: 1;
     min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2);
   }
 }
 
@@ -492,10 +552,10 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-family: var(--font-ui);
-  font-weight: var(--weight-black);
-  font-size: var(--text-lg);
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.08rem;
+  letter-spacing: 0;
   text-decoration: none;
   color: var(--color-text);
   transition: color var(--transition-fast);
@@ -505,7 +565,7 @@ onUnmounted(() => {
   flex: 0 0 30px;
   width: 30px;
   height: 30px;
-  border-radius: 7px;
+  border-radius: 3px;
 }
 
 .logo:hover {
@@ -534,13 +594,14 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
+  gap: 7px;
+  border-radius: var(--radius-pill);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
   background: var(--color-primary);
   color: var(--color-on-primary);
   border: 1px solid transparent;
-  box-shadow: var(--shadow-brutal-sm);
+  box-shadow: none;
   text-decoration: none;
   white-space: nowrap;
   transition:
@@ -549,7 +610,7 @@ onUnmounted(() => {
 }
 
 .nav-write-btn:hover {
-  transform: translate(2px, 2px);
+  transform: translateY(-1px);
   box-shadow: none;
   color: var(--color-on-primary);
 }
@@ -562,9 +623,9 @@ onUnmounted(() => {
   height: 2.5rem;
   padding: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 50%;
   background: transparent;
-  box-shadow: none;
+  border-color: transparent;
   color: var(--color-text);
   cursor: pointer;
   transition:
@@ -598,12 +659,22 @@ onUnmounted(() => {
   gap: var(--space-2);
 }
 
+@media (min-width: 1024px) {
+  .nav-links {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+  }
+}
+
 .nav-links :deep(.n-menu) {
   background: transparent;
 }
 
 .nav-links :deep(.n-menu-item-content) {
-  font-size: 0.92rem;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .nav-links :deep(.n-menu-item-content--selected) {
@@ -615,7 +686,43 @@ onUnmounted(() => {
   flex-shrink: 0;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
+  margin-left: 0;
+  min-width: 0;
+}
+
+.nav-primary-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.nav-more-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 66px;
+  height: 2.5rem;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: .06em;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.nav-more-trigger:hover,
+.nav-more-trigger:focus-visible {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .nav-search-wrap {
@@ -623,19 +730,104 @@ onUnmounted(() => {
   min-width: 140px;
 }
 
+.nav-search-shell {
+  position: relative;
+  flex: 0 1 200px;
+  min-width: 140px;
+}
+
+.nav-search-compact-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.nav-search-compact-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.nav-search-wrap :deep(.n-input) {
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 64%, transparent);
+  overflow: visible;
+}
+
+.nav-search-wrap :deep(.n-input__border),
+.nav-search-wrap :deep(.n-input__state-border) {
+  border-radius: var(--radius-pill);
+}
+
+.nav-search-wrap :deep(input:focus-visible) {
+  outline: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.nav-search-wrap :deep(.n-input.n-input--focus) {
+  border-radius: var(--radius-pill) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent) !important;
+}
+
+.nav-search-wrap :deep(.n-input.n-input--focus .n-input__border),
+.nav-search-wrap :deep(.n-input.n-input--focus .n-input__state-border) {
+  border-radius: var(--radius-pill) !important;
+  box-shadow: none !important;
+}
+
 .nav-actions--logged-in .nav-search-wrap {
   flex: 0 1 160px;
   min-width: 120px;
 }
 
+@media (min-width: 1024px) and (max-width: 1240px) {
+  .nav-search-shell {
+    flex: 0 0 2.5rem;
+    min-width: 2.5rem;
+  }
+
+  .nav-search-compact-toggle {
+    display: inline-flex;
+  }
+
+  .nav-search-shell .nav-search-wrap {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 260px;
+    min-width: 260px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-5px);
+    transition: opacity var(--transition-fast), transform var(--transition-fast), visibility var(--transition-fast);
+  }
+
+  .nav-search-shell.is-expanded .nav-search-wrap {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
 .nav-naive-menu--desktop {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
+  width: auto;
   overflow: hidden;
 }
 
 .nav-naive-menu--desktop :deep(.n-menu--horizontal) {
-  width: 100%;
+  width: auto;
 }
 
 .nav-naive-menu--desktop :deep(.n-menu-item-content) {
@@ -650,7 +842,7 @@ onUnmounted(() => {
   left: var(--space-2);
   right: var(--space-2);
   bottom: 2px;
-  height: 2px;
+  height: 1px;
   background: var(--color-primary);
   transform: scaleX(0);
   transform-origin: center;
@@ -661,16 +853,16 @@ onUnmounted(() => {
   background: transparent !important;
   color: var(--color-primary) !important;
   border-radius: 0 !important;
-  font-weight: var(--weight-semibold) !important;
+  font-weight: 500 !important;
 }
 
 html:not(.dark) .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
-  background: rgba(17, 24, 39, 0.08) !important;
-  color: var(--color-text) !important;
+  background: transparent !important;
+  color: var(--color-primary) !important;
 }
 
 html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
-  background: var(--color-primary-soft) !important;
+  background: transparent !important;
   color: var(--color-primary) !important;
 }
 
@@ -784,6 +976,12 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
     margin-left: 0;
   }
 
+  .nav-search-shell {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
   .nav-search-wrap {
     flex: none;
     width: 100%;
@@ -791,6 +989,11 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
     padding: var(--space-3) var(--space-4);
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
+  }
+
+  .nav-theme-toggle {
+    flex-shrink: 0;
+    margin: var(--space-1) var(--space-4) 0;
   }
 
   .nav-write-btn,
@@ -856,12 +1059,30 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
   color: var(--color-text);
 }
 
+.nav-actions--logged-in .nav-user-trigger {
+  width: 44px;
+  height: 44px;
+  padding: 4px;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
 .nav-user-trigger:hover {
   border-color: var(--color-text-muted);
 }
 
 .nav-avatar {
   flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.nav-avatar :deep(.n-avatar),
+.nav-avatar :deep(.n-avatar img) {
+  display: block;
+  object-fit: cover;
+  object-position: center;
 }
 
 .nav-username-short {
@@ -902,7 +1123,7 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
   font-weight: var(--weight-semibold);
   line-height: 1;
   white-space: nowrap;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   transition: background var(--transition-fast);
 }
 
@@ -953,7 +1174,12 @@ html.dark .nav-naive-menu--desktop :deep(.n-menu-item-content--selected) {
     top: var(--layout-navbar-bottom);
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: auto;
+    height: calc(
+      100dvh - var(--layout-navbar-bottom) - var(--mobile-dock-height) -
+        env(safe-area-inset-bottom, 0px)
+    );
+    min-height: 0;
     flex-direction: column;
     align-items: stretch;
     gap: 0;

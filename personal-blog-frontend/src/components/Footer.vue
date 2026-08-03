@@ -148,22 +148,21 @@ function updateUptime() {
   }
   const diff = Date.now() - launch.getTime();
   if (diff <= 0) {
-    uptimeText.value = '运行时间：0天00小时00分00秒';
+    uptimeText.value = '运行时间：0天00小时00分';
     return;
   }
   const secs = Math.floor(diff / 1000);
   const days = Math.floor(secs / 86400);
   const hrs = Math.floor((secs % 86400) / 3600);
   const mins = Math.floor((secs % 3600) / 60);
-  const remainingSecs = secs % 60;
-  uptimeText.value = `运行时间：${days}天${pad(hrs)}小时${pad(mins)}分${pad(remainingSecs)}秒`;
+  uptimeText.value = `运行时间：${days}天${pad(hrs)}小时${pad(mins)}分`;
 }
 
 let timer;
 onMounted(() => {
   launchAt.value = parseLaunchTime(siteStore.launchTime);
   updateUptime();
-  timer = setInterval(updateUptime, 1000);
+  timer = setInterval(updateUptime, 60_000);
 });
 
 watch(
@@ -183,10 +182,10 @@ onUnmounted(() => {
 .footer {
   position: relative;
   margin-top: var(--space-12);
-  padding: var(--space-12) 0 calc(var(--space-12) + env(safe-area-inset-bottom, 0px));
+  padding: 72px 0 calc(72px + env(safe-area-inset-bottom, 0px));
   background: var(--color-page);
   color: var(--color-text-muted);
-  border-top: var(--border-brutal);
+  border-top: 1px solid var(--color-border);
 }
 
 .footer::before {
@@ -224,7 +223,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: var(--space-4);
+  gap: 28px;
 }
 
 .footer-top {
@@ -240,7 +239,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: var(--space-1) var(--space-3);
+  gap: 8px 22px;
 }
 
 .footer-link {
@@ -279,7 +278,8 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-soft);
-  font-size: var(--text-sm);
+  font: 11px var(--font-mono);
+  letter-spacing: .08em;
 }
 
 .uptime {

@@ -401,24 +401,6 @@ const router = createRouter({
   },
 });
 
-let pendingScrollResets = [];
-function forceScrollTop() {
-  pendingScrollResets.forEach((timer) => clearTimeout(timer));
-  pendingScrollResets = [];
-  const reset = () => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  };
-  reset();
-  requestAnimationFrame(() => {
-    reset();
-    pendingScrollResets.push(setTimeout(reset, 80));
-    pendingScrollResets.push(setTimeout(reset, 260));
-    pendingScrollResets.push(setTimeout(reset, 600));
-  });
-}
-
 router.beforeEach(async (to) => {
   if (to.fullPath.length > 1 && to.fullPath.endsWith('/')) {
     return {
@@ -449,11 +431,6 @@ router.beforeEach(async (to) => {
       return { name: 'Home' };
     }
   }
-});
-
-router.afterEach((to, from) => {
-  if (to.path === from.path || to.hash) return;
-  forceScrollTop();
 });
 
 export default router;
