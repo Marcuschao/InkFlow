@@ -29,6 +29,7 @@ public class AiSecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/internal/**", "/actuator/**").permitAll()
+                        .requestMatchers("/api/agent/feedback/**").authenticated()
                         .requestMatchers("/api/agent/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

@@ -10,6 +10,7 @@ import org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfigura
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.util.TimeZone;
 
@@ -20,6 +21,7 @@ import java.util.TimeZone;
 @EnableDiscoveryClient
 @MapperScan("com.blog.ai.mapper")
 @EnableScheduling
+@EnableAsync
 @Import(CommonAutoConfiguration.class)
 public class BlogAiApplication {
 

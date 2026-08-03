@@ -2,6 +2,7 @@ package com.blog.ai.rag.generate;
 
 import com.blog.ai.gateway.AiTaskType;
 import com.blog.ai.llm.AiService;
+import com.blog.ai.gateway.model.GatewayResult;
 import com.blog.ai.rag.dto.RagAnswerVo;
 import com.blog.ai.rag.dto.SourceChunkDto;
 import com.blog.ai.rag.model.RetrievedChunk;
@@ -51,10 +52,12 @@ public class RagGenerationService {
         if (StringUtils.hasText(historySummary)) {
             user = "更早对话摘要：" + historySummary + "\n\n" + user;
         }
-        String answer = aiService.chat(AiTaskType.RAG, sys, user);
+        GatewayResult gatewayResult = aiService.chatResult(AiTaskType.RAG, sys, user);
+        String answer = gatewayResult.getContent();
         RagAnswerVo vo = new RagAnswerVo();
         vo.setAnswer(answer);
         vo.setSources(sources);
+        vo.setTotalTokens(gatewayResult.getTotalTokens());
         return vo;
     }
 

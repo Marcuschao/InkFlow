@@ -37,11 +37,13 @@ public class RagChatOrchestrator {
         chatSessionService.saveMessage(session.getId(), "user", question, null);
         RagAnswerVo answerVo = ragGenerationService.answer(question, historySummary, recentHistory);
         List<ChatSourceDto> sources = toChatSources(answerVo.getSources());
-        chatSessionService.saveMessage(session.getId(), "assistant", answerVo.getAnswer(), answerVo.getSources());
+        com.blog.ai.model.entity.ChatMessage assistantMessage =
+                chatSessionService.saveMessage(session.getId(), "assistant", answerVo.getAnswer(), answerVo.getSources());
         ChatResponse resp = new ChatResponse();
         resp.setAnswer(answerVo.getAnswer());
         resp.setSources(sources);
         resp.setSessionId(session.getId());
+        resp.setMessageId(assistantMessage.getId());
         return resp;
     }
 

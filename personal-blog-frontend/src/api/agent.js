@@ -228,6 +228,11 @@ function dispatchSseEvent(eventName, data, handlers) {
     if (sid != null) handlers.onSession(sid);
     return '';
   }
+  if (name === 'message-id' && handlers.onMessageId) {
+    const id = typeof data === 'number' ? data : data?.messageId ?? data?.id ?? data;
+    if (id != null) handlers.onMessageId(Number(id));
+    return '';
+  }
   if (name === 'error' && handlers.onError) {
     const msg = typeof data === 'string' ? data : data?.message || 'Chat failed';
     handlers.onError(msg);
@@ -245,6 +250,7 @@ export async function agentChatStream(questionPayload, handlers = {}) {
           onDelta: handlers.onDelta,
           onSources: handlers.onSources,
           onSession: handlers.onSession,
+          onMessageId: handlers.onMessageId,
           onError: handlers.onError,
         };
   const authStore = useAuthStore();
@@ -280,7 +286,8 @@ export async function agentChatStream(questionPayload, handlers = {}) {
     if (text && h.onDelta) h.onDelta(text);
     if (inner?.sources && h.onSources) h.onSources(inner.sources);
     if (inner?.sessionId != null && h.onSession) h.onSession(inner.sessionId);
-    return { answer: text, sources: inner?.sources || [], sessionId: inner?.sessionId ?? null };
+    if (inner?.messageId != null && h.onMessageId) h.onMessageId(inner.messageId);
+    return { answer: text, sources: inner?.sources || [], sessionId: inner?.sessionId ?? null, messageId: inner?.messageId ?? null };
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -288,6 +295,7 @@ export async function agentChatStream(questionPayload, handlers = {}) {
   let full = '';
   let sources = [];
   let sessionId = null;
+  let messageId = null;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -321,10 +329,14 @@ export async function agentChatStream(questionPayload, handlers = {}) {
           sessionId = sid;
           if (h.onSession) h.onSession(sid);
         },
+        onMessageId: (id) => {
+          messageId = id;
+          if (h.onMessageId) h.onMessageId(id);
+        },
         onError: h.onError,
       });
       if (eventName === 'delta' && piece) full += piece;
     }
   }
-  return { answer: full, sources, sessionId };
+  return { answer: full, sources, sessionId, messageId };
 }

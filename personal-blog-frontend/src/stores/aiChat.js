@@ -109,10 +109,12 @@ export const useAiChatStore = defineStore('aiChat', {
           STORAGE_KEY,
           JSON.stringify({
             sessionId: this.sessionId,
-            messages: this.messages.slice(-MAX_MESSAGES).map(({ role, content, sources }) => ({
+            messages: this.messages.slice(-MAX_MESSAGES).map(({ id, role, content, sources, feedback }) => ({
+              ...(id ? { id } : {}),
               role,
               content,
               ...(sources?.length ? { sources } : {}),
+              ...(feedback ? { feedback } : {}),
             })),
           })
         );
@@ -178,6 +180,9 @@ export const useAiChatStore = defineStore('aiChat', {
             this.addKnownSessionId(sid);
             this.persist();
           },
+          onMessageId: (id) => {
+            this.messages[assistantIdx].id = Number(id);
+          },
           onError: (msg) => {
             this.lastError = msg;
           },
@@ -222,6 +227,7 @@ export const useAiChatStore = defineStore('aiChat', {
       try {
         const rows = await listAiSessionMessages(id, this.guestSessionParams());
         this.messages = (rows || []).map((m) => ({
+          id: m.id,
           role: m.role,
           content: m.role === 'assistant' ? stripCitationMarkers(m.content || '') : (m.content || ''),
           sources: (() => {

@@ -38,6 +38,7 @@
           {{ displayContent(m) }}<span v-if="m.streaming" class="ai-cursor-blink">▍</span>
         </div>
         <p v-if="m.role === 'assistant' && sourceLine(m)" class="ai-source-line">{{ sourceLine(m) }}</p>
+        <AiFeedbackButtons v-if="m.role === 'assistant' && m.content && !m.streaming" :message="m" />
         <div v-if="m.role === 'assistant' && m.content && !m.streaming" class="ai-msg-actions">
           <button type="button" class="ai-action-btn" @click="aiChat.copyMessage(displayContent(m))">复制</button>
           <button v-if="idx === aiChat.messages.length - 1" type="button" class="ai-action-btn" @click="aiChat.regenerate()">重新生成</button>
@@ -77,6 +78,7 @@ import { NButton, NDrawer, NDrawerContent } from 'naive-ui';
 import { useAiChatStore } from '../../stores/aiChat';
 import { stripCitationMarkers, formatSourceLine } from '../../utils/aiChatFormat';
 import AiSessionList from './AiSessionList.vue';
+import AiFeedbackButtons from './AiFeedbackButtons.vue';
 
 const props = defineProps({
   embedded: { type: Boolean, default: false },

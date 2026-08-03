@@ -208,6 +208,7 @@ public class AgentController {
                 }
                 emitter.send(SseEmitter.event().name("sources").data(resp.getSources()));
                 emitter.send(SseEmitter.event().name("session").data(resp.getSessionId()));
+                emitter.send(SseEmitter.event().name("message-id").data(resp.getMessageId()));
                 emitter.complete();
             } catch (Exception e) {
                 log.error("[agent] chat stream failed", e);

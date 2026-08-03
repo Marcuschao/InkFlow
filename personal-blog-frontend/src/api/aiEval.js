@@ -1,0 +1,15 @@
+import request from '../utils/request';
+export const listEvalDatasets=(params)=>request({url:'/admin/ai/eval/datasets',method:'get',params}).then(r=>r.data);
+export const createEvalDataset=(data)=>request({url:'/admin/ai/eval/datasets',method:'post',data}).then(r=>r.data);
+export const updateEvalDataset=(id,data)=>request({url:`/admin/ai/eval/datasets/${id}`,method:'put',data}).then(r=>r.data);
+export const deleteEvalDataset=(id)=>request({url:`/admin/ai/eval/datasets/${id}`,method:'delete'});
+export const listEvalCases=(id,params)=>request({url:`/admin/ai/eval/datasets/${id}/cases`,method:'get',params}).then(r=>r.data);
+export const createEvalCase=(id,data)=>request({url:`/admin/ai/eval/datasets/${id}/cases`,method:'post',data}).then(r=>r.data);
+export const updateEvalCase=(id,data)=>request({url:`/admin/ai/eval/cases/${id}`,method:'put',data}).then(r=>r.data);
+export const deleteEvalCase=(id)=>request({url:`/admin/ai/eval/cases/${id}`,method:'delete'});
+export const importEvalJsonl=(id,data)=>request({url:`/admin/ai/eval/datasets/${id}/import-jsonl`,method:'post',data,headers:{'Content-Type':'text/plain'}}).then(r=>r.data);
+export const startEvalRun=(datasetId)=>request({url:'/admin/ai/eval/runs',method:'post',data:{datasetId,topK:5}}).then(r=>r.data);
+export const listEvalRuns=(params)=>request({url:'/admin/ai/eval/runs',method:'get',params}).then(r=>r.data);
+export const listEvalResults=(id,params)=>request({url:`/admin/ai/eval/runs/${id}/results`,method:'get',params}).then(r=>r.data);
+export const saveAnswerFeedback=(data)=>request({url:'/agent/feedback',method:'post',data}).then(r=>r.data);
+export const getAnswerFeedback=(messageId)=>request({url:'/agent/feedback',method:'get',params:{messageId},skipErrorToast:true}).then(r=>r.data);

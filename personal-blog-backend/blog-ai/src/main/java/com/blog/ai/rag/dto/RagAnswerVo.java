@@ -9,4 +9,5 @@ import java.util.List;
 public class RagAnswerVo {
     private String answer;
     private List<SourceChunkDto> sources = new ArrayList<>();
+    private Integer totalTokens = 0;
 }

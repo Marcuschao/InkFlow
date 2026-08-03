@@ -7,6 +7,7 @@ import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.stereotype.Service;
+import com.blog.ai.gateway.model.GatewayResult;
 
 @Service
 public class AiService {
@@ -36,6 +37,17 @@ public class AiService {
                 throw se;
             }
             return FALLBACK;
+        }
+    }
+
+    public GatewayResult chatResult(AiTaskType taskType, String systemPrompt, String userPrompt) {
+        try {
+            return circuitBreaker.executeSupplier(() -> aiGatewayService.chat(taskType, systemPrompt, userPrompt));
+        } catch (CallNotPermittedException ex) {
+            GatewayResult result = new GatewayResult();
+            result.setContent(FALLBACK);
+            result.setStatus("fallback");
+            return result;
         }
     }
 }

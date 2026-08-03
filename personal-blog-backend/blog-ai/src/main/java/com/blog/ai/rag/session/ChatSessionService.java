@@ -142,7 +142,7 @@ public class ChatSessionService {
         chatSessionMapper.deleteById(sessionId);
     }
 
-    public void saveMessage(Long sessionId, String role, String content, Object sources) {
+    public ChatMessage saveMessage(Long sessionId, String role, String content, Object sources) {
         ChatMessage msg = new ChatMessage();
         msg.setSessionId(sessionId);
         msg.setRole(role);
@@ -160,6 +160,7 @@ public class ChatSessionService {
         update.setId(sessionId);
         update.setUpdateTime(LocalDateTime.now());
         chatSessionMapper.updateById(update);
+        return msg;
     }
 
     public String compressHistory(Long sessionId, String currentQuestion) {
