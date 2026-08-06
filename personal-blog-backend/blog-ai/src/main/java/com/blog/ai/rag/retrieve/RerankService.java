@@ -38,11 +38,15 @@ public class RerankService {
     }
 
     public List<RetrievedChunk> rerank(String query, List<RetrievedChunk> candidates, int topN) {
+        return rerankWithStatus(query, candidates, topN).chunks();
+    }
+
+    public RerankResult rerankWithStatus(String query, List<RetrievedChunk> candidates, int topN) {
         if (candidates == null || candidates.isEmpty()) {
-            return List.of();
+            return new RerankResult(List.of(), false, false, null);
         }
         if (!properties.getRerank().isEnabled() || !StringUtils.hasText(properties.getRerank().getApiKey())) {
-            return truncate(candidates, topN);
+            return new RerankResult(truncate(candidates, topN), false, true, "RERANK_UNAVAILABLE");
         }
         try {
             RagProperties.Rerank cfg = properties.getRerank();
@@ -65,7 +69,7 @@ public class RerankService {
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() / 100 != 2) {
                 log.warn("[rag] rerank api failed status={} body={}", resp.statusCode(), resp.body());
-                return truncate(candidates, topN);
+                return new RerankResult(truncate(candidates, topN), false, true, "RERANK_UNAVAILABLE");
             }
             JsonNode root = objectMapper.readTree(resp.body());
             JsonNode results = root.get("results");
@@ -89,12 +93,16 @@ public class RerankService {
                     out.add(rc);
                 }
             }
-            return out.isEmpty() ? truncate(candidates, topN) : out;
+            return out.isEmpty()
+                    ? new RerankResult(truncate(candidates, topN), false, true, "RERANK_UNAVAILABLE")
+                    : new RerankResult(out, true, false, null);
         } catch (Exception e) {
             log.warn("[rag] rerank call failed: {}", e.getMessage());
-            return truncate(candidates, topN);
+            return new RerankResult(truncate(candidates, topN), false, true, "RERANK_UNAVAILABLE");
         }
     }
+
+    public record RerankResult(List<RetrievedChunk> chunks, boolean applied, boolean degraded, String reason) {}
 
     private List<RetrievedChunk> truncate(List<RetrievedChunk> list, int topN) {
         return list.size() <= topN ? list : new ArrayList<>(list.subList(0, topN));

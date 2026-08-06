@@ -9,6 +9,7 @@ public enum AiTaskType {
     SEO,
     FRESHNESS,
     RAG,
+    GUARD,
     CHAT;
 
     public String code() {

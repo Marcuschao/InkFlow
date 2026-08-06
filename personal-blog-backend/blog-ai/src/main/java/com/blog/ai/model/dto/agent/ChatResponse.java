@@ -11,4 +11,8 @@ public class ChatResponse {
     private List<ChatSourceDto> sources = new ArrayList<>();
     private Long sessionId;
     private Long messageId;
+    private boolean grounded;
+    private double confidence;
+    private String refusalReason;
+    private boolean degraded;
 }

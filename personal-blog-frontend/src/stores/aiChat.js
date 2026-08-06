@@ -6,13 +6,10 @@ import {
   deleteAiSession,
 } from '../api/agent';
 import { copyTextToClipboard } from '../utils/clipboard';
-import { useAuthStore } from './auth';
 import { useToastStore } from './toast';
 
 const STORAGE_KEY = 'aiChat.session';
-const SESSION_IDS_KEY = 'aiChat.knownSessionIds';
 const MAX_MESSAGES = 80;
-const MAX_KNOWN_SESSIONS = 100;
 
 function loadPersisted() {
   try {
@@ -25,24 +22,6 @@ function loadPersisted() {
     };
   } catch {
     return { sessionId: null, messages: [] };
-  }
-}
-
-function loadKnownSessionIds() {
-  try {
-    const raw = localStorage.getItem(SESSION_IDS_KEY);
-    const ids = raw ? JSON.parse(raw) : [];
-    return Array.isArray(ids) ? ids.map(Number).filter(Boolean) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveKnownSessionIds(ids) {
-  try {
-    localStorage.setItem(SESSION_IDS_KEY, JSON.stringify(ids.slice(0, MAX_KNOWN_SESSIONS)));
-  } catch {
-    /* ignore */
   }
 }
 
@@ -88,20 +67,6 @@ export const useAiChatStore = defineStore('aiChat', {
     },
   },
   actions: {
-    guestSessionParams() {
-      const ids = loadKnownSessionIds();
-      return ids.length ? { ids: ids.join(',') } : {};
-    },
-    addKnownSessionId(id) {
-      const sid = Number(id);
-      if (!sid) return;
-      const ids = loadKnownSessionIds().filter((x) => x !== sid);
-      ids.unshift(sid);
-      saveKnownSessionIds(ids);
-    },
-    removeKnownSessionId(id) {
-      saveKnownSessionIds(loadKnownSessionIds().filter((x) => x !== Number(id)));
-    },
     persist() {
       try {
         localStorage.setItem(
@@ -176,7 +141,6 @@ export const useAiChatStore = defineStore('aiChat', {
           },
           onSession: (sid) => {
             this.sessionId = Number(sid);
-            this.addKnownSessionId(sid);
             this.persist();
           },
           onMessageId: (id) => {
@@ -202,13 +166,7 @@ export const useAiChatStore = defineStore('aiChat', {
       }
     },
     async loadSessions() {
-      const authStore = useAuthStore();
-      const params = { page: 1, size: 50, ...this.guestSessionParams() };
-      if (!authStore.isLoggedIn && !params.ids) {
-        this.sessions = [];
-        this.sessionsLoaded = true;
-        return;
-      }
+      const params = { page: 1, size: 50 };
       try {
         const data = await listAiSessions(params);
         this.sessions = data?.records || [];
@@ -221,7 +179,7 @@ export const useAiChatStore = defineStore('aiChat', {
       if (!id) return;
       this.sessionId = Number(id);
       try {
-        const rows = await listAiSessionMessages(id, this.guestSessionParams());
+        const rows = await listAiSessionMessages(id);
         this.messages = (rows || []).map((m) => ({
           id: m.id,
           role: m.role,
@@ -254,8 +212,7 @@ export const useAiChatStore = defineStore('aiChat', {
     },
     async removeSession(id) {
       try {
-        await deleteAiSession(id, this.guestSessionParams());
-        this.removeKnownSessionId(id);
+        await deleteAiSession(id);
         this.sessions = this.sessions.filter((s) => s.id !== id);
         if (this.sessionId === id) this.newSession();
       } catch (e) {
@@ -277,9 +234,6 @@ export const useAiChatStore = defineStore('aiChat', {
       await this.send(text, { regenerate: true });
     },
     async hydrateFromBackend() {
-      if (this.sessionId) {
-        this.addKnownSessionId(this.sessionId);
-      }
       await this.loadSessions();
       if (this.sessionId) {
         await this.selectSession(this.sessionId);

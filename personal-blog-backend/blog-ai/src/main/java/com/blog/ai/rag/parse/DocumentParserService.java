@@ -4,6 +4,7 @@ import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.text.Normalizer;
 
 @Service
 public class DocumentParserService {
@@ -12,7 +13,12 @@ public class DocumentParserService {
 
     public String parse(InputStream stream) {
         try {
-            return tika.parseToString(stream);
+            String parsed = tika.parseToString(stream);
+            return Normalizer.normalize(parsed, Normalizer.Form.NFKC)
+                    .replaceAll("(?is)<script[^>]*>.*?</script>", " ")
+                    .replaceAll("(?is)<style[^>]*>.*?</style>", " ")
+                    .replaceAll("[\\u200B-\\u200F\\u2060\\uFEFF]", "")
+                    .replaceAll("[\\p{Cc}&&[^\\r\\n\\t]]", " ");
         } catch (Exception e) {
             throw new IllegalStateException("文档解析失败: " + e.getMessage(), e);
         }

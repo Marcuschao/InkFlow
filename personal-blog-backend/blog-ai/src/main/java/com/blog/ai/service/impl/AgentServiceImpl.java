@@ -200,8 +200,7 @@ public class AgentServiceImpl implements AgentService {
         }
         Long scopedId = request.getArticleId();
         if (scopedId == null && ragChatOrchestrator.isPresent()) {
-            Long userId = ragChatOrchestrator.get().currentUserId();
-            return ragChatOrchestrator.get().chat(q, request.getSessionId(), userId);
+            return ragChatOrchestrator.get().chat(q, request.getSessionId());
         }
         List<Article> articles = new ArrayList<>();
         if (scopedId != null) {
@@ -231,12 +230,6 @@ public class AgentServiceImpl implements AgentService {
             return refusalResponse();
         }
         articles = articleMapper.searchPublishedByKeywords(keywords, null, 3);
-        if (articles == null || articles.isEmpty()) {
-            articles = articleMapper.selectList(new QueryWrapper<Article>()
-                    .eq("status", 1)
-                    .orderByDesc("create_time")
-                    .last("LIMIT 3"));
-        }
         if (articles == null || articles.isEmpty()) {
             return refusalResponse();
         }

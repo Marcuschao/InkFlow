@@ -13,6 +13,7 @@ public class ChatSession {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
+    private String guestTokenHash;
     private String title;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

@@ -8,6 +8,7 @@ import com.blog.ai.rag.embed.EmbeddingService;
 import com.blog.ai.rag.model.KnowledgeChunkDoc;
 import com.blog.ai.rag.parse.DocumentParserService;
 import com.blog.ai.rag.search.KnowledgeChunkIndexService;
+import com.blog.ai.gateway.guard.PromptInjectionGuard;
 import com.blog.ai.rag.service.KnowledgeDocumentService;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class RagDocumentParseConsumer {
     private final EmbeddingService embeddingService;
     private final KnowledgeChunkIndexService knowledgeChunkIndexService;
     private final RagProperties ragProperties;
+    private final PromptInjectionGuard promptInjectionGuard;
 
     @RabbitListener(queues = "${blog.rag.rabbit.queue:rag.doc.parse.queue}")
     public void onParseTask(Long docId, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag)
@@ -76,8 +78,23 @@ public class RagDocumentParseConsumer {
                     ragProperties.getChunk().getSize(),
                     ragProperties.getChunk().getOverlap());
             List<String> texts = new ArrayList<>();
+            List<KnowledgeChunkDoc> safeChunks = new ArrayList<>();
             for (KnowledgeChunkDoc c : chunks) {
+                PromptInjectionGuard.Assessment risk = promptInjectionGuard.assess(c.getText());
+                c.getMetadata().put("injectionRisk", risk.riskLevel().name());
+                c.getMetadata().put("injectionReason", risk.reasonCode());
+                if (promptInjectionGuard.enforce()
+                        && risk.riskLevel() == PromptInjectionGuard.RiskLevel.HIGH) {
+                    log.warn("[rag] quarantined high-risk chunk docId={} ordinal={} reason={}",
+                            docId, c.getOrdinal(), risk.reasonCode());
+                    continue;
+                }
+                safeChunks.add(c);
                 texts.add(c.getText());
+            }
+            chunks = safeChunks;
+            if (chunks.isEmpty()) {
+                throw new IllegalStateException("文档没有可安全索引的有效分块");
             }
             List<float[]> vectors = embeddingService.embedForIndex(texts);
             for (int i = 0; i < chunks.size() && i < vectors.size(); i++) {

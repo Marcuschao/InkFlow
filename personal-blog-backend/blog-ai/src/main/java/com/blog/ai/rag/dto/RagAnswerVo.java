@@ -10,4 +10,8 @@ public class RagAnswerVo {
     private String answer;
     private List<SourceChunkDto> sources = new ArrayList<>();
     private Integer totalTokens = 0;
+    private boolean grounded;
+    private double confidence;
+    private String refusalReason;
+    private boolean degraded;
 }

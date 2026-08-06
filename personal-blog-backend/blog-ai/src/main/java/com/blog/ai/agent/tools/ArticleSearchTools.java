@@ -4,7 +4,6 @@ import com.blog.ai.agent.KeywordHelper;
 import com.blog.ai.model.dto.agent.ChatSourceDto;
 import com.blog.ai.model.entity.Article;
 import com.blog.ai.mapper.ArticleMapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import dev.langchain4j.agent.tool.Tool;
 import org.springframework.stereotype.Component;
 
@@ -40,12 +39,6 @@ public class ArticleSearchTools {
             return "未提取到有效检索词。";
         }
         List<Article> articles = articleMapper.searchPublishedByKeywords(keywords, null, 5);
-        if (articles == null || articles.isEmpty()) {
-            articles = articleMapper.selectList(new QueryWrapper<Article>()
-                    .eq("status", 1)
-                    .orderByDesc("create_time")
-                    .last("LIMIT 3"));
-        }
         if (articles == null || articles.isEmpty()) {
             return "暂无可用文章资料。";
         }

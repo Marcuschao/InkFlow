@@ -71,6 +71,10 @@ public class RagProperties {
         private int rrfTopK = 10;
         private int rrfK = 60;
         private int finalTopK = 5;
+        /** OBSERVE records low evidence without blocking; ENFORCE applies the calibrated threshold. */
+        private String evidenceGateMode = "OBSERVE";
+        /** Disabled until an evaluation run calibrates a provider/model-specific value. */
+        private double calibratedRerankThreshold = -1.0;
     }
 
     @Data

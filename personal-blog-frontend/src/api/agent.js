@@ -265,6 +265,7 @@ export async function agentChatStream(questionPayload, handlers = {}) {
   const res = await fetch(`${apiBase()}/agent/chat/stream`, {
     method: 'POST',
     headers,
+    credentials: 'same-origin',
     body: JSON.stringify(body),
   });
   if (!res.ok) {
