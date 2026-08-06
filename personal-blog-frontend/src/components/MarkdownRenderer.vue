@@ -7,6 +7,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 import { copyTextToClipboard } from '../utils/clipboard';
@@ -15,6 +16,10 @@ const props = defineProps({
   markdown: {
     type: String,
     default: '',
+  },
+  decorateCitations: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -58,6 +63,37 @@ const normalizeHeadings = (htmlContent) => {
     html: doc.body.innerHTML,
     headings,
   };
+};
+
+const decorateCitations = (htmlContent) => {
+  if (!props.decorateCitations) return htmlContent;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    const parent = node.parentElement;
+    if (!parent || parent.closest('code, pre, a, sup')) continue;
+    if (/\[\d+\]/.test(node.nodeValue || '')) nodes.push(node);
+  }
+  nodes.forEach((textNode) => {
+    const fragment = doc.createDocumentFragment();
+    const parts = textNode.nodeValue.split(/(\[\d+\])/g);
+    parts.forEach((part) => {
+      if (/^\[\d+\]$/.test(part)) {
+        const citation = doc.createElement('sup');
+        citation.className = 'markdown-citation';
+        citation.textContent = part;
+        citation.setAttribute('aria-label', `引用 ${part.slice(1, -1)}`);
+        fragment.appendChild(citation);
+      } else if (part) {
+        fragment.appendChild(doc.createTextNode(part));
+      }
+    });
+    textNode.parentNode.replaceChild(fragment, textNode);
+  });
+  return doc.body.innerHTML;
 };
 
 const applyLazyAllImages = () => {
@@ -115,9 +151,9 @@ const renderMarkdown = async () => {
     mangle: false,
   });
 
-  const html = marked.parse(props.markdown || '');
+  const html = DOMPurify.sanitize(marked.parse(props.markdown || ''));
   const normalized = normalizeHeadings(html);
-  renderedMarkdown.value = normalized.html;
+  renderedMarkdown.value = decorateCitations(normalized.html);
   await nextTick();
   emit('headings-extracted', normalized.headings);
   await nextTick();
@@ -215,6 +251,18 @@ watch(() => props.markdown, renderMarkdown, { immediate: true });
 
 .markdown-prose :deep(a:hover) {
   opacity: 0.85;
+}
+
+.markdown-prose :deep(.markdown-citation) {
+  position: relative;
+  top: -0.28em;
+  margin-left: 0.12em;
+  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-size: 0.68em;
+  font-weight: 700;
+  line-height: 0;
+  text-decoration: none;
 }
 
 .markdown-prose :deep(.terminal-shell) {

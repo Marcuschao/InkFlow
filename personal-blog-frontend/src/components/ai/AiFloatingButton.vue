@@ -3,27 +3,28 @@
     v-if="showFab"
     type="button"
     class="ai-fab ai-fab-glow"
-    :class="{ 'ai-fab--open': aiChat.open }"
-    :aria-label="aiChat.open ? '关闭 AI 助手' : '打开 AI 知识助手'"
-    @click="aiChat.toggleWindow()"
+    aria-label="打开 AI 知识助手"
+    @click="openAiWorkspace"
   >
-    <n-icon :size="24" :component="aiChat.open ? CloseOutline : SparklesOutline" />
-    <span v-if="aiChat.hasNew && !aiChat.open" class="ai-fab-dot" aria-hidden="true" />
+    <n-icon :size="24" :component="SparklesOutline" />
   </button>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { NIcon } from 'naive-ui';
-import { CloseOutline, SparklesOutline } from '@vicons/ionicons5';
+import { SparklesOutline } from '@vicons/ionicons5';
 import { useAiChatStore } from '../../stores/aiChat';
 import { useAiChatVisibility } from '../../composables/useAiChatVisibility';
 
 const route = useRoute();
-const aiChat = useAiChatStore();
+const router = useRouter();
 const { visible: aiChatVisible } = useAiChatVisibility();
 const showFab = computed(() => route.name !== 'AiChat' && route.name !== 'ArticleDetail' && aiChatVisible.value);
+function openAiWorkspace() {
+  router.push({ name: 'AiChat' });
+}
 </script>
 
 <style scoped>
@@ -44,22 +45,6 @@ const showFab = computed(() => route.name !== 'AiChat' && route.name !== 'Articl
   background: var(--color-accent);
   box-shadow: var(--shadow-brutal-lg);
   transition: transform var(--transition-fast);
-}
-
-.ai-fab--open {
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-}
-
-.ai-fab-dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-danger);
-  border: 1.5px solid var(--color-surface);
 }
 
 @media (max-width: 767px) {

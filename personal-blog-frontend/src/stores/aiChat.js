@@ -5,7 +5,6 @@ import {
   listAiSessionMessages,
   deleteAiSession,
 } from '../api/agent';
-import { stripCitationMarkers } from '../utils/aiChatFormat';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { useAuthStore } from './auth';
 import { useToastStore } from './toast';
@@ -193,9 +192,6 @@ export const useAiChatStore = defineStore('aiChat', {
         this.lastError = e?.message || '请求失败';
       } finally {
         const msg = this.messages[assistantIdx];
-        if (msg?.content) {
-          msg.content = stripCitationMarkers(msg.content);
-        }
         msg.streaming = false;
         this.streaming = false;
         this.messages = [...this.messages.slice(-MAX_MESSAGES)];
@@ -229,7 +225,7 @@ export const useAiChatStore = defineStore('aiChat', {
         this.messages = (rows || []).map((m) => ({
           id: m.id,
           role: m.role,
-          content: m.role === 'assistant' ? stripCitationMarkers(m.content || '') : (m.content || ''),
+          content: m.content || '',
           sources: (() => {
             if (!m.sources) return [];
             if (typeof m.sources === 'string') {
@@ -290,10 +286,11 @@ export const useAiChatStore = defineStore('aiChat', {
       }
     },
     async copyMessage(content) {
-      if (!content) return;
+      if (!content) return false;
       const ok = await copyTextToClipboard(content);
       const toast = useToastStore();
-      toast.push(ok ? '已复制' : '复制失败', ok ? 'success' : 'error');
+      toast.push(ok ? '复制成功' : '复制失败', ok ? 'success' : 'error');
+      return ok;
     },
   },
 });

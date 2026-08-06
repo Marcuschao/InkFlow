@@ -12,7 +12,6 @@ import Navbar from './components/Navbar.vue';
 import OfflineBanner from './components/OfflineBanner.vue';
 import Footer from './components/Footer.vue';
 import AiFloatingButton from './components/ai/AiFloatingButton.vue';
-import AiChatWindow from './components/ai/AiChatWindow.vue';
 import AiChatbot from './components/AiChatbot.vue';
 import ScrollToTop from './components/ScrollToTop.vue';
 import ToastHost from './components/ToastHost.vue';
@@ -142,10 +141,10 @@ onUnmounted(() => {
     <n-message-provider>
       <n-dialog-provider>
         <div id="app-wrapper">
-          <Navbar />
-          <div class="nav-layout-spacer" aria-hidden="true" />
+          <Navbar v-if="route.name !== 'AiChat'" />
+          <div v-if="route.name !== 'AiChat'" class="nav-layout-spacer" aria-hidden="true" />
           <OfflineBanner />
-          <main class="main-content">
+          <main class="main-content" :class="{ 'main-content--ai': route.name === 'AiChat' }">
             <RouterView v-slot="{ Component, route }">
               <template v-if="route.meta.requiresAdmin">
                 <AdminShell>
@@ -161,16 +160,11 @@ onUnmounted(() => {
               </template>
             </RouterView>
           </main>
-          <Footer />
-          <MobileDock />
-          <ScrollToTop />
+          <Footer v-if="route.name !== 'AiChat'" />
+          <MobileDock v-if="route.name !== 'AiChat'" />
+          <ScrollToTop v-if="route.name !== 'AiChat'" />
           <ToastHost />
-          <AiFloatingButton v-if="aiChatVisible && route.name !== 'ArticleDetail'" />
-          <AiChatWindow
-            v-if="aiChatVisible && route.name !== 'AiChat' && route.name !== 'ArticleDetail'"
-            :visible="aiChatStore.open"
-            :embedded="false"
-          />
+          <AiFloatingButton v-if="aiChatVisible && route.name !== 'ArticleDetail' && route.name !== 'AiChat'" />
           <AiChatbot v-if="aiChatVisible && route.name === 'ArticleDetail'" />
         </div>
       </n-dialog-provider>
@@ -190,9 +184,18 @@ onUnmounted(() => {
   width: 100%;
 }
 
+.main-content--ai {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
 @media (max-width: 767px) {
   .main-content {
     padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .main-content--ai {
+    padding-bottom: 0;
   }
 }
 </style>
