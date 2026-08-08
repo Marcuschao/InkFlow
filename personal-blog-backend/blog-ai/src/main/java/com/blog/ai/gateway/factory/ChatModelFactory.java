@@ -7,6 +7,9 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.cloud.context.environment.EnvironmentChangeEvent;
+import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -29,6 +32,19 @@ public class ChatModelFactory {
 
     public void invalidateAll() {
         cache.clear();
+    }
+
+    @EventListener(EnvironmentChangeEvent.class)
+    public void onConfigRefresh(EnvironmentChangeEvent event) {
+        if (event.getKeys().stream().anyMatch(key -> key.startsWith("blog.ai.gateway")
+                || key.startsWith("spring.ai.openai"))) {
+            invalidateAll();
+        }
+    }
+
+    @EventListener(RefreshScopeRefreshedEvent.class)
+    public void onRefreshScopeRefreshed(RefreshScopeRefreshedEvent event) {
+        invalidateAll();
     }
 
     private ChatModel build(ModelTarget target) {

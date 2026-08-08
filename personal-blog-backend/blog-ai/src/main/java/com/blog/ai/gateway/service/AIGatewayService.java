@@ -10,6 +10,7 @@ import com.blog.ai.gateway.guard.PromptGuard;
 import com.blog.ai.gateway.health.ModelHealthChecker;
 import com.blog.ai.gateway.model.GatewayResult;
 import com.blog.ai.gateway.model.ModelTarget;
+import com.blog.ai.gateway.model.ModelStreamChunk;
 import com.blog.ai.gateway.mq.AiCallLogEvent;
 import com.blog.ai.gateway.mq.AiCallLogProducer;
 import com.blog.ai.gateway.quota.TokenQuotaService;
@@ -32,6 +33,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import reactor.core.publisher.Flux;
 
 @Service
 public class AIGatewayService {
@@ -109,6 +113,67 @@ public class AIGatewayService {
         return fail;
     }
 
+    public Flux<ModelStreamChunk> stream(AiTaskType taskType, String systemPrompt, String userPrompt) {
+        return stream(taskType, systemPrompt, userPrompt, GatewayUserContext.getUserId(), GatewayUserContext.getUsername());
+    }
+
+    public Flux<ModelStreamChunk> stream(AiTaskType taskType, String systemPrompt, String userPrompt,
+                                         Long userId, String username) {
+        return Flux.defer(() -> {
+            tokenQuotaService.checkQuota(userId, taskType);
+            promptGuard.checkInput(userPrompt);
+            List<ModelTarget> chain = modelRouter.resolveChain(taskType);
+            if (chain.isEmpty()) return Flux.error(new ServiceException(503, "No streaming model is available"));
+            return streamFrom(chain, 0, taskType, userId, username, systemPrompt, userPrompt);
+        });
+    }
+
+    private Flux<ModelStreamChunk> streamFrom(List<ModelTarget> chain, int index, AiTaskType taskType,
+                                               Long userId, String username, String systemPrompt, String userPrompt) {
+        if (index >= chain.size()) return Flux.error(new ServiceException(503, "All streaming models failed"));
+        ModelTarget target = chain.get(index);
+        ChatModel chatModel = chatModelFactory.get(target);
+        Prompt prompt = new Prompt(List.of(new SystemMessage(systemPrompt), new UserMessage(userPrompt)));
+        AtomicInteger inputTokens = new AtomicInteger();
+        AtomicInteger outputTokens = new AtomicInteger();
+        AtomicBoolean emitted = new AtomicBoolean();
+        long started = System.currentTimeMillis();
+        return chatModel.stream(prompt)
+                .timeout(java.time.Duration.ofMillis(target.getTimeoutMs() > 0
+                        ? target.getTimeoutMs() : gatewayProperties.getDefaultTimeoutMs()))
+                .map(response -> {
+                    Usage usage = response.getMetadata() != null ? response.getMetadata().getUsage() : null;
+                    if (usage != null) {
+                        inputTokens.set(safeInt(usage.getPromptTokens()));
+                        outputTokens.set(safeInt(usage.getCompletionTokens()));
+                    }
+                    String text = response.getResult() != null && response.getResult().getOutput() != null
+                            ? response.getResult().getOutput().getText() : null;
+                    text = promptGuard.filterOutput(text);
+                    emitted.set(emitted.get() || StringUtils.hasText(text));
+                    return ModelStreamChunk.builder().delta(text).provider(target.getProviderId()).model(target.getModel())
+                            .inputTokens(inputTokens.get()).outputTokens(outputTokens.get())
+                            .cost(calcCost(target, inputTokens.get(), outputTokens.get())).fallbackUsed(index > 0).build();
+                })
+                .filter(chunk -> StringUtils.hasText(chunk.getDelta()))
+                .doOnComplete(() -> {
+                    if (!emitted.get()) return;
+                    healthChecker.recordSuccess(target.getProviderId());
+                    tokenQuotaService.recordUsage(userId, inputTokens.get() + outputTokens.get());
+                    GatewayResult result = new GatewayResult();
+                    result.setProvider(target.getProviderId()); result.setModel(target.getModel()); result.setStatus("success");
+                    result.setInputTokens(inputTokens.get()); result.setOutputTokens(outputTokens.get());
+                    result.setCost(calcCost(target, inputTokens.get(), outputTokens.get()));
+                    result.setLatencyMs(System.currentTimeMillis() - started); result.setFallbackUsed(index > 0);
+                    publishLog(taskType, userId, username, result);
+                })
+                .onErrorResume(error -> {
+                    healthChecker.recordFailure(target.getProviderId(), error.getMessage());
+                    if (emitted.get()) return Flux.error(error);
+                    return streamFrom(chain, index + 1, taskType, userId, username, systemPrompt, userPrompt);
+                });
+    }
+
     private GatewayResult invoke(ModelTarget target, String systemPrompt, String userPrompt) throws Exception {
         ChatModel chatModel = chatModelFactory.get(target);
         long timeout = target.getTimeoutMs() > 0 ? target.getTimeoutMs() : gatewayProperties.getDefaultTimeoutMs();
@@ -154,9 +219,13 @@ public class AIGatewayService {
     }
 
     private void publishLog(AiTaskType taskType, Long userId, GatewayResult result) {
+        publishLog(taskType, userId, GatewayUserContext.getUsername(), result);
+    }
+
+    private void publishLog(AiTaskType taskType, Long userId, String username, GatewayResult result) {
         AiCallLogEvent event = new AiCallLogEvent();
         event.setUserId(userId);
-        event.setUsername(GatewayUserContext.getUsername());
+        event.setUsername(username);
         event.setTaskType(taskType.code());
         event.setFeature(taskType.code());
         event.setProvider(result.getProvider());

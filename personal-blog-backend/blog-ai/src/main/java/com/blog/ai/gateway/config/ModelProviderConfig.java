@@ -4,9 +4,10 @@ import com.blog.ai.gateway.model.ModelTarget;
 import com.blog.ai.mapper.AiModelConfigMapper;
 import com.blog.ai.model.entity.AiModelConfig;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.environment.EnvironmentChangeEvent;
+import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -23,25 +24,18 @@ public class ModelProviderConfig {
 
     private final GatewayProperties gatewayProperties;
     private final AiModelConfigMapper aiModelConfigMapper;
-    private final String fallbackApiKey;
-    private final String fallbackBaseUrl;
-    private final String fallbackModel;
-
     private final AiApiKeyCipher apiKeyCipher;
+    private final Environment environment;
     private volatile Map<String, GatewayProperties.ProviderDef> providerMap = new ConcurrentHashMap<>();
 
     public ModelProviderConfig(GatewayProperties gatewayProperties,
                                AiModelConfigMapper aiModelConfigMapper,
                                AiApiKeyCipher apiKeyCipher,
-                               @Value("${spring.ai.openai.api-key:}") String fallbackApiKey,
-                               @Value("${spring.ai.openai.base-url:https://api.openai.com}") String fallbackBaseUrl,
-                               @Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}") String fallbackModel) {
+                               Environment environment) {
         this.gatewayProperties = gatewayProperties;
         this.aiModelConfigMapper = aiModelConfigMapper;
         this.apiKeyCipher = apiKeyCipher;
-        this.fallbackApiKey = fallbackApiKey;
-        this.fallbackBaseUrl = fallbackBaseUrl;
-        this.fallbackModel = fallbackModel;
+        this.environment = environment;
     }
 
     @PostConstruct
@@ -56,7 +50,15 @@ public class ModelProviderConfig {
         }
     }
 
+    @EventListener(RefreshScopeRefreshedEvent.class)
+    public void onRefreshScopeRefreshed(RefreshScopeRefreshedEvent event) {
+        reload();
+    }
+
     public void reload() {
+        String fallbackApiKey = environment.getProperty("spring.ai.openai.api-key", "");
+        String fallbackBaseUrl = environment.getProperty("spring.ai.openai.base-url", "https://api.openai.com");
+        String fallbackModel = environment.getProperty("spring.ai.openai.chat.options.model", "gpt-4o-mini");
         Map<String, GatewayProperties.ProviderDef> map = new LinkedHashMap<>();
         List<GatewayProperties.ProviderDef> defs = new ArrayList<>(gatewayProperties.getProviders());
         if (defs.isEmpty()) {
@@ -82,7 +84,9 @@ public class ModelProviderConfig {
             }
             map.put(def.getId(), def);
         }
-        applyDbOverrides(map);
+        if (gatewayProperties.isDatabaseOverridesEnabled()) {
+            applyDbOverrides(map);
+        }
         providerMap = map;
     }
 

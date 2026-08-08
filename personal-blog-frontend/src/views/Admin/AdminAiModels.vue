@@ -35,7 +35,7 @@
             <n-input v-model:value="form.baseUrl" placeholder="https://api.deepseek.com" />
           </n-form-item>
           <n-form-item label="模型列表">
-            <n-input v-model:value="form.models" placeholder="多个用逗号分隔，如 deepseek-chat,deepseek-coder" />
+            <n-input v-model:value="form.models" placeholder="多个用逗号分隔，如 deepseek-v4-flash,deepseek-v4-pro" />
           </n-form-item>
           <n-form-item label="优先级">
             <n-input-number v-model:value="form.priority" :min="0" style="width: 100%" />

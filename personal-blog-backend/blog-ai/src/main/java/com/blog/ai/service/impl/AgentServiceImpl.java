@@ -213,17 +213,13 @@ public class AgentServiceImpl implements AgentService {
             return answerFromArticles(articles, q, CONTEXT_CHUNK_SCOPED);
         }
         if (blogChatAssistant.isPresent()) {
-            articleSearchTools.beginSession();
             try {
                 String answer = blogChatAssistant.get().respond(q);
-                List<ChatSourceDto> sources = articleSearchTools.endSession();
                 ChatResponse res = new ChatResponse();
                 res.setAnswer(answer != null ? answer.trim() : "");
-                res.setSources(sources != null ? sources : List.of());
+                res.setSources(articleSearchTools.searchStructured(q));
                 return res;
-            } catch (Exception ex) {
-                articleSearchTools.endSession();
-            }
+            } catch (Exception ignored) { }
         }
         List<String> keywords = KeywordHelper.fromText(q);
         if (keywords.isEmpty()) {

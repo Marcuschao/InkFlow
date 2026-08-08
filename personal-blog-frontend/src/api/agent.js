@@ -210,31 +210,46 @@ function parseSseData(raw) {
 
 function dispatchSseEvent(eventName, data, handlers) {
   const name = eventName || 'message';
+  const envelope = data && typeof data === 'object' && data.data ? data : null;
+  const payload = envelope ? envelope.data : data;
   if (name === 'delta' || name === 'message') {
     const piece =
-      typeof data === 'string'
-        ? data
-        : data?.delta || data?.content || data?.text || data?.chunk || data?.answer || '';
+      typeof payload === 'string'
+        ? payload
+        : payload?.delta || payload?.content || payload?.text || payload?.chunk || payload?.answer || '';
     if (piece && handlers.onDelta) handlers.onDelta(piece);
     return piece;
   }
+  if (name === 'citation' && handlers.onCitation) {
+    const source = payload?.source || payload;
+    if (source) handlers.onCitation(source);
+    return '';
+  }
+  if (name === 'run.started' && handlers.onRun) {
+    if (envelope?.runId) handlers.onRun(envelope.runId, envelope.traceId);
+    return '';
+  }
+  if (name === 'run.completed' && handlers.onCompleted) {
+    handlers.onCompleted(payload?.result || payload);
+    return '';
+  }
   if (name === 'sources' && handlers.onSources) {
-    const list = Array.isArray(data) ? data : data?.sources || [];
+    const list = Array.isArray(payload) ? payload : payload?.sources || [];
     handlers.onSources(list);
     return '';
   }
   if (name === 'session' && handlers.onSession) {
-    const sid = typeof data === 'number' ? data : data?.sessionId ?? data?.id ?? data;
+    const sid = typeof payload === 'number' ? payload : payload?.sessionId ?? payload?.id ?? payload;
     if (sid != null) handlers.onSession(sid);
     return '';
   }
   if (name === 'message-id' && handlers.onMessageId) {
-    const id = typeof data === 'number' ? data : data?.messageId ?? data?.id ?? data;
+    const id = typeof payload === 'number' ? payload : payload?.messageId ?? payload?.id ?? payload;
     if (id != null) handlers.onMessageId(Number(id));
     return '';
   }
   if (name === 'error' && handlers.onError) {
-    const msg = typeof data === 'string' ? data : data?.message || 'Chat failed';
+    const msg = typeof payload === 'string' ? payload : payload?.message || 'Chat failed';
     handlers.onError(msg);
     return '';
   }
@@ -252,9 +267,19 @@ export async function agentChatStream(questionPayload, handlers = {}) {
           onSession: handlers.onSession,
           onMessageId: handlers.onMessageId,
           onError: handlers.onError,
+          onRun: handlers.onRun,
+          onCitation: handlers.onCitation,
+          onCompleted: handlers.onCompleted,
+          signal: handlers.signal,
         };
   const authStore = useAuthStore();
-  const body = chatRequestBody(questionPayload);
+  const chatBody = chatRequestBody(questionPayload);
+  const body = {
+    taskType: 'RAG_QA',
+    question: chatBody.question,
+    articleId: chatBody.articleId,
+    sessionId: chatBody.sessionId,
+  };
   const headers = {
     'Content-Type': 'application/json',
     Accept: 'text/event-stream',
@@ -262,11 +287,12 @@ export async function agentChatStream(questionPayload, handlers = {}) {
   if (authStore.token) {
     headers.Authorization = `Bearer ${authStore.token}`;
   }
-  const res = await fetch(`${apiBase()}/agent/chat/stream`, {
+  const res = await fetch(`${apiBase()}/agent/runs/stream`, {
     method: 'POST',
     headers,
     credentials: 'same-origin',
     body: JSON.stringify(body),
+    signal: h.signal,
   });
   if (!res.ok) {
     const t = await res.text();
@@ -297,6 +323,7 @@ export async function agentChatStream(questionPayload, handlers = {}) {
   let sources = [];
   let sessionId = null;
   let messageId = null;
+  let runId = null;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -335,9 +362,32 @@ export async function agentChatStream(questionPayload, handlers = {}) {
           if (h.onMessageId) h.onMessageId(id);
         },
         onError: h.onError,
+        onRun: (id, traceId) => {
+          runId = id;
+          if (h.onRun) h.onRun(id, traceId);
+        },
+        onCitation: (source) => {
+          sources = [...sources, source];
+          if (h.onSources) h.onSources(sources);
+          if (h.onCitation) h.onCitation(source);
+        },
+        onCompleted: (result) => {
+          if (Array.isArray(result?.sources)) {
+            sources = result.sources;
+            if (h.onSources) h.onSources(sources);
+          }
+          if (result?.sessionId != null) {
+            sessionId = result.sessionId;
+            if (h.onSession) h.onSession(sessionId);
+          }
+          if (result?.messageId != null) {
+            messageId = result.messageId;
+            if (h.onMessageId) h.onMessageId(messageId);
+          }
+          if (h.onCompleted) h.onCompleted(result);
+        },
       });
-      if (eventName === 'delta' && piece) full += piece;
     }
   }
-  return { answer: full, sources, sessionId, messageId };
+  return { answer: full, sources, sessionId, messageId, runId };
 }

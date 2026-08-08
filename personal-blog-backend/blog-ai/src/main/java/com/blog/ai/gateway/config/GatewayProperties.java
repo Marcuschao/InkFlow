@@ -13,6 +13,11 @@ import java.util.List;
 public class GatewayProperties {
 
     private boolean enabled = true;
+    /**
+     * When enabled, ai_model_config and ai_route_rule override external configuration.
+     * Disable this when Nacos is the single source of truth for model routing.
+     */
+    private boolean databaseOverridesEnabled = true;
     private long defaultTimeoutMs = 5000;
     private boolean healthCheckEnabled = false;
     private String apiKeyCipherSecret;

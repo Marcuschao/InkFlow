@@ -10,14 +10,26 @@ import com.blog.ai.rag.dto.ChatSessionVo;
 import com.blog.ai.rag.session.ChatSessionService;
 import com.blog.ai.rag.session.ChatPrincipalResolver;
 import com.blog.ai.service.AgentService;
+import com.blog.ai.runtime.AgentRuntime;
+import com.blog.ai.runtime.model.AgentExecutionContext;
+import com.blog.ai.runtime.model.AgentRequest;
+import com.blog.ai.runtime.model.AgentTaskType;
+import com.blog.ai.gateway.context.GatewayUserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import reactor.core.publisher.Flux;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
+import java.util.Set;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
 @RestController
@@ -32,6 +44,11 @@ public class AgentController {
     private RagChatOrchestrator ragChatOrchestrator;
     @Autowired(required = false)
     private ChatPrincipalResolver chatPrincipalResolver;
+    @Autowired
+    private AgentRuntime agentRuntime;
+    @Autowired
+    @Qualifier("agentRuntimeExecutor")
+    private AsyncTaskExecutor agentRuntimeExecutor;
 
     @PostMapping("/outline")
     public Result<String> outline(@RequestBody OutlineRequest request) {
@@ -96,8 +113,20 @@ public class AgentController {
      */
     @Audit("AGENT_CHAT")
     @PostMapping("/chat")
-    public Result<ChatResponse> chat(@RequestBody ChatRequest request) {
-        return Result.success(agentService.chat(request));
+    public Result<ChatResponse> chat(@RequestBody ChatRequest request,
+                                     HttpServletRequest servletRequest,
+                                     HttpServletResponse servletResponse) {
+        var result = agentRuntime.run(toRuntimeRequest(request), runtimeContext(servletRequest, servletResponse));
+        ChatResponse response = new ChatResponse();
+        response.setAnswer(result.getAnswer());
+        response.setSources(result.getSources());
+        response.setSessionId(result.getSessionId());
+        response.setMessageId(result.getMessageId());
+        response.setGrounded(result.isGrounded());
+        response.setConfidence(result.getConfidence());
+        response.setRefusalReason(result.getRefusalReason());
+        response.setDegraded(result.isDegraded());
+        return Result.success(response);
     }
 
     @Audit("AGENT_WEEKLY")
@@ -188,7 +217,15 @@ public class AgentController {
     }
 
     @Audit("AGENT_CHAT_STREAM")
-    @PostMapping("/chat/stream")
+    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<com.blog.ai.runtime.model.AgentEvent>> runtimeChatStream(
+            @RequestBody ChatRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        return agentRuntime.stream(toRuntimeRequest(request), runtimeContext(servletRequest, servletResponse))
+                .map(event -> ServerSentEvent.<com.blog.ai.runtime.model.AgentEvent>builder(event)
+                        .id(event.getEventId()).event(event.getType().wireName()).build());
+    }
+
+    @Deprecated
     public SseEmitter chatStream(@RequestBody ChatRequest request,
                                  HttpServletRequest servletRequest,
                                  HttpServletResponse servletResponse) {
@@ -203,16 +240,11 @@ public class AgentController {
         }
         String question = request.resolveQuestion();
         var principal = chatPrincipalResolver.resolve(servletRequest, servletResponse);
-        new Thread(() -> {
+        agentRuntimeExecutor.execute(() -> {
             try {
                 ChatResponse resp = ragChatOrchestrator.chat(question, request.getSessionId(), principal);
                 String answer = resp.getAnswer() == null ? "" : resp.getAnswer();
-                int chunkSize = 8;
-                for (int i = 0; i < answer.length(); i += chunkSize) {
-                    int end = Math.min(answer.length(), i + chunkSize);
-                    emitter.send(SseEmitter.event().name("delta").data(answer.substring(i, end)));
-                    Thread.sleep(20);
-                }
+                emitter.send(SseEmitter.event().name("delta").data(answer));
                 emitter.send(SseEmitter.event().name("sources").data(resp.getSources()));
                 emitter.send(SseEmitter.event().name("session").data(resp.getSessionId()));
                 emitter.send(SseEmitter.event().name("message-id").data(resp.getMessageId()));
@@ -225,7 +257,25 @@ public class AgentController {
                 } catch (Exception ignored) {
                 }
             }
-        }).start();
+        });
         return emitter;
+    }
+
+    private AgentRequest toRuntimeRequest(ChatRequest request) {
+        AgentRequest runtime = new AgentRequest();
+        runtime.setTaskType(AgentTaskType.RAG_QA);
+        runtime.setQuestion(request.resolveQuestion());
+        runtime.setArticleId(request.getArticleId());
+        runtime.setSessionId(request.getSessionId());
+        return runtime;
+    }
+
+    private AgentExecutionContext runtimeContext(HttpServletRequest request, HttpServletResponse response) {
+        var principal = chatPrincipalResolver.resolve(request, response);
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        Set<String> permissions = authentication == null ? Set.of() : authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority()).collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new AgentExecutionContext(principal.userId(), principal.guestTokenHash(), null,
+                GatewayUserContext.getUsername(), principal, permissions);
     }
 }

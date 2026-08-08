@@ -44,7 +44,7 @@ class RagGenerationServiceTest {
                 List.of(chunk), HybridRetrievalService.EvidenceLevel.MEDIUM, false, null, false));
         GatewayResult gatewayResult = new GatewayResult();
         gatewayResult.setContent("grounded answer [1]");
-        gatewayResult.setTotalTokens(12);
+        gatewayResult.setOutputTokens(12);
         when(aiService.chatResult(any(), anyString(), anyString())).thenReturn(gatewayResult);
 
         var answer = new RagGenerationService(retrievalService, aiService)

@@ -149,6 +149,7 @@ export const useAiChatStore = defineStore('aiChat', {
           onError: (msg) => {
             this.lastError = msg;
           },
+          signal: this._abortController.signal,
         });
       } catch (e) {
         this.messages[assistantIdx].content =

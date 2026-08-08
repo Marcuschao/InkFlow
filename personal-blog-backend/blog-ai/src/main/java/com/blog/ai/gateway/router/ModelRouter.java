@@ -8,6 +8,9 @@ import com.blog.ai.gateway.model.ModelTarget;
 import com.blog.ai.mapper.AiRouteRuleMapper;
 import com.blog.ai.model.entity.AiRouteRule;
 import jakarta.annotation.PostConstruct;
+import org.springframework.cloud.context.environment.EnvironmentChangeEvent;
+import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -43,6 +46,10 @@ public class ModelRouter {
     }
 
     public void reloadRules() {
+        if (!gatewayProperties.isDatabaseOverridesEnabled()) {
+            dbRules = List.of();
+            return;
+        }
         try {
             List<AiRouteRule> rows = aiRouteRuleMapper.selectList(null);
             dbRules = rows == null ? List.of() : rows.stream()
@@ -54,15 +61,29 @@ public class ModelRouter {
         }
     }
 
+    @EventListener(EnvironmentChangeEvent.class)
+    public void onConfigRefresh(EnvironmentChangeEvent event) {
+        if (event.getKeys().stream().anyMatch(key -> key.startsWith("blog.ai.gateway"))) {
+            reloadRules();
+        }
+    }
+
+    @EventListener(RefreshScopeRefreshedEvent.class)
+    public void onRefreshScopeRefreshed(RefreshScopeRefreshedEvent event) {
+        reloadRules();
+    }
+
     public List<ModelTarget> resolveChain(AiTaskType taskType) {
         LinkedHashSet<ModelTarget> chain = new LinkedHashSet<>();
         String code = taskType.code();
 
-        for (AiRouteRule rule : dbRules) {
-            if (matches(rule.getTaskPattern(), code)) {
-                addTarget(chain, rule.getPrimaryModel());
-                addFallbacks(chain, rule.getFallbackChain());
-                break;
+        if (gatewayProperties.isDatabaseOverridesEnabled()) {
+            for (AiRouteRule rule : dbRules) {
+                if (matches(rule.getTaskPattern(), code)) {
+                    addTarget(chain, rule.getPrimaryModel());
+                    addFallbacks(chain, rule.getFallbackChain());
+                    break;
+                }
             }
         }
 

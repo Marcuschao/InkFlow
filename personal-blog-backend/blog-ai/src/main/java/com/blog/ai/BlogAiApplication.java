@@ -19,7 +19,7 @@ import java.util.TimeZone;
         OpenAiChatAutoConfiguration.class
 })
 @EnableDiscoveryClient
-@MapperScan("com.blog.ai.mapper")
+@MapperScan({"com.blog.ai.mapper", "com.blog.ai.runtime.mapper"})
 @EnableScheduling
 @EnableAsync
 @Import(CommonAutoConfiguration.class)
