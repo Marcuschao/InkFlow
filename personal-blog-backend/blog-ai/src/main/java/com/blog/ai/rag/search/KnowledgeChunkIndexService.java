@@ -29,7 +29,8 @@ import java.util.List;
 @ConditionalOnProperty(name = "blog.rag.enabled", havingValue = "true")
 public class KnowledgeChunkIndexService {
 
-    private static final List<String> SOURCE_FIELDS = List.of("chunkId", "docId", "docTitle", "ordinal", "text");
+    private static final List<String> SOURCE_FIELDS = List.of("chunkId", "docId", "docTitle", "ordinal", "text",
+            "tenantId", "workspaceId", "ownerId", "visibility", "documentVersion");
 
     private final ElasticsearchClient client;
     private final RagProperties properties;
@@ -83,7 +84,7 @@ public class KnowledgeChunkIndexService {
         }
         String index = properties.getEs().getChunksIndex();
         try {
-            client.deleteByQuery(d -> d.index(index)
+            client.deleteByQuery(d -> d.index(index).refresh(true)
                     .query(Query.of(q -> q.term(t -> t.field("docId").value(FieldValue.of(docId))))));
         } catch (Exception e) {
             log.warn("[rag] deleteByDocId failed docId={}: {}", docId, e.getMessage());
@@ -179,6 +180,11 @@ public class KnowledgeChunkIndexService {
         rc.setDocTitle(src.getDocTitle());
         rc.setOrdinal(src.getOrdinal());
         rc.setText(src.getText());
+        rc.setTenantId(src.getTenantId());
+        rc.setWorkspaceId(src.getWorkspaceId());
+        rc.setOwnerId(src.getOwnerId());
+        rc.setVisibility(src.getVisibility());
+        rc.setDocumentVersion(src.getDocumentVersion());
         return rc;
     }
 

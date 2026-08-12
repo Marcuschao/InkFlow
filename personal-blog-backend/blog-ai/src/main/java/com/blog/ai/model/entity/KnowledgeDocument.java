@@ -18,6 +18,12 @@ public class KnowledgeDocument {
     private String status;
     private String errorMsg;
     private Long chunkCount;
+    private Long version;
+    private String tenantId;
+    private String workspaceId;
+    private Long ownerId;
+    private String visibility;
+    private LocalDateTime expireTime;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

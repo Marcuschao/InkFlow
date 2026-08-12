@@ -26,6 +26,10 @@ public class HybridRetrievalService {
     private final RagProperties properties;
 
     public RetrievalResult retrieve(String query) {
+        return retrieve(query, RetrievalFilter.publicOnly());
+    }
+
+    public RetrievalResult retrieve(String query, RetrievalFilter filter) {
         RagProperties.Retrieve cfg = properties.getRetrieve();
         List<RetrievedChunk> keywordHits = List.of();
         List<RetrievedChunk> vectorHits = List.of();
@@ -47,6 +51,8 @@ public class HybridRetrievalService {
             throw new ServiceException(503, "知识库检索服务暂时不可用");
         }
 
+        keywordHits = filter.apply(keywordHits);
+        vectorHits = filter.apply(vectorHits);
         List<RetrievedChunk> fused = reciprocalRankFusion(keywordHits, vectorHits, cfg.getRrfK(), cfg.getRrfTopK());
         if (fused.isEmpty()) {
             return new RetrievalResult(keywordHits, vectorHits, fused, List.of(), List.of(),
@@ -61,7 +67,7 @@ public class HybridRetrievalService {
         EvidenceLevel level = classify(best, rerank.applied(), cfg);
         boolean blockedByThreshold = level == EvidenceLevel.NONE && !best.isEmpty();
         return new RetrievalResult(keywordHits, vectorHits, fused, rerank.chunks(), best,
-                level, degraded, reason, blockedByThreshold);
+                level, degraded, reason, blockedByThreshold, RetrievalAudit.from(keywordHits, vectorHits, fused, rerank.chunks(), best));
     }
 
     private EvidenceLevel classify(List<RetrievedChunk> best, boolean rerankApplied, RagProperties.Retrieve cfg) {
@@ -87,8 +93,12 @@ public class HybridRetrievalService {
         for (int i = 0; i < Math.min(topK, sorted.size()); i++) {
             RetrievedChunk source = byId.get(sorted.get(i).getKey());
             if (source != null) {
-                RetrievedChunk copy = new RetrievedChunk(source.getChunkId(), source.getDocId(), source.getDocTitle(),
-                        source.getOrdinal(), source.getText(), source.getScore(), sorted.get(i).getValue());
+                RetrievedChunk copy = new RetrievedChunk();
+                copy.setChunkId(source.getChunkId()); copy.setDocId(source.getDocId()); copy.setDocTitle(source.getDocTitle());
+                copy.setOrdinal(source.getOrdinal()); copy.setText(source.getText()); copy.setScore(source.getScore());
+                copy.setRerankScore(sorted.get(i).getValue()); copy.setTenantId(source.getTenantId());
+                copy.setWorkspaceId(source.getWorkspaceId()); copy.setOwnerId(source.getOwnerId());
+                copy.setVisibility(source.getVisibility()); copy.setDocumentVersion(source.getDocumentVersion());
                 out.add(copy);
             }
         }
@@ -120,7 +130,7 @@ public class HybridRetrievalService {
         public RetrievalResult(List<RetrievedChunk> keywordHits, List<RetrievedChunk> vectorHits,
                                List<RetrievedChunk> fused, List<RetrievedChunk> reranked,
                                List<RetrievedChunk> best, EvidenceLevel evidenceLevel,
-                               boolean degraded, String reason, boolean blockedByThreshold) {
+                               boolean degraded, String reason, boolean blockedByThreshold, RetrievalAudit audit) {
             this.keywordHits = keywordHits;
             this.vectorHits = vectorHits;
             this.fused = fused;
@@ -130,6 +140,40 @@ public class HybridRetrievalService {
             this.degraded = degraded;
             this.reason = reason;
             this.blockedByThreshold = blockedByThreshold;
+            this.audit = audit;
+        }
+        public RetrievalResult(List<RetrievedChunk> keywordHits, List<RetrievedChunk> vectorHits,
+                               List<RetrievedChunk> fused, List<RetrievedChunk> reranked,
+                               List<RetrievedChunk> best, EvidenceLevel evidenceLevel,
+                               boolean degraded, String reason, boolean blockedByThreshold) {
+            this(keywordHits, vectorHits, fused, reranked, best, evidenceLevel, degraded, reason,
+                    blockedByThreshold, RetrievalAudit.from(keywordHits, vectorHits, fused, reranked, best));
+        }
+        public final RetrievalAudit audit;
+    }
+
+    public record RetrievalFilter(String tenantId, String workspaceId, Long ownerId, boolean includePublic) {
+        public static RetrievalFilter publicOnly() { return new RetrievalFilter(null, null, null, true); }
+        public List<RetrievedChunk> apply(List<RetrievedChunk> chunks) {
+            if (chunks == null || chunks.isEmpty()) return List.of();
+            return chunks.stream().filter(c -> {
+                if (includePublic && (c.getVisibility() == null || "PUBLIC".equalsIgnoreCase(c.getVisibility()))) return true;
+                return (tenantId != null && tenantId.equals(c.getTenantId()))
+                        && (workspaceId == null || workspaceId.equals(c.getWorkspaceId()))
+                        && (ownerId == null || ownerId.equals(c.getOwnerId()));
+            }).toList();
         }
     }
+
+    public record RetrievalAudit(List<AuditHit> keyword, List<AuditHit> vector, List<AuditHit> fused,
+                                 List<AuditHit> reranked, List<AuditHit> adopted) {
+        static RetrievalAudit from(List<RetrievedChunk> k, List<RetrievedChunk> v, List<RetrievedChunk> f,
+                                   List<RetrievedChunk> r, List<RetrievedChunk> a) {
+            return new RetrievalAudit(toHits(k), toHits(v), toHits(f), toHits(r), toHits(a));
+        }
+        private static List<AuditHit> toHits(List<RetrievedChunk> list) {
+            return list == null ? List.of() : list.stream().map(c -> new AuditHit(c.getChunkId(), c.getDocId(), c.getScore(), c.getRerankScore())).toList();
+        }
+    }
+    public record AuditHit(String chunkId, Long docId, double score, double rerankScore) {}
 }

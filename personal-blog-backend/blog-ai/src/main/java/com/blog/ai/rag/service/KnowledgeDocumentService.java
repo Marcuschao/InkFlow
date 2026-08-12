@@ -8,6 +8,7 @@ import com.blog.ai.config.properties.RagProperties;
 import com.blog.ai.mapper.KnowledgeDocumentMapper;
 import com.blog.ai.model.entity.KnowledgeDocument;
 import com.blog.ai.rag.messaging.RagMessageProducer;
+import com.blog.ai.rag.search.KnowledgeChunkIndexService;
 import com.blog.ai.service.MinioStorageService;
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
@@ -36,19 +37,22 @@ public class KnowledgeDocumentService {
     private final RagProperties ragProperties;
     private final RagMessageProducer ragMessageProducer;
     private final TransactionTemplate insertTxTemplate;
+    private final KnowledgeChunkIndexService knowledgeChunkIndexService;
 
     public KnowledgeDocumentService(KnowledgeDocumentMapper knowledgeDocumentMapper,
                                     MinioStorageService minioStorageService,
                                     MinioClient minioClient,
                                     RagProperties ragProperties,
                                     RagMessageProducer ragMessageProducer,
-                                    PlatformTransactionManager transactionManager) {
+                                    PlatformTransactionManager transactionManager,
+                                    KnowledgeChunkIndexService knowledgeChunkIndexService) {
         this.knowledgeDocumentMapper = knowledgeDocumentMapper;
         this.minioStorageService = minioStorageService;
         this.minioClient = minioClient;
         this.ragProperties = ragProperties;
         this.ragMessageProducer = ragMessageProducer;
         this.insertTxTemplate = new TransactionTemplate(transactionManager);
+        this.knowledgeChunkIndexService = knowledgeChunkIndexService;
     }
 
     /**
@@ -231,6 +235,7 @@ public class KnowledgeDocumentService {
             minioStorageService.deleteObject(minioStorageService.bucketKnowledge(), doc.getMinioPath());
         } catch (Exception ignored) {
         }
+        knowledgeChunkIndexService.deleteByDocId(id);
         knowledgeDocumentMapper.deleteById(id);
     }
 

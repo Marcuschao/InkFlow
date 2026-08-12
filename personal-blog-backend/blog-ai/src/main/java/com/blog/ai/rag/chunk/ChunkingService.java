@@ -41,6 +41,18 @@ public class ChunkingService {
         return chunks;
     }
 
+    public List<KnowledgeChunkDoc> chunk(Long docId, String docTitle, String text, int size, int overlap,
+                                         String tenantId, String workspaceId, Long ownerId, String visibility,
+                                         Long documentVersion) {
+        List<KnowledgeChunkDoc> chunks = chunk(docId, docTitle, text, size, overlap);
+        for (KnowledgeChunkDoc chunk : chunks) {
+            chunk.setTenantId(tenantId); chunk.setWorkspaceId(workspaceId); chunk.setOwnerId(ownerId);
+            chunk.setVisibility(visibility == null ? "PUBLIC" : visibility);
+            chunk.setDocumentVersion(documentVersion == null ? 1L : documentVersion);
+        }
+        return chunks;
+    }
+
     private KnowledgeChunkDoc buildChunk(Long docId, String docTitle, int ordinal, String text) {
         KnowledgeChunkDoc doc = new KnowledgeChunkDoc();
         doc.setChunkId(docId + "_" + ordinal);

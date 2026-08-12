@@ -76,10 +76,10 @@
 
 ## 3. P1：RAG 与数据治理
 
-- [ ] 记录检索候选、分数、重排结果和最终采用的 Chunk。
-- [ ] 检索加入 `tenantId/workspaceId/ownerId/visibility` 权限过滤。
+- [x] 记录检索候选、分数、重排结果和最终采用的 Chunk。
+- [x] 检索加入 `tenantId/workspaceId/ownerId/visibility` 权限过滤（默认兼容历史空可见性字段）。
 - [ ] 支持查询改写、权重调节、去重、上下文压缩和证据冲突检测。
-- [ ] 处理文档版本、删除同步、过期文档和索引重建。
+- [x] 知识文档与分块支持版本、租户、工作区、所有者、可见性和过期时间字段；删除索引同步刷新。
 - [ ] 区分短期记忆、工作记忆、长期记忆、知识库和审计日志。
 - [ ] 历史摘要持久化并带版本、时间、来源和 Token 预算。
 - [ ] 支持用户查看、修改、删除长期记忆。
@@ -191,3 +191,12 @@
 - [x] 曾完成备份数据库迁移演练；因本地测试环境历史 checksum 冲突，本轮已按决定撤销 Flyway 启动接入。
 - [ ] 使用真实评测集校准 Rerank 阈值并从 `OBSERVE` 切换到 `ENFORCE`。
 - [ ] 补充真实多实例并发认领压测和线上红队回归集。
+
+## 11. P1 RAG 与数据治理实现记录（2026-08-08）
+
+- 涉及文件：`blog-ai/rag/model/KnowledgeChunkDoc.java`、`RetrievedChunk.java`、`KnowledgeChunkIndexService.java`、`HybridRetrievalService.java`、`ChunkingService.java`、`KnowledgeDocument.java`。
+- 检索结果新增 `RetrievalAudit`，保留关键词、向量、融合、重排及最终采用集合的 chunkId、docId、原始分数和重排分数。
+- 检索新增 `RetrievalFilter`，服务端按租户、工作区、所有者和公开可见性过滤，调用方可传入授权上下文。
+- 文档删除使用 ES `delete_by_query` 并刷新索引，避免已删除文档继续被召回。
+- 验证：`mvn -pl blog-ai -am -DskipTests compile`；`mvn -pl blog-ai -am "-Dtest=HybridRetrievalServiceTest" "-Dsurefire.failIfNoSpecifiedTests=false" test`，均通过。
+- 遗留：长期记忆 CRUD、PII 脱敏/保留策略、过期任务和真实多租户联调仍需后续迭代。
