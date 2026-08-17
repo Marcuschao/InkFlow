@@ -3,16 +3,15 @@ package com.blog.ai.gateway.factory;
 import com.blog.ai.gateway.config.GatewayProperties;
 import com.blog.ai.gateway.config.ModelProviderConfig;
 import com.blog.ai.gateway.model.ModelTarget;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import org.springframework.cloud.context.environment.EnvironmentChangeEvent;
 import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,14 +19,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatModelFactory {
 
     private final ModelProviderConfig modelProviderConfig;
-    private final Map<String, ChatModel> cache = new ConcurrentHashMap<>();
+    private final Map<String, GatewayChatModels> cache = new ConcurrentHashMap<>();
 
     public ChatModelFactory(ModelProviderConfig modelProviderConfig) {
         this.modelProviderConfig = modelProviderConfig;
     }
 
-    public ChatModel get(ModelTarget target) {
-        return cache.computeIfAbsent(target.key(), k -> build(target));
+    public GatewayChatModels get(ModelTarget target) {
+        return cache.computeIfAbsent(target.key(), key -> build(target));
     }
 
     public void invalidateAll() {
@@ -36,8 +35,7 @@ public class ChatModelFactory {
 
     @EventListener(EnvironmentChangeEvent.class)
     public void onConfigRefresh(EnvironmentChangeEvent event) {
-        if (event.getKeys().stream().anyMatch(key -> key.startsWith("blog.ai.gateway")
-                || key.startsWith("spring.ai.openai"))) {
+        if (event.getKeys().stream().anyMatch(key -> key.startsWith("blog.ai.gateway"))) {
             invalidateAll();
         }
     }
@@ -47,26 +45,45 @@ public class ChatModelFactory {
         invalidateAll();
     }
 
-    private ChatModel build(ModelTarget target) {
+    private GatewayChatModels build(ModelTarget target) {
         GatewayProperties.ProviderDef def = modelProviderConfig.getProvider(target.getProviderId());
         if (def == null || !StringUtils.hasText(def.getApiKey())) {
-            throw new IllegalStateException("Provider 未配置 API Key: " + target.getProviderId());
+            throw new IllegalStateException("Provider missing API key: " + target.getProviderId());
         }
-        OpenAiApi.Builder apiBuilder = OpenAiApi.builder().apiKey(def.getApiKey());
-        if (StringUtils.hasText(def.getBaseUrl())) {
-            String normalized = def.getBaseUrl().endsWith("/")
-                    ? def.getBaseUrl().substring(0, def.getBaseUrl().length() - 1)
-                    : def.getBaseUrl();
-            apiBuilder.baseUrl(normalized);
+        if (!StringUtils.hasText(def.getBaseUrl())) {
+            throw new IllegalStateException("Provider missing base URL: " + target.getProviderId());
         }
-        OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .model(target.getModel())
-                .temperature(0.7)
-                .maxTokens(1024)
+        if (!StringUtils.hasText(target.getModel())) {
+            throw new IllegalStateException("Provider missing model: " + target.getProviderId());
+        }
+        String baseUrl = normalizeBaseUrl(def.getBaseUrl());
+        long timeoutMs = target.getTimeoutMs() > 0 ? target.getTimeoutMs() : def.getTimeoutMs();
+        Duration timeout = Duration.ofMillis(Math.max(timeoutMs, 1));
+        OpenAiChatModel chatModel = OpenAiChatModel.builder()
+                .apiKey(def.getApiKey())
+                .baseUrl(baseUrl)
+                .modelName(target.getModel())
+                .temperature(def.getTemperature())
+                .maxTokens(def.getMaxTokens())
+                .timeout(timeout)
+                .maxRetries(0)
                 .build();
-        return OpenAiChatModel.builder()
-                .openAiApi(apiBuilder.build())
-                .defaultOptions(options)
+        OpenAiStreamingChatModel streamingChatModel = OpenAiStreamingChatModel.builder()
+                .apiKey(def.getApiKey())
+                .baseUrl(baseUrl)
+                .modelName(target.getModel())
+                .temperature(def.getTemperature())
+                .maxTokens(def.getMaxTokens())
+                .timeout(timeout)
                 .build();
+        return new GatewayChatModels(chatModel, streamingChatModel);
+    }
+
+    private static String normalizeBaseUrl(String baseUrl) {
+        String normalized = baseUrl.trim();
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
     }
 }

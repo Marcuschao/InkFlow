@@ -40,6 +40,8 @@ public class GatewayProperties {
         private int priority = 1;
         private int maxConcurrency = 10;
         private long timeoutMs = 5000;
+        private double temperature = 0.7;
+        private int maxTokens = 1024;
         private double inputPricePer1k = 0.001;
         private double outputPricePer1k = 0.002;
     }

@@ -6,7 +6,6 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
-import org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -14,10 +13,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.util.TimeZone;
 
-@SpringBootApplication(exclude = {
-        UserDetailsServiceAutoConfiguration.class,
-        OpenAiChatAutoConfiguration.class
-})
+@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableDiscoveryClient
 @MapperScan({"com.blog.ai.mapper", "com.blog.ai.runtime.mapper"})
 @EnableScheduling

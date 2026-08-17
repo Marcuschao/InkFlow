@@ -38,6 +38,15 @@ blog-*/src/main/resources/application-dev.yml.example
 blog-*/src/main/resources/application-local.yml.example
 ```
 
+`blog-ai` 使用 LangChain4j 连接 OpenAI 兼容模型，模型配置统一位于
+`blog.ai.gateway.providers`。本地或部署环境至少需要提供：
+
+```bash
+AI_API_KEY=your-api-key
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4o-mini
+```
+
 ### 首次初始化
 
 **Windows：**

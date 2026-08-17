@@ -11,8 +11,6 @@ import com.blog.common.dto.LearningPathResult;
 import com.blog.common.dto.LearningPathStepDto;
 import com.blog.common.feign.KnowledgeFeignClient;
 import com.blog.common.support.Result;
-import com.blog.ai.agent.langchain.BlogChatAssistant;
-import com.blog.ai.agent.tools.ArticleSearchTools;
 import com.blog.ai.model.dto.agent.*;
 import com.blog.ai.model.entity.Article;
 import com.blog.ai.common.exception.ServiceException;
@@ -24,7 +22,6 @@ import com.blog.ai.service.ReportStorageService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -55,23 +52,18 @@ public class AgentServiceImpl implements AgentService {
     private final AiService aiService;
     private final ArticleMapper articleMapper;
     private final ObjectMapper objectMapper;
-    private final Optional<BlogChatAssistant> blogChatAssistant;
-    private final ArticleSearchTools articleSearchTools;
     private final Optional<ReportStorageService> reportStorageService;
     private final Optional<KnowledgeFeignClient> knowledgeFeignClient;
     private final Optional<com.blog.ai.rag.RagChatOrchestrator> ragChatOrchestrator;
 
     public AgentServiceImpl(AiService aiService, ArticleMapper articleMapper, ObjectMapper objectMapper,
-                            @Autowired(required = false) BlogChatAssistant blogChatAssistant,
-                            ArticleSearchTools articleSearchTools,
-                            @Autowired(required = false) ReportStorageService reportStorageService,
-                            @Autowired(required = false) KnowledgeFeignClient knowledgeFeignClient,
-                            @Autowired(required = false) com.blog.ai.rag.RagChatOrchestrator ragChatOrchestrator) {
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) ReportStorageService reportStorageService,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false) KnowledgeFeignClient knowledgeFeignClient,
+                            @org.springframework.beans.factory.annotation.Autowired(required = false)
+                            com.blog.ai.rag.RagChatOrchestrator ragChatOrchestrator) {
         this.aiService = aiService;
         this.articleMapper = articleMapper;
         this.objectMapper = objectMapper;
-        this.blogChatAssistant = Optional.ofNullable(blogChatAssistant);
-        this.articleSearchTools = articleSearchTools;
         this.reportStorageService = Optional.ofNullable(reportStorageService);
         this.knowledgeFeignClient = Optional.ofNullable(knowledgeFeignClient);
         this.ragChatOrchestrator = Optional.ofNullable(ragChatOrchestrator);
@@ -211,15 +203,6 @@ public class AgentServiceImpl implements AgentService {
         }
         if (!articles.isEmpty()) {
             return answerFromArticles(articles, q, CONTEXT_CHUNK_SCOPED);
-        }
-        if (blogChatAssistant.isPresent()) {
-            try {
-                String answer = blogChatAssistant.get().respond(q);
-                ChatResponse res = new ChatResponse();
-                res.setAnswer(answer != null ? answer.trim() : "");
-                res.setSources(articleSearchTools.searchStructured(q));
-                return res;
-            } catch (Exception ignored) { }
         }
         List<String> keywords = KeywordHelper.fromText(q);
         if (keywords.isEmpty()) {

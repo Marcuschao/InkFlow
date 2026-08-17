@@ -3,8 +3,6 @@ package com.blog.ai.gateway.config;
 import com.blog.ai.mapper.AiModelConfigMapper;
 import com.blog.ai.model.entity.AiModelConfig;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.env.MockEnvironment;
-
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,14 +13,14 @@ class ModelProviderConfigTest {
 
     @Test
     void reloadReadsTheCurrentExternalModelValue() {
-        MockEnvironment environment = baseEnvironment("deepseek-v4-flash");
-        ModelProviderConfig config = new ModelProviderConfig(new GatewayProperties(),
-                mock(AiModelConfigMapper.class), mock(AiApiKeyCipher.class), environment);
+        GatewayProperties properties = externalProperties("deepseek-v4-flash");
+        ModelProviderConfig config = new ModelProviderConfig(properties,
+                mock(AiModelConfigMapper.class), mock(AiApiKeyCipher.class));
 
         config.reload();
         assertThat(config.defaultTarget().getModel()).isEqualTo("deepseek-v4-flash");
 
-        environment.setProperty("spring.ai.openai.chat.options.model", "deepseek-v4-pro");
+        properties.getProviders().get(0).setModels(List.of("deepseek-v4-pro"));
         config.reload();
         assertThat(config.defaultTarget().getModel()).isEqualTo("deepseek-v4-pro");
     }
@@ -35,7 +33,8 @@ class ModelProviderConfigTest {
         when(mapper.selectList(null)).thenReturn(List.of(databaseProvider("deepseek-v4-pro")));
 
         ModelProviderConfig config = new ModelProviderConfig(properties, mapper,
-                mock(AiApiKeyCipher.class), baseEnvironment("deepseek-v4-flash"));
+                mock(AiApiKeyCipher.class));
+        properties.getProviders().add(externalProvider("deepseek-v4-flash"));
         config.reload();
 
         assertThat(config.defaultTarget().getModel()).isEqualTo("deepseek-v4-flash");
@@ -46,18 +45,30 @@ class ModelProviderConfigTest {
         AiModelConfigMapper mapper = mock(AiModelConfigMapper.class);
         when(mapper.selectList(null)).thenReturn(List.of(databaseProvider("deepseek-v4-pro")));
 
-        ModelProviderConfig config = new ModelProviderConfig(new GatewayProperties(), mapper,
-                mock(AiApiKeyCipher.class), baseEnvironment("deepseek-v4-flash"));
+        GatewayProperties properties = externalProperties("deepseek-v4-flash");
+        properties.setDatabaseOverridesEnabled(true);
+        ModelProviderConfig config = new ModelProviderConfig(properties, mapper,
+                mock(AiApiKeyCipher.class));
         config.reload();
 
         assertThat(config.defaultTarget().getModel()).isEqualTo("deepseek-v4-pro");
     }
 
-    private static MockEnvironment baseEnvironment(String model) {
-        return new MockEnvironment()
-                .withProperty("spring.ai.openai.api-key", "test-key")
-                .withProperty("spring.ai.openai.base-url", "https://api.deepseek.com")
-                .withProperty("spring.ai.openai.chat.options.model", model);
+    private static GatewayProperties externalProperties(String model) {
+        GatewayProperties properties = new GatewayProperties();
+        properties.getProviders().add(externalProvider(model));
+        properties.setDatabaseOverridesEnabled(false);
+        return properties;
+    }
+
+    private static GatewayProperties.ProviderDef externalProvider(String model) {
+        GatewayProperties.ProviderDef provider = new GatewayProperties.ProviderDef();
+        provider.setId("deepseek");
+        provider.setName("deepseek");
+        provider.setApiKey("test-key");
+        provider.setBaseUrl("https://api.deepseek.com");
+        provider.setModels(List.of(model));
+        return provider;
     }
 
     private static AiModelConfig databaseProvider(String model) {

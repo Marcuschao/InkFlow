@@ -3,13 +3,13 @@ package com.blog.ai.gateway.health;
 import com.blog.ai.gateway.config.GatewayProperties;
 import com.blog.ai.gateway.config.ModelProviderConfig;
 import com.blog.ai.gateway.factory.ChatModelFactory;
+import com.blog.ai.gateway.factory.GatewayChatModels;
 import com.blog.ai.gateway.model.ModelTarget;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -115,11 +115,11 @@ public class ModelHealthChecker {
     private boolean probe(String providerId, String model, ProviderHealthState state) {
         try {
             ModelTarget target = new ModelTarget(providerId, model, 5000, 0, 0);
-            ChatModel chatModel = chatModelFactory.get(target);
-            ChatResponse response = chatModel.call(new Prompt(List.of(new UserMessage("ping"))));
-            boolean ok = response != null && response.getResult() != null
-                    && response.getResult().getOutput() != null
-                    && StringUtils.hasText(response.getResult().getOutput().getText());
+            GatewayChatModels models = chatModelFactory.get(target);
+            ChatModel chatModel = models.chatModel();
+            ChatResponse response = chatModel.chat(List.of(UserMessage.from("ping")));
+            boolean ok = response != null && response.aiMessage() != null
+                    && StringUtils.hasText(response.aiMessage().text());
             state.setLastCheckAt(Instant.now());
             if (ok) {
                 state.setConsecutiveFailures(0);

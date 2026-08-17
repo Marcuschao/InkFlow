@@ -87,9 +87,13 @@ public class RagQaTaskHandler implements AgentTaskHandler {
             int[] inputTokens = {0}; int[] outputTokens = {0}; double[] cost = {0D}; String[] model = {null};
             Flux<AgentTaskChunk> generated = gateway.stream(AiTaskType.RAG, prepared.systemPrompt(), prepared.userPrompt(),
                             context.userId(), context.username())
+                    .doOnNext(chunk -> {
+                        inputTokens[0] = chunk.getInputTokens(); outputTokens[0] = chunk.getOutputTokens();
+                        cost[0] = chunk.getCost(); model[0] = chunk.getModel();
+                    })
+                    .filter(chunk -> StringUtils.hasText(chunk.getDelta()))
                     .map(chunk -> {
-                        answer.append(chunk.getDelta()); inputTokens[0] = chunk.getInputTokens();
-                        outputTokens[0] = chunk.getOutputTokens(); cost[0] = chunk.getCost(); model[0] = chunk.getModel();
+                        answer.append(chunk.getDelta());
                         return AgentTaskChunk.event(AgentEventType.DELTA, Map.of("delta", chunk.getDelta()));
                     })
                     .concatWith(Flux.defer(() -> {
