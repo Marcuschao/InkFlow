@@ -28,3 +28,7 @@ personal-blog-frontend/build/
 *~
 .DS_Store
 docker-compose.yml
+
+# 已合并到 blog-content-v2，旧模块仅在本地保留
+/personal-blog-backend/blog-ai/
+/personal-blog-backend/blog-content/

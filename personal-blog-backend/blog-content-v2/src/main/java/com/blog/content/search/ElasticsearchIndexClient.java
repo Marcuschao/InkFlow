@@ -1,0 +1,246 @@
+package com.blog.content.search;
+
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.Refresh;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.bulk.IndexOperation;
+import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
+import co.elastic.clients.elasticsearch.indices.DeleteIndexRequest;
+import co.elastic.clients.elasticsearch.indices.ExistsRequest;
+import com.blog.content.config.properties.SearchProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Component
+@ConditionalOnProperty(name = "blog.search.enabled", havingValue = "true")
+public class ElasticsearchIndexClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ElasticsearchIndexClient.class);
+
+    private final ElasticsearchClient client;
+    private final SearchProperties properties;
+    private final ObjectMapper objectMapper;
+
+    public ElasticsearchIndexClient(
+            @Qualifier("elasticsearchClient") ElasticsearchClient client,
+            SearchProperties properties,
+            ObjectMapper objectMapper) {
+        this.client = client;
+        this.properties = properties;
+        this.objectMapper = objectMapper;
+    }
+
+    public boolean isAvailable() {
+        try {
+            return client.ping().value();
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    public void ensureIndex() {
+        ensureIndex(properties.getIndex());
+    }
+
+    public void ensureIndex(String index) {
+        try {
+            boolean exists = client.indices().exists(ExistsRequest.of(e -> e.index(index))).value();
+            if (!exists) {
+                client.indices().create(CreateIndexRequest.of(c -> c.index(index)
+                        .withJson(new StringReader("""
+                                {"mappings":{"properties":{
+                                "id":{"type":"long"},"title":{"type":"text"},"summary":{"type":"text"},
+                                "content":{"type":"text"},"cover":{"type":"keyword"},
+                                "categoryId":{"type":"long"},"authorId":{"type":"long"},
+                                "status":{"type":"integer"},"viewCount":{"type":"integer"},
+                                "createTime":{"type":"date"},"updateTime":{"type":"date"},
+                                "tagIds":{"type":"long"},"tagNames":{"type":"keyword"}
+                                }}}"""))));
+            }
+        } catch (Exception ex) {
+            log.error("[search] ensureIndex failed index={}: {}", index, ex.getMessage());
+        }
+    }
+
+    public void recreateIndex(String index) {
+        try {
+            boolean exists = client.indices().exists(ExistsRequest.of(e -> e.index(index))).value();
+            if (exists) {
+                client.indices().delete(DeleteIndexRequest.of(d -> d.index(index)));
+            }
+            ensureIndex(index);
+        } catch (Exception ex) {
+            log.error("[search] recreateIndex failed index={}: {}", index, ex.getMessage());
+        }
+    }
+
+    public void updateSettings() {
+        ensureIndex();
+    }
+
+    public void updateSettings(String indexUid) {
+        ensureIndex(indexUid);
+    }
+
+    public void addOrReplaceDocuments(List<ArticleSearchDocument> documents) {
+        addOrReplaceDocuments(properties.getIndex(), documents);
+    }
+
+    public void addOrReplaceDocuments(String indexUid, List<ArticleSearchDocument> documents) {
+        if (documents == null || documents.isEmpty()) {
+            return;
+        }
+        try {
+            BulkRequest.Builder bulk = new BulkRequest.Builder().refresh(Refresh.True);
+            for (ArticleSearchDocument doc : documents) {
+                bulk.operations(BulkOperation.of(op -> op.index(IndexOperation.of(i -> i
+                        .index(indexUid).id(String.valueOf(doc.getId())).document(doc)))));
+            }
+            var response = client.bulk(bulk.build());
+            if (response.errors()) {
+                response.items().forEach(item -> {
+                    if (item.error() != null) {
+                        log.warn("[search] bulk item error id={}: {}", item.id(), item.error().reason());
+                    }
+                });
+            } else {
+                log.info("[search] bulk indexed {} docs into {}", documents.size(), indexUid);
+            }
+        } catch (Exception ex) {
+            log.error("[search] bulk index failed index={} size={}: {}", indexUid, documents.size(), ex.getMessage());
+        }
+    }
+
+    public void deleteDocument(Long id) {
+        if (id == null) {
+            return;
+        }
+        try {
+            client.delete(d -> d.index(properties.getIndex()).id(String.valueOf(id)));
+        } catch (Exception ignored) {
+        }
+    }
+
+    public long getNumberOfDocuments() {
+        return getNumberOfDocuments(properties.getIndex());
+    }
+
+    public long getNumberOfDocuments(String indexUid) {
+        try {
+            return client.count(c -> c.index(indexUid)).count();
+        } catch (Exception ex) {
+            return 0;
+        }
+    }
+
+    public Set<Long> fetchExistingIds(String indexUid, List<Long> ids) {
+        Set<Long> found = new HashSet<>();
+        if (ids == null || ids.isEmpty()) {
+            return found;
+        }
+        try {
+            SearchResponse<ArticleSearchDocument> resp = client.search(SearchRequest.of(s -> s
+                    .index(indexUid).size(ids.size())
+                    .query(Query.of(q -> q.ids(i -> i.values(ids.stream().map(String::valueOf).toList()))))),
+                    ArticleSearchDocument.class);
+            resp.hits().hits().forEach(h -> {
+                if (h.source() != null && h.source().getId() != null) {
+                    found.add(h.source().getId());
+                }
+            });
+        } catch (Exception ignored) {
+        }
+        return found;
+    }
+
+    public void swapIndexes(String targetIndex, String sourceIndex) {
+        try {
+            client.reindex(r -> r
+                    .source(s -> s.index(sourceIndex))
+                    .dest(d -> d.index(targetIndex))
+                    .waitForCompletion(true));
+        } catch (Exception ex) {
+            log.error("[search] reindex {} -> {} failed: {}", sourceIndex, targetIndex, ex.getMessage());
+        }
+    }
+
+    public void deleteIndex(String indexUid) {
+        try {
+            client.indices().delete(d -> d.index(indexUid));
+        } catch (Exception ignored) {
+        }
+    }
+
+    public JsonNode search(String query, int limit, int offset) {
+        ObjectNode root = objectMapper.createObjectNode();
+        ArrayNode hits = objectMapper.createArrayNode();
+        try {
+            SearchResponse<ArticleSearchDocument> resp = client.search(SearchRequest.of(s -> s
+                    .index(properties.getIndex()).from(offset).size(limit)
+                    .query(Query.of(q -> q.bool(b -> b
+                            .must(m -> m.term(t -> t.field("status").value(FieldValue.of(1))))
+                            .must(m -> m.multiMatch(mm -> mm.fields("title", "summary", "content", "tagNames")
+                                    .query(query != null ? query : ""))))))),
+                    ArticleSearchDocument.class);
+            long total = resp.hits().total() != null ? resp.hits().total().value() : 0;
+            root.put("estimatedTotalHits", total);
+            resp.hits().hits().forEach(h -> {
+                if (h.source() == null) {
+                    return;
+                }
+                ObjectNode hit = objectMapper.valueToTree(h.source());
+                hits.add(hit);
+            });
+        } catch (Exception ignored) {
+        }
+        root.set("hits", hits);
+        return root;
+    }
+
+    public List<String> aggregateRelatedTagNames(String query, int limit) {
+        List<String> tags = new ArrayList<>();
+        if (query == null || query.isBlank()) {
+            return tags;
+        }
+        try {
+            int aggSize = Math.max(1, limit);
+            SearchResponse<ArticleSearchDocument> resp = client.search(
+                    SearchRequest.of(s -> s
+                            .index(properties.getIndex())
+                            .size(0)
+                            .query(Query.of(q -> q.bool(b -> b
+                                    .must(m -> m.term(t -> t.field("status").value(FieldValue.of(1))))
+                                    .must(m -> m.multiMatch(mm -> mm
+                                            .fields("title", "summary", "content", "tagNames")
+                                            .query(query.trim()))))))
+                            .aggregations("related_tags", a -> a.terms(t -> t.field("tagNames").size(aggSize)))),
+                    ArticleSearchDocument.class);
+            if (resp.aggregations() != null && resp.aggregations().containsKey("related_tags")) {
+                var buckets = resp.aggregations().get("related_tags").sterms().buckets().array();
+                for (var bucket : buckets) {
+                    tags.add(bucket.key().stringValue());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return tags;
+    }
+}

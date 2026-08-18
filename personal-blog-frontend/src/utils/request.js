@@ -63,13 +63,12 @@ service.interceptors.response.use(
     if (res?.status != null) {
       err.responseStatus = res.status;
     }
-    if (res?.status === 401 || err.code === 401) {
-      const url = cfg.url || '';
-      if (!url.includes('/auth/login')) {
-        useAuthStore().clearAuth();
-      }
-    }
-    if (res?.status === 403 && useAuthStore().token) {
+    // Only the identity endpoint is authoritative for session invalidation.
+    // Optional startup calls (AI history, notifications, presence, etc.) may
+    // fail while the unified service is warming up; logging out on their 401/403
+    // races with a successful login and makes the navbar immediately revert to
+    // the anonymous state.
+    if ((res?.status === 401 || err.code === 401) && isIdentityRequest(cfg.url)) {
       useAuthStore().clearAuth();
     }
     if (!cfg.skipErrorToast) {
@@ -84,3 +83,8 @@ service.interceptors.response.use(
 );
 
 export default service;
+
+function isIdentityRequest(url = '') {
+  const normalized = String(url).split('?')[0].replace(/\/+$/, '');
+  return normalized === '/user/me' || normalized.endsWith('/user/me');
+}
