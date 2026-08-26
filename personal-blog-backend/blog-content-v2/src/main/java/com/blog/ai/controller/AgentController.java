@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 import java.util.Set;
+
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
@@ -159,10 +160,10 @@ public class AgentController {
 
     @GetMapping("/sessions")
     public Result<PageResult<ChatSessionVo>> sessions(@RequestParam(defaultValue = "1") long page,
-                                                       @RequestParam(defaultValue = "20") long size,
-                                                       @RequestParam(required = false) List<Long> ids,
-                                                       HttpServletRequest servletRequest,
-                                                       HttpServletResponse servletResponse) {
+                                                      @RequestParam(defaultValue = "20") long size,
+                                                      @RequestParam(required = false) List<Long> ids,
+                                                      HttpServletRequest servletRequest,
+                                                      HttpServletResponse servletResponse) {
         if (chatSessionService == null) {
             return Result.fail(503, "RAG 未启用");
         }

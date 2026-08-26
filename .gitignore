@@ -32,3 +32,9 @@ docker-compose.yml
 # 已合并到 blog-content-v2，旧模块仅在本地保留
 /personal-blog-backend/blog-ai/
 /personal-blog-backend/blog-content/
+
+# 本地 content-v2 后端安全与稳定性整改计划
+/CONTENT_V2_BACKEND_SECURITY_PLAN.md
+
+# 社交关系与动态流个人练习接口文档
+/SOCIAL_FEED_API_PLAN.md

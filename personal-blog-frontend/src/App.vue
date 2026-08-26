@@ -110,6 +110,7 @@ watch(
   () => authStore.token,
   (token, prev) => {
     if (token !== prev) {
+      aiChatStore.resetForIdentityChange();
       connect(token || null);
     }
   }

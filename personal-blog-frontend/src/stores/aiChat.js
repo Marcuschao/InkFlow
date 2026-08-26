@@ -172,8 +172,11 @@ export const useAiChatStore = defineStore('aiChat', {
         const data = await listAiSessions(params);
         this.sessions = data?.records || [];
         this.sessionsLoaded = true;
+        return true;
       } catch {
         this.sessions = [];
+        this.sessionsLoaded = false;
+        return false;
       }
     },
     async selectSession(id) {
@@ -211,6 +214,24 @@ export const useAiChatStore = defineStore('aiChat', {
       this.draftQuestion = '';
       this.persist();
     },
+    resetForIdentityChange() {
+      this._abortController?.abort();
+      this._abortController = null;
+      this.sessionId = null;
+      this.messages = [];
+      this.streaming = false;
+      this.draftQuestion = '';
+      this.sessions = [];
+      this.sessionsLoaded = false;
+      this.lastError = '';
+      this.hasNew = false;
+      this.clearContext();
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+    },
     async removeSession(id) {
       try {
         await deleteAiSession(id);
@@ -235,10 +256,14 @@ export const useAiChatStore = defineStore('aiChat', {
       await this.send(text, { regenerate: true });
     },
     async hydrateFromBackend() {
-      await this.loadSessions();
-      if (this.sessionId) {
-        await this.selectSession(this.sessionId);
+      const loaded = await this.loadSessions();
+      if (!loaded || !this.sessionId) return;
+      const sessionExists = this.sessions.some((session) => Number(session.id) === Number(this.sessionId));
+      if (!sessionExists) {
+        this.newSession();
+        return;
       }
+      await this.selectSession(this.sessionId);
     },
     async copyMessage(content) {
       if (!content) return false;
